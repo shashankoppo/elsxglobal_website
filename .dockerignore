@@ -1,0 +1,20 @@
+# Docker ignore
+node_modules
+npm-debug.log
+.next
+dist
+.git
+.env
+.env.local
+.env.production
+.env.development
+.DS_Store
+*.md
+!README.md
+.vscode
+.idea
+.vercel
+.netlify
+coverage
+.nyc_output
+*.log

@@ -1,0 +1,132 @@
+name: CI — Lint · Type-check · Build
+
+on:
+  push:
+    branches: [main, develop, staging]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  # Required env vars — set in GitHub → Settings → Secrets and variables → Actions
+  NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://elsxglobal.com' }}
+
+jobs:
+  # ── Job 1: Lint & Type-check ─────────────────────────────────────
+  quality:
+    name: Lint & Type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: TypeScript type-check
+        run: npm run typecheck
+
+      - name: ESLint
+        run: npm run lint
+
+  # ── Job 2: Production Build ──────────────────────────────────────
+  build:
+    name: Production Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          # Supabase — optional, build continues without real values
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://placeholder' }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build-${{ github.sha }}
+          path: |
+            .next/
+            public/
+          retention-days: 7
+
+  # ── Job 3: Deploy to Staging (on develop branch) ─────────────────
+  deploy-staging:
+    name: Deploy → Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.elsxglobal.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build-${{ github.sha }}
+
+      # Replace this step with your actual deploy command:
+      # Netlify, Vercel, Railway, Fly.io, Docker push, etc.
+      - name: Deploy (placeholder — replace with actual deploy step)
+        run: |
+          echo "✅ Build artifact ready for deployment"
+          echo "Replace this step with: netlify deploy / vercel deploy / docker push / fly deploy"
+
+  # ── Job 4: Deploy to Production (on main branch) ─────────────────
+  deploy-production:
+    name: Deploy → Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://elsxglobal.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build-${{ github.sha }}
+
+      - name: Deploy (placeholder — replace with actual deploy step)
+        run: |
+          echo "🚀 Deploying to production"
+          echo "Replace this step with your actual deploy command"

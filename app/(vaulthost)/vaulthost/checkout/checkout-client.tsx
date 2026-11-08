@@ -75,6 +75,10 @@ export function CheckoutClient() {
   const [confirmed, setConfirmed] = useState(false);
   const [razorpayLoading, setRazorpayLoading] = useState(false);
   const [dbAddons, setDbAddons] = useState<any[]>([]);
+  const [couponCode, setCouponCode] = useState('');
+  const [coupon, setCoupon] = useState<{ code: string; discount_type: string; discount_value: number } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -142,8 +146,33 @@ export function CheckoutClient() {
   const panelPrice = panel !== 'none' && panel !== 'aapanel' ? (panel === 'cpanel' ? 1500 : panel === 'plesk' ? 800 : 500) : 0;
   const addonTotal = addons.reduce((sum, id) => sum + (addonPrices[id] || 0), 0);
   const subtotal = (basePrice + panelPrice) * cycle.multiplier * (1 - cycle.discount) + addonTotal * cycle.multiplier;
-  const amount = Math.round(subtotal);
+  const couponDiscount = coupon
+    ? coupon.discount_type === 'percentage'
+      ? Math.round(subtotal * coupon.discount_value / 100)
+      : Math.min(Math.round(coupon.discount_value), Math.round(subtotal))
+    : 0;
+  const amount = Math.max(0, Math.round(subtotal - couponDiscount));
   const savings = billingCycle !== 'monthly' ? Math.round(basePrice * cycle.multiplier - basePrice * cycle.multiplier * (1 - cycle.discount)) : 0;
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError(null);
+    const supabase = createClient();
+    const now = new Date().toISOString();
+    const { data, error: ce } = await supabase
+      .from('hosting_coupons')
+      .select('code, discount_type, discount_value, max_uses, current_uses, valid_until, is_active')
+      .eq('code', couponCode.trim().toUpperCase())
+      .eq('is_active', true)
+      .maybeSingle();
+    if (ce || !data) { setCouponError('Invalid or expired coupon code.'); setCouponLoading(false); return; }
+    if (data.valid_until && data.valid_until < now) { setCouponError('This coupon has expired.'); setCouponLoading(false); return; }
+    if (data.max_uses && data.current_uses >= data.max_uses) { setCouponError('This coupon has reached its usage limit.'); setCouponLoading(false); return; }
+    setCoupon(data);
+    setCouponError(null);
+    setCouponLoading(false);
+  };
 
   const handleCreateOrder = async () => {
     if (!user) {
@@ -165,6 +194,8 @@ export function CheckoutClient() {
         body: JSON.stringify({
           planId: plan.id, planName: plan.name, planTier: plan.tier,
           billingCycle, amount, domain, os, panel, location, user, addons,
+          coupon_code: coupon?.code || null,
+          coupon_discount: couponDiscount || 0,
           custom_vcpu: plan.id === 'custom' ? Number(searchParams.get('vcpu') || 4) : undefined,
           custom_ram: plan.id === 'custom' ? Number(searchParams.get('ram') || 8) : undefined,
           custom_storage: plan.id === 'custom' ? Number(searchParams.get('storage') || 100) : undefined
@@ -671,10 +702,39 @@ export function CheckoutClient() {
                 ))}
                 {savings > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-good inline-flex items-center gap-1"><Tag className="h-3 w-3" />Discount</span>
+                    <span className="text-good inline-flex items-center gap-1"><Tag className="h-3 w-3" />Billing Discount</span>
                     <span className="text-good">- Rs {savings.toLocaleString('en-IN')}</span>
                   </div>
                 )}
+                {coupon && couponDiscount > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-good inline-flex items-center gap-1"><Tag className="h-3 w-3" />Coupon ({coupon.code})</span>
+                    <span className="text-good">- Rs {couponDiscount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Coupon Code Input */}
+              <div className="mb-4">
+                <label className="text-sm font-medium mb-1.5 block">Have a coupon?</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); if (coupon) setCoupon(null); }}
+                    placeholder="COUPON CODE"
+                    className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <button
+                    onClick={applyCoupon}
+                    disabled={couponLoading || !couponCode.trim() || !!coupon}
+                    className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50 shrink-0"
+                  >
+                    {coupon ? '✓' : couponLoading ? '...' : 'Apply'}
+                  </button>
+                </div>
+                {couponError && <p className="text-xs text-destructive mt-1">{couponError}</p>}
+                {coupon && <p className="text-xs text-good mt-1">✓ Coupon applied — {coupon.discount_type === 'percentage' ? `${coupon.discount_value}% off` : `Rs ${coupon.discount_value} off`}</p>}
               </div>
 
               {/* Total */}

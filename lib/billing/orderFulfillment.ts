@@ -137,6 +137,35 @@ export async function fulfillOrder(
 
     console.log(`✅ Order ${orderId} successfully fulfilled via ${paymentMethod}.`);
 
+    // Send confirmation email (non-blocking)
+    const userEmail = order.notes
+      ? (typeof order.notes === 'string'
+          ? JSON.parse(order.notes)?.user_email
+          : order.notes?.user_email)
+      : null;
+
+    if (userEmail) {
+      const supabasePublicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (supabasePublicUrl && supabaseAnonKey) {
+        fetch(`${supabasePublicUrl}/functions/v1/send-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            template: 'order-approved',
+            to: userEmail,
+            orderId,
+            planName: order.plan_name,
+          }),
+        }).catch((err) => {
+          console.error('Failed to send fulfillment email:', err);
+        });
+      }
+    }
+
     return { 
       success: true, 
       message: 'Order fulfilled successfully',

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Phone, MapPin, MessageSquare, ArrowRight, Send, Building2 } from 'lucide-react';
+import { Mail, Phone, MapPin, MessageSquare, ArrowRight, Send, Building2, Loader2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase';
 import { PageHeroV4 } from '@/components/ui/page-hero-v4';
 import { PanelCard } from '@/components/ui/panel-card';
 import { SectionLabelV4 } from '@/components/ui/section-label-v4';
@@ -34,11 +35,66 @@ const SERVICES = [
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', email: '', company: '', service: SERVICES[0], message: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      // 1. Save lead to Supabase
+      const supabase = createClient();
+      const { error: dbError } = await supabase.from('leads').insert({
+        name: form.name,
+        email: form.email,
+        company: form.company,
+        service_interest: form.service,
+        message: form.message,
+        source: 'contact_form',
+        status: 'new'
+      });
+
+      if (dbError) {
+        console.warn('Leads table insert note:', dbError);
+      }
+
+      // 2. Call send-email edge function
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && anonKey) {
+        try {
+          await fetch(supabaseUrl + '/functions/v1/send-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + anonKey
+            },
+            body: JSON.stringify({
+              template: 'contact-form',
+              to: 'contact@elsxglobal.cloud',
+              name: form.name,
+              email: form.email,
+              company: form.company,
+              service: form.service,
+              message: form.message
+            })
+          });
+        } catch (emailErr) {
+          console.warn('send-email function call note:', emailErr);
+        }
+      }
+
+      setSubmitted(true);
+    } catch (err: any) {
+      console.error('Contact submission error:', err);
+      setError(err?.message || 'Failed to submit your message. Please try again or email us directly.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -104,7 +160,7 @@ export default function ContactPage() {
                     <h3 className="text-xl font-semibold text-text-primary-v4">Message Sent</h3>
                     <p className="mt-2 text-sm text-text-secondary-v4 max-w-sm">Thank you for reaching out. Our team will respond within one business day.</p>
                     <button
-                      onClick={() => { setSubmitted(false); setForm({ name: '', email: '', company: '', service: SERVICES[0], message: '' }); }}
+                      onClick={() => { setSubmitted(false); setError(null); setForm({ name: '', email: '', company: '', service: SERVICES[0], message: '' }); }}
                       className="mt-6 px-5 py-2.5 rounded-btn v4-btn-ghost text-sm"
                     >
                       Send Another
@@ -114,6 +170,13 @@ export default function ContactPage() {
                   <>
                     <h3 className="text-lg font-semibold text-text-primary-v4 mb-1">Send us a message</h3>
                     <p className="text-sm text-text-muted-v4 mb-6">All fields required. We respond within 1 business day.</p>
+                    
+                    {error && (
+                      <div className="p-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                        {error}
+                      </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-4">
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div>
@@ -162,8 +225,20 @@ export default function ContactPage() {
                           placeholder="Tell us about your project..."
                         />
                       </div>
-                      <button type="submit" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-btn v4-btn-primary text-sm w-full sm:w-auto">
-                        Send Message <ArrowRight className="h-4 w-4" />
+                      <button 
+                        type="submit" 
+                        disabled={submitting}
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-btn v4-btn-primary text-sm w-full sm:w-auto disabled:opacity-50"
+                      >
+                        {submitting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" /> Sending...
+                          </>
+                        ) : (
+                          <>
+                            Send Message <ArrowRight className="h-4 w-4" />
+                          </>
+                        )}
                       </button>
                     </form>
                   </>

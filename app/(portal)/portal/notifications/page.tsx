@@ -1,10 +1,19 @@
 'use client';
 
-import { useState } from 'react';
-import { Bell, Check, Clock, Info, CheckCircle, AlertCircle, X as XIcon, Settings, Filter } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase';
+import { Bell, Check, Clock, Info, CheckCircle, AlertCircle, Settings } from 'lucide-react';
 import { PanelCard } from '@/components/ui/panel-card';
 
-interface Notification { id: string; type: string; title: string; message: string; time: string; read: boolean; severity: string; }
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  severity: string;
+}
 
 const DEMO_NOTIFICATIONS: Notification[] = [
   { id: '1', type: 'security', title: 'New login detected', message: 'Sign-in from Chrome on Windows (IP: 182.72.x.x, Mumbai)', time: '2 minutes ago', read: false, severity: 'warn' },
@@ -17,24 +26,88 @@ const DEMO_NOTIFICATIONS: Notification[] = [
 ];
 
 export default function NotificationsPage() {
+  const [userId, setUserId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>(DEMO_NOTIFICATIONS);
   const [activeFilter, setActiveFilter] = useState('All');
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [smsNotifs, setSmsNotifs] = useState(false);
   const [pushNotifs, setPushNotifs] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const handleMarkAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  useEffect(() => {
+    async function fetchNotifications() {
+      setLoading(true);
+      try {
+        const supabase = createClient();
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user) {
+          const uId = authData.user.id;
+          setUserId(uId);
+
+          const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', uId)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+          if (!error && data && data.length > 0) {
+            setNotifications(
+              data.map((item: any) => ({
+                id: String(item.id),
+                type: item.type || 'system',
+                title: item.title || 'Notification',
+                message: item.message || '',
+                time: item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Just now',
+                read: Boolean(item.read),
+                severity: item.severity || 'info',
+              }))
+            );
+          } else {
+            setNotifications(DEMO_NOTIFICATIONS);
+          }
+        } else {
+          setNotifications(DEMO_NOTIFICATIONS);
+        }
+      } catch (e) {
+        console.warn('Real notifications fetch error, using demo:', e);
+        setNotifications(DEMO_NOTIFICATIONS);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchNotifications();
+  }, []);
+
+  const handleMarkAllRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    if (userId) {
+      try {
+        const supabase = createClient();
+        await supabase.from('notifications').update({ read: true }).eq('user_id', userId);
+      } catch (e) {
+        console.error('Error updating all notifications read status:', e);
+      }
+    }
   };
 
-  const handleMarkRead = (id: string) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  const handleMarkRead = async (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    if (userId) {
+      try {
+        const supabase = createClient();
+        await supabase.from('notifications').update({ read: true }).eq('id', id);
+      } catch (e) {
+        console.error('Error updating notification read status:', e);
+      }
+    }
   };
 
-  const filteredNotifs = notifications.filter(n => {
+  const filteredNotifs = notifications.filter((n) => {
     if (activeFilter === 'All') return true;
     if (activeFilter === 'Unread') return !n.read;
-    return n.type === activeFilter.toLowerCase();
+    return (n.type || '').toLowerCase() === activeFilter.toLowerCase();
   });
 
   const getBorderColor = (severity: string) => {
@@ -75,7 +148,7 @@ export default function NotificationsPage() {
         
         <button 
           onClick={handleMarkAllRead}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-btn v4-btn-secondary text-xs font-semibold"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-btn v4-btn-secondary text-xs font-semibold hover:border-signal transition-colors"
         >
           <Check className="h-3.5 w-3.5" /> Mark all as read
         </button>
@@ -85,7 +158,7 @@ export default function NotificationsPage() {
         <div className="lg:col-span-3 space-y-4">
           {/* Filters */}
           <div className="flex gap-2 overflow-x-auto pb-2 terminal-scrollbar">
-            {['All', 'Unread', 'Security', 'Billing', 'System'].map(filter => (
+            {['All', 'Unread', 'Security', 'Billing', 'System'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
@@ -109,7 +182,7 @@ export default function NotificationsPage() {
                 <p className="text-xs text-text-secondary-v4">There are no notifications matching this filter.</p>
               </div>
             ) : (
-              filteredNotifs.map(notif => (
+              filteredNotifs.map((notif) => (
                 <div 
                   key={notif.id}
                   onClick={() => !notif.read && handleMarkRead(notif.id)}

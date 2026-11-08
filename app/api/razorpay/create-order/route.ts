@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
@@ -70,6 +70,12 @@ export async function POST(req: Request) {
     if (!order) {
       return NextResponse.json({ error: 'Failed to create Razorpay order' }, { status: 500 });
     }
+
+    // Store Razorpay order ID for webhook matching
+    await supabaseAdmin
+      .from('hosting_orders')
+      .update({ razorpay_order_id: order.id })
+      .eq('id', orderId);
 
     return NextResponse.json({
       id: order.id,

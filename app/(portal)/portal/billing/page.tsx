@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import Link from 'next/link';
 import { Receipt, CreditCard, Download, CheckCircle2, Clock, XCircle, ArrowRight, Sparkles, RefreshCw, Plus } from 'lucide-react';
 import { PanelCard } from '@/components/ui/panel-card';
+import { SkeletonCard } from '@/components/ui/skeleton-loaders';
 
 const DEMO_INVOICES = [
   { id: 'INV-2026-0041', amount: 4999, status: 'paid', created_at: '2026-09-01', plan: 'VPS Pro 8GB', period: 'Sep 2026' },
@@ -14,6 +16,7 @@ const DEMO_INVOICES = [
 ];
 
 export default function BillingPage() {
+  const router = useRouter();
   const [invoices, setInvoices] = useState<any[]>(DEMO_INVOICES);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'invoices' | 'payment-methods' | 'usage'>('invoices');
@@ -24,25 +27,40 @@ export default function BillingPage() {
       try {
         const supabase = createClient();
         const { data: userData } = await supabase.auth.getUser();
-        if (userData.user) {
+        if (userData?.user) {
           const { data, error } = await supabase
             .from('hosting_invoices')
             .select('*, hosting_orders(*)')
             .eq('user_id', userData.user.id)
             .order('created_at', { ascending: false });
             
-          if (data && data.length > 0) {
+          if (!error && data && data.length > 0) {
             setInvoices(data);
+          } else {
+            setInvoices(DEMO_INVOICES);
           }
+        } else {
+          setInvoices(DEMO_INVOICES);
         }
       } catch (e) {
         console.error('Error fetching invoices, using demo data', e);
+        setInvoices(DEMO_INVOICES);
       } finally {
         setLoading(false);
       }
     }
     fetchInvoices();
   }, []);
+
+  const totalPaid = invoices
+    .filter((inv) => inv.status === 'paid')
+    .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+
+  const pendingAmount = invoices
+    .filter((inv) => inv.status === 'pending')
+    .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+
+  const activeSubscriptions = invoices.filter((inv) => inv.status === 'paid').length > 0 ? 1 : 0;
 
   const getStatusIcon = (status: string) => {
     switch(status) {
@@ -76,20 +94,20 @@ export default function BillingPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <PanelCard className="p-5">
-          <div className="text-sm text-text-muted-v4 mb-1">Current Balance</div>
-          <div className="text-2xl font-bold text-text-primary-v4">₹0.00</div>
+          <div className="text-sm text-text-muted-v4 mb-1">Total Paid</div>
+          <div className="text-2xl font-bold text-text-primary-v4">₹{totalPaid.toLocaleString()}</div>
         </PanelCard>
         <PanelCard className="p-5">
-          <div className="text-sm text-text-muted-v4 mb-1">Next Invoice</div>
-          <div className="text-2xl font-bold text-text-primary-v4">Oct 1, 2026 — ₹4,999</div>
+          <div className="text-sm text-text-muted-v4 mb-1">Pending Amount</div>
+          <div className="text-2xl font-bold text-text-primary-v4">₹{pendingAmount.toLocaleString()}</div>
         </PanelCard>
         <PanelCard className="p-5">
-          <div className="text-sm text-text-muted-v4 mb-1">Total Paid (2026)</div>
-          <div className="text-2xl font-bold text-text-primary-v4">₹19,996</div>
+          <div className="text-sm text-text-muted-v4 mb-1">Next Renewal</div>
+          <div className="text-2xl font-bold text-text-primary-v4">Oct 1, 2026</div>
         </PanelCard>
         <PanelCard className="p-5">
           <div className="text-sm text-text-muted-v4 mb-1">Active Subscriptions</div>
-          <div className="text-2xl font-bold text-text-primary-v4">1</div>
+          <div className="text-2xl font-bold text-text-primary-v4">{activeSubscriptions}</div>
         </PanelCard>
       </div>
 
@@ -118,7 +136,11 @@ export default function BillingPage() {
       {/* Tab Content */}
       <div className="bg-ink rounded-lg border border-hairline min-h-[400px]">
         {loading ? (
-          <div className="flex items-center justify-center h-64 text-text-muted-v4">Loading...</div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
         ) : (
           <>
             {activeTab === 'invoices' && (
@@ -138,9 +160,9 @@ export default function BillingPage() {
                     {invoices.map((inv, idx) => (
                       <tr key={idx} className="border-b border-hairline last:border-0 hover:bg-ink-surface/50">
                         <td className="px-6 py-4 font-mono text-text-primary-v4">{inv.id}</td>
-                        <td className="px-6 py-4 text-text-secondary-v4">{inv.plan || 'N/A'}</td>
+                        <td className="px-6 py-4 text-text-secondary-v4">{inv.plan || 'VPS Pro 8GB'}</td>
                         <td className="px-6 py-4 text-text-secondary-v4">{inv.period || inv.created_at}</td>
-                        <td className="px-6 py-4 font-medium text-text-primary-v4">₹{inv.amount.toLocaleString()}</td>
+                        <td className="px-6 py-4 font-medium text-text-primary-v4">₹{(Number(inv.amount) || 0).toLocaleString()}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(inv.status)}`}>
                             {getStatusIcon(inv.status)}
@@ -150,7 +172,7 @@ export default function BillingPage() {
                         <td className="px-6 py-4 text-right">
                           <button 
                             className="text-text-muted-v4 hover:text-signal p-1 transition-colors"
-                            onClick={() => alert('PDF export coming soon')}
+                            onClick={() => router.push('/portal/invoice/' + inv.id)}
                             title="Download PDF"
                           >
                             <Download className="w-4 h-4" />

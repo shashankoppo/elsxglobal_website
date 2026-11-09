@@ -307,7 +307,9 @@ export function PaymentSettingsTab({ showToast }: { showToast: (t: 'success' | '
             <div>
               <label className="text-sm font-medium mb-2 block">Custom QR Image (overrides dynamic QR)</label>
               {settings.custom_qr_image_url ? (
-                <div className="flex items-center gap-4"><div className="w-24 h-24 rounded-xl overflow-hidden bg-white border border-border">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={settings.custom_qr_image_url} alt="Custom QR" className="w-full h-full object-contain" /></div><button onClick={() => setSettings({ ...settings, custom_qr_image_url: '' })} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-500/10"><Trash2 className="h-4 w-4" />Remove</button></div>
+                <div className="flex items-center gap-4"><div className="w-24 h-24 rounded-xl overflow-hidden bg-white border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={settings.custom_qr_image_url} alt="Custom QR" className="w-full h-full object-contain" /></div><button onClick={() => setSettings({ ...settings, custom_qr_image_url: '' })} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-500/10"><Trash2 className="h-4 w-4" />Remove</button></div>
               ) : (
                 <label className="flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors"><div className="flex flex-col items-center gap-2">{uploadingQr ? <Loader2 className="h-6 w-6 animate-spin text-signal" /> : <Upload className="h-6 w-6 text-zinc-500" />}<span className="text-xs text-zinc-500">{uploadingQr ? 'Uploading...' : 'Upload custom QR (PNG/JPEG, max 2MB)'}</span></div><input type="file" accept="image/*" onChange={handleQrUpload} className="hidden" disabled={uploadingQr} /></label>
               )}
@@ -383,7 +385,10 @@ export function SiteSettingsTab({ showToast }: { showToast: (t: 'success' | 'err
           {(settings.trust_badges || []).map((badge: any, idx: number) => (
             <div key={badge.id} className="v4-panel rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">{badge.logo_url ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={badge.logo_url} alt={badge.name} className="h-6 w-6 object-contain" /> : <BadgeCheck className="h-5 w-5 text-signal" />}</div><input type="text" value={badge.name} onChange={(e) => { const badges = [...settings.trust_badges]; badges[idx] = { ...badges[idx], name: e.target.value }; setSettings({ ...settings, trust_badges: badges }); }} className="px-3 py-1.5 rounded-lg bg-background border border-border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+                <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">{badge.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={badge.logo_url} alt={badge.name} className="h-6 w-6 object-contain" />
+                ) : <BadgeCheck className="h-5 w-5 text-signal" />}</div><input type="text" value={badge.name} onChange={(e) => { const badges = [...settings.trust_badges]; badges[idx] = { ...badges[idx], name: e.target.value }; setSettings({ ...settings, trust_badges: badges }); }} className="px-3 py-1.5 rounded-lg bg-background border border-border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
                 <button onClick={() => { const badges = [...settings.trust_badges]; badges.splice(idx, 1); setSettings({ ...settings, trust_badges: badges }); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></button>
               </div>
               <div className="grid sm:grid-cols-2 gap-3 mb-3">

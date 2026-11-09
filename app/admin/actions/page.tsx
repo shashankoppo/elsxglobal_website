@@ -50,6 +50,7 @@ export default function AdminActionsAuditPage() {
 
   useEffect(() => {
     fetchLogs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceFilter, tierFilter]);
 
   // Execute a test ActionIntent through the Gateway

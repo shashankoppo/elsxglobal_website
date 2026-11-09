@@ -105,6 +105,7 @@ export default function StorageManagementPage() {
 
   useEffect(() => {
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {

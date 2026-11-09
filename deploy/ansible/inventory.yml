@@ -1,0 +1,25 @@
+all:
+  children:
+    proxmox:
+      hosts:
+        proxmox-primary:
+          ansible_host: "{{ proxmox_ip }}"
+          ansible_user: root
+          ansible_ssh_private_key_file: ~/.ssh/vaulthost_deploy
+    services:
+      hosts:
+        dns-server:
+          ansible_host: "{{ dns_lxc_ip }}"
+          service_compose_file: "docker-compose.dns.yml"
+        storage-server:
+          ansible_host: "{{ storage_lxc_ip }}"
+          service_compose_file: "docker-compose.storage.yml"
+        ai-gateway:
+          ansible_host: "{{ ai_lxc_ip }}"
+          service_compose_file: "docker-compose.ai-gateway.yml"
+        tunnel-server:
+          ansible_host: "{{ tunnel_lxc_ip }}"
+          service_compose_file: "docker-compose.tunnel.yml"
+        queue-server:
+          ansible_host: "{{ queue_lxc_ip }}"
+          service_compose_file: "docker-compose.rabbitmq.yml"

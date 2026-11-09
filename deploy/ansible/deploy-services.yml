@@ -1,0 +1,41 @@
+---
+- name: Deploy VaultHost Services
+  hosts: services
+  become: true
+  tasks:
+    - name: Install Docker
+      ansible.builtin.include_role:
+        name: geerlingguy.docker
+
+    - name: Ensure vaulthost deployment directory exists
+      ansible.builtin.file:
+        path: /opt/vaulthost
+        state: directory
+        mode: '0755'
+
+    - name: Copy docker-compose files
+      ansible.builtin.copy:
+        src: "../{{ service_compose_file }}"
+        dest: /opt/vaulthost/
+
+    - name: Copy auxiliary service configuration files
+      ansible.builtin.copy:
+        src: "../{{ item }}"
+        dest: /opt/vaulthost/
+      loop:
+        - litellm_config.yaml
+        - frps.toml
+        - workerd-api-server.js
+      ignore_errors: true
+
+    - name: Copy .env file
+      ansible.builtin.template:
+        src: .env.j2
+        dest: /opt/vaulthost/.env
+
+    - name: Start services
+      community.docker.docker_compose_v2:
+        project_src: /opt/vaulthost
+        files: ["{{ service_compose_file }}"]
+        state: present
+        pull: always

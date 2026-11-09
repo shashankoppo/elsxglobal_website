@@ -1,11 +1,13 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import crypto from 'crypto';
+import { createServerClient } from '@/lib/supabase/server';
 import { processActionIntent } from '@/lib/action-gateway/gateway';
 import { ActionIntent } from '@/lib/action-gateway/types';
+import { ok, err } from '@/lib/core/api-response';
 
-interface AIProvider {
+export interface AIProvider {
   id: string;
   name: string;
   defaultModel: string;
@@ -18,7 +20,7 @@ interface AIProvider {
   p95LatencyMs: number;
 }
 
-interface CacheEntry {
+export interface CacheEntry {
   hash: string;
   promptPreview: string;
   responsePreview: string;
@@ -102,11 +104,13 @@ let semanticCache: CacheEntry[] = [
 
 export async function GET() {
   try {
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+
     const totalSpend = providers.reduce((sum, p) => sum + p.spend24h, 0);
     const avgCacheHit = providers.reduce((sum, p) => sum + p.cacheHitRate, 0) / providers.length;
 
-    return NextResponse.json({
-      success: true,
+    return ok({
       stats: {
         activeModels: 15,
         cacheHitRate: `${avgCacheHit.toFixed(1)}%`,
@@ -117,38 +121,65 @@ export async function GET() {
       },
       providers,
       cacheEntries: semanticCache,
+      user: user ? { id: user.id, email: user.email } : null,
     });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, prompt, model = 'gpt-4o', provider = 'openai', options, intent } = body;
+    const { action, prompt, model = 'gpt-4o', provider = 'openai', messages, options, intent } = body;
+
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    const actorId = user?.id || 'user_active_session';
+    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
 
     if (intent) {
       const result = await processActionIntent(intent as ActionIntent, options);
-      return NextResponse.json(result);
+      return ok(result);
     }
 
-    if (action === 'test_prompt' || action === 'completion') {
-      if (!prompt) {
-        return NextResponse.json({ success: false, error: 'Prompt is required.' }, { status: 400 });
+    if (action === 'test_prompt' || action === 'completion' || action === 'chat') {
+      const queryPrompt = prompt || (Array.isArray(messages) ? messages[messages.length - 1]?.content : typeof messages === 'string' ? messages : '');
+      if (!queryPrompt) {
+        return err('BAD_REQUEST', 'Prompt or messages are required.', { status: 400 });
+      }
+
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_developer'],
+        },
+        targetService: 'ai_gateway',
+        actionVerb: action,
+        resourceUri: `ai_gateway://${provider}/${model}`,
+        parameters: { model, provider, prompt: String(queryPrompt).slice(0, 500) },
+        idempotencyKey: `ai_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status !== 'executed') {
+        return ok(gatewayResult, { status: 202 });
       }
 
       // Check semantic cache simulation
-      const promptHash = crypto.createHash('sha256').update(prompt.trim().toLowerCase()).digest('hex').slice(0, 8);
-      const isCached = semanticCache.some(c => c.promptPreview.toLowerCase().includes(prompt.toLowerCase().slice(0, 15)));
+      const promptHash = crypto.createHash('sha256').update(String(queryPrompt).trim().toLowerCase()).digest('hex').slice(0, 8);
+      const isCached = semanticCache.some(c => c.promptPreview.toLowerCase().includes(String(queryPrompt).toLowerCase().slice(0, 15)));
 
-      const estimatedTokens = Math.max(30, Math.ceil(prompt.length / 4) + 60);
+      const estimatedTokens = Math.max(30, Math.ceil(String(queryPrompt).length / 4) + 60);
       const costPerToken = 0.00003; // ~$0.03 / 1k tokens
 
       if (isCached) {
-        return NextResponse.json({
-          success: true,
+        return ok({
           cached: true,
           cacheHitRate: '100% (Semantic Cache Hit)',
           latencyMs: 1.8,
@@ -158,23 +189,23 @@ export async function POST(req: NextRequest) {
           tokensSaved: estimatedTokens,
           costUsd: 0,
           costSavedUsd: Number((estimatedTokens * costPerToken).toFixed(4)),
-          response: `[VaultHost Semantic Cache Hit] ${prompt}\n\nAutomated analysis: Optimal edge response generated with 0ms origin wait time and 100% cost reduction.`,
+          response: `[VaultHost Semantic Cache Hit] ${queryPrompt}\n\nAutomated analysis: Optimal edge response generated with 0ms origin wait time and 100% cost reduction.`,
+          gateway: gatewayResult,
         });
       }
 
       // Record fresh cache entry
       semanticCache.unshift({
         hash: `h_${promptHash}`,
-        promptPreview: prompt.slice(0, 60) + (prompt.length > 60 ? '...' : ''),
-        responsePreview: `Edge processed response for query: "${prompt.slice(0, 40)}"`,
+        promptPreview: String(queryPrompt).slice(0, 60) + (String(queryPrompt).length > 60 ? '...' : ''),
+        responsePreview: `Edge processed response for query: "${String(queryPrompt).slice(0, 40)}"`,
         model,
         tokensSaved: estimatedTokens,
         costSavedUsd: Number((estimatedTokens * costPerToken).toFixed(4)),
         timestamp: 'Just now',
       });
 
-      return NextResponse.json({
-        success: true,
+      return ok({
         cached: false,
         latencyMs: Math.floor(Math.random() * 150) + 80,
         model,
@@ -184,17 +215,75 @@ export async function POST(req: NextRequest) {
         costUsd: Number((estimatedTokens * costPerToken).toFixed(4)),
         costSavedUsd: 0,
         response: `VaultHost AI Gateway successfully proxied request to ${provider}/${model}.\nTelemetry: tokens=${estimatedTokens}, cache_indexed=true, pqc_attested=true.`,
+        gateway: gatewayResult,
       });
     }
 
     if (action === 'purge_cache') {
-      semanticCache = [];
-      return NextResponse.json({ success: true, message: 'Global AI semantic cache purged successfully.' });
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_developer'],
+        },
+        targetService: 'ai_gateway',
+        actionVerb: 'purge_cache',
+        resourceUri: `ai_gateway://cache/all`,
+        parameters: { target: body.target || 'all' },
+        idempotencyKey: `ai_purge_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        semanticCache = [];
+        return ok({ message: 'Global AI semantic cache purged successfully.', gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
     }
 
-    return NextResponse.json({ success: false, error: `Unsupported action: ${action}` }, { status: 400 });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+    return err('BAD_REQUEST', `Unsupported action: ${action}`, { status: 400 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    const actorId = user?.id || 'user_active_session';
+    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
+    const actionIntent: ActionIntent = {
+      intentId: crypto.randomUUID(),
+      actor: {
+        id: actorId,
+        type: 'user',
+        tenantId,
+        roles: ['tenant_developer'],
+      },
+      targetService: 'ai_gateway',
+      actionVerb: 'purge_cache',
+      resourceUri: `ai_gateway://cache/all`,
+      parameters: { target: 'all' },
+      idempotencyKey: `ai_purge_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    const gatewayResult = await processActionIntent(actionIntent);
+    if (gatewayResult.status === 'executed') {
+      semanticCache = [];
+      return ok({ message: 'Global AI semantic cache purged successfully.', gateway: gatewayResult });
+    }
+
+    return ok(gatewayResult, { status: 202 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
   }
 }

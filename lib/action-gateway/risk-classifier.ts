@@ -6,6 +6,7 @@ export interface TenantPolicyOverride {
   targetService?: TargetService;
   actionVerbPattern?: string; // Regex or exact match, e.g. 'deploy.*' or 'delete'
   enforceMinimumTier?: RiskTier;
+  enforceTier?: RiskTier;
   denyAiAgents?: boolean;
   requireStaffApprovalForAi?: boolean;
 }
@@ -215,6 +216,13 @@ export function classifyRisk(
       blastRadius = 'critical';
       appliedOverrides.push(`Policy ${policy.id || 'ai-staff-req'}: AI agent requires staff approval`);
       reason += ' | Tenant policy requires staff approval for all AI agent mutations';
+    }
+
+    // Explicit Tier Enforcement
+    if (policy.enforceTier !== undefined) {
+      tier = policy.enforceTier;
+      appliedOverrides.push(`Policy ${policy.id || 'force-tier'}: Enforced Tier ${tier}`);
+      reason += ` | Tenant policy explicitly set Tier ${tier}`;
     }
 
     // Minimum Tier Enforcement

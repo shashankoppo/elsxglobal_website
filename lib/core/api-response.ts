@@ -26,6 +26,7 @@ export interface ResponseMeta {
   riskTier?: number;
   idempotencyKey?: string;
   signature?: string;
+  apiKeyId?: string;
 }
 
 export interface ApiResponseEnvelope<T> {
@@ -121,6 +122,7 @@ export function createSuccessResponse<T>(
     riskTier: options?.meta?.riskTier,
     idempotencyKey: options?.meta?.idempotencyKey,
     signature: options?.meta?.signature,
+    apiKeyId: options?.meta?.apiKeyId,
   };
 
   const body: ApiResponseEnvelope<T> = {
@@ -159,6 +161,7 @@ export function createErrorResponse(
     version: '2026-09-v1',
     riskTier: options?.meta?.riskTier,
     idempotencyKey: options?.meta?.idempotencyKey,
+    apiKeyId: options?.meta?.apiKeyId,
   };
 
   const body: ApiErrorEnvelope = {
@@ -179,3 +182,9 @@ export function createErrorResponse(
     headers,
   });
 }
+
+/** Canonical alias helpers */
+export const ok = createSuccessResponse;
+export const err = createErrorResponse;
+export const withStandardHeaders = buildResponseHeaders;
+

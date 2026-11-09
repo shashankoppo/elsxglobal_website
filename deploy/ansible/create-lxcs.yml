@@ -1,0 +1,100 @@
+---
+- name: Create VaultHost Service LXCs on Proxmox
+  hosts: proxmox
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Create DNS LXC (PowerDNS)
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: 200
+        hostname: dns-01
+        ostemplate: "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+        storage: local-lvm
+        disk: 20
+        memory: 1024
+        cores: 2
+        netif: '{"net0": "name=eth0,bridge=vmbr0,ip=dhcp,gw=auto"}'
+        state: present
+        pubkey: "{{ lookup('file', '~/.ssh/vaulthost_deploy.pub') }}"
+      register: dns_lxc
+
+    - name: Create Storage LXC (MinIO)
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: 201
+        hostname: storage-01
+        ostemplate: "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+        storage: local-lvm
+        disk: 500   # 500GB for object storage
+        memory: 4096
+        cores: 4
+        netif: '{"net0": "name=eth0,bridge=vmbr0,ip=dhcp,gw=auto"}'
+        state: present
+        pubkey: "{{ lookup('file', '~/.ssh/vaulthost_deploy.pub') }}"
+      register: storage_lxc
+
+    - name: Create AI Gateway LXC (LiteLLM)
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: 202
+        hostname: ai-gw-01
+        ostemplate: "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+        storage: local-lvm
+        disk: 50
+        memory: 8192  # LiteLLM + Redis needs RAM
+        cores: 4
+        netif: '{"net0": "name=eth0,bridge=vmbr0,ip=dhcp,gw=auto"}'
+        state: present
+        pubkey: "{{ lookup('file', '~/.ssh/vaulthost_deploy.pub') }}"
+      register: ai_lxc
+
+    - name: Create Tunnel LXC (frp)
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: 203
+        hostname: tunnel-01
+        ostemplate: "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+        storage: local-lvm
+        disk: 20
+        memory: 2048
+        cores: 2
+        netif: '{"net0": "name=eth0,bridge=vmbr0,ip=dhcp,gw=auto"}'
+        state: present
+        pubkey: "{{ lookup('file', '~/.ssh/vaulthost_deploy.pub') }}"
+      register: tunnel_lxc
+
+    - name: Create Queue LXC (RabbitMQ)
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        node: "{{ proxmox_node }}"
+        vmid: 204
+        hostname: queue-01
+        ostemplate: "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+        storage: local-lvm
+        disk: 50
+        memory: 4096
+        cores: 2
+        netif: '{"net0": "name=eth0,bridge=vmbr0,ip=dhcp,gw=auto"}'
+        state: present
+        pubkey: "{{ lookup('file', '~/.ssh/vaulthost_deploy.pub') }}"
+      register: queue_lxc

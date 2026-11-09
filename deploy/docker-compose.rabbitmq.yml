@@ -1,0 +1,17 @@
+# RabbitMQ Message Queue
+version: '3.8'
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI + HTTP API
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-vaulthost}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-changeme}
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+volumes:
+  rabbitmq-data:

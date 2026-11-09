@@ -1,0 +1,30 @@
+# LiteLLM AI Proxy Gateway
+version: '3.8'
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-changeme}
+      DATABASE_URL: ${LITELLM_DB_URL:-postgresql://litellm:changeme@litellm-db:5432/litellm}
+      STORE_MODEL_IN_DB: "True"
+      PORT: "4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--detailed_debug"]
+    depends_on: [litellm-db]
+
+  litellm-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: ${LITELLM_DB_PASSWORD:-changeme}
+    volumes:
+      - litellm-db:/var/lib/postgresql/data
+
+volumes:
+  litellm-db:

@@ -1,11 +1,18 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { processActionIntent } from '@/lib/action-gateway/gateway';
 import { ActionIntent } from '@/lib/action-gateway/types';
+import { ok, err } from '@/lib/core/api-response';
 
-interface Worker {
+export interface WorkerBinding {
+  type: string;
+  name: string;
+  resource: string;
+}
+
+export interface Worker {
   id: string;
   name: string;
   route: string;
@@ -16,7 +23,17 @@ interface Worker {
   cpuLimitMs: number;
   deployedAt: string;
   envVars: Record<string, string>;
-  bindings: { type: string; name: string; resource: string }[];
+  bindings: WorkerBinding[];
+}
+
+export interface WorkerLog {
+  id: string;
+  time: string;
+  method: string;
+  path: string;
+  status: number;
+  colo: string;
+  duration: string;
 }
 
 let fallbackWorkers: Worker[] = [
@@ -69,7 +86,7 @@ let fallbackWorkers: Worker[] = [
   },
 ];
 
-const DEMO_LOGS = [
+const DEMO_LOGS: WorkerLog[] = [
   { id: '1', time: '11:42:01.204', method: 'GET', path: '/auth/verify', status: 200, colo: 'BOM', duration: '1.2ms' },
   { id: '2', time: '11:42:02.819', method: 'POST', path: '/auth/token', status: 200, colo: 'BLR', duration: '2.4ms' },
   { id: '3', time: '11:42:04.102', method: 'GET', path: '/auth/verify', status: 200, colo: 'SIN', duration: '3.1ms' },
@@ -81,29 +98,55 @@ const DEMO_LOGS = [
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const workerId = searchParams.get('workerId');
+    const workerId = searchParams.get('workerId') || searchParams.get('name') || searchParams.get('id');
     const logsOnly = searchParams.get('logs');
 
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+
     if (logsOnly) {
-      return NextResponse.json({
-        success: true,
+      return ok({
         logs: DEMO_LOGS,
       });
     }
 
+    let workers = fallbackWorkers;
+    try {
+      const { data: dbWorkers, error } = await supabase
+        .from('cloud_workers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && dbWorkers && dbWorkers.length > 0) {
+        workers = dbWorkers.map((w: any) => ({
+          id: w.id,
+          name: w.name,
+          route: w.route_pattern || w.route,
+          status: w.status || 'running',
+          runtime: w.runtime || 'v8_isolate',
+          memoryLimitMb: w.memory_limit_mb || 128,
+          cpuLimitMs: w.cpu_limit_ms || 50,
+          deployedAt: w.updated_at ? new Date(w.updated_at).toLocaleTimeString() : 'Recently',
+          envVars: w.env_vars || {},
+          bindings: w.bindings || [],
+          code: w.script_code || '',
+        }));
+      }
+    } catch {}
+
     if (workerId) {
-      const worker = fallbackWorkers.find(w => w.id === workerId);
-      if (!worker) return NextResponse.json({ success: false, error: 'Worker not found' }, { status: 404 });
-      return NextResponse.json({ success: true, worker });
+      const worker = workers.find(w => w.id === workerId || w.name === workerId);
+      if (!worker) return err('NOT_FOUND', 'Worker not found', { status: 404 });
+      return ok({ worker, user: user ? { id: user.id, email: user.email } : null });
     }
 
-    return NextResponse.json({
-      success: true,
-      workers: fallbackWorkers,
+    return ok({
+      workers,
+      user: user ? { id: user.id, email: user.email } : null,
     });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
   }
 }
 
@@ -112,25 +155,32 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, worker, code, envVars, options, intent } = body;
 
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    const actorId = user?.id || 'user_active_session';
+    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
     if (intent) {
       const result = await processActionIntent(intent as ActionIntent, options);
-      return NextResponse.json(result);
+      return ok(result);
     }
 
     if (action === 'deploy_worker') {
-      const { name, route, scriptCode = code } = worker || {};
+      const name = worker?.name || body.name;
+      const route = worker?.route || body.route || body.routes || 'api.vaulthost.cloud/*';
+      const scriptCode = worker?.scriptCode || worker?.script || code || body.script || '// VaultHost edge worker';
 
       if (!name || !route) {
-        return NextResponse.json({ success: false, error: 'Worker name and route pattern are required.' }, { status: 400 });
+        return err('BAD_REQUEST', 'Worker name and route pattern are required.', { status: 400 });
       }
 
       // Route through Action Gateway
       const actionIntent: ActionIntent = {
         intentId: crypto.randomUUID(),
         actor: {
-          id: 'user_active_session',
+          id: actorId,
           type: 'user',
-          tenantId: 'ten_portal_default',
+          tenantId,
           roles: ['tenant_developer'],
         },
         targetService: 'compute',
@@ -154,9 +204,9 @@ export async function POST(req: NextRequest) {
           memoryLimitMb: 128,
           cpuLimitMs: 50,
           deployedAt: 'Just now',
-          envVars: envVars || { ENVIRONMENT: 'production' },
+          envVars: envVars || (existingIdx >= 0 ? fallbackWorkers[existingIdx].envVars : { ENVIRONMENT: 'production' }),
           bindings: existingIdx >= 0 ? fallbackWorkers[existingIdx].bindings : [],
-          code: scriptCode || '// VaultHost edge worker',
+          code: scriptCode,
         };
 
         if (existingIdx >= 0) {
@@ -165,29 +215,143 @@ export async function POST(req: NextRequest) {
           fallbackWorkers.push(updatedWorker);
         }
 
-        return NextResponse.json({
-          success: true,
+        try {
+          await supabase.from('cloud_workers').upsert({
+            tenant_id: tenantId,
+            name,
+            route_pattern: route,
+            script_code: scriptCode,
+            status: 'running',
+          });
+        } catch {}
+
+        return ok({
           status: 'executed',
           worker: updatedWorker,
           gateway: gatewayResult,
         });
       }
 
-      return NextResponse.json(gatewayResult, { status: 202 });
+      return ok(gatewayResult, { status: 202 });
     }
 
-    if (action === 'suspend_worker') {
-      const { id } = worker;
-      const target = fallbackWorkers.find(w => w.id === id);
-      if (target) {
-        target.status = target.status === 'suspended' ? 'running' : 'suspended';
+    if (action === 'suspend_worker' || action === 'resume_worker') {
+      const id = worker?.id || body.id || worker?.name || body.name;
+      if (!id) {
+        return err('BAD_REQUEST', 'Worker id or name is required', { status: 400 });
       }
-      return NextResponse.json({ success: true, status: target?.status });
+
+      const actionVerb = action === 'resume_worker' ? 'resume_worker' : 'suspend_worker';
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_developer'],
+        },
+        targetService: 'compute',
+        actionVerb,
+        resourceUri: `compute://workers/${id}`,
+        parameters: { id, action: actionVerb },
+        idempotencyKey: `worker_toggle_${Date.now()}_${id}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        const target = fallbackWorkers.find(w => w.id === id || w.name === id);
+        if (target) {
+          target.status = action === 'resume_worker' ? 'running' : (target.status === 'suspended' ? 'running' : 'suspended');
+        }
+        return ok({ status: target?.status, gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
     }
 
-    return NextResponse.json({ success: false, error: `Unsupported action: ${action}` }, { status: 400 });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+    if (action === 'delete_worker') {
+      const id = worker?.id || body.id || worker?.name || body.name;
+      if (!id) {
+        return err('BAD_REQUEST', 'Worker id or name is required', { status: 400 });
+      }
+
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_developer'],
+        },
+        targetService: 'compute',
+        actionVerb: 'delete_worker',
+        resourceUri: `compute://workers/${id}`,
+        parameters: { id },
+        idempotencyKey: `worker_del_${Date.now()}_${id}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        fallbackWorkers = fallbackWorkers.filter(w => w.id !== id && w.name !== id);
+        try {
+          await supabase.from('cloud_workers').delete().or(`id.eq.${id},name.eq.${id}`);
+        } catch {}
+        return ok({ message: `Worker ${id} deleted.`, gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
+    }
+
+    return err('BAD_REQUEST', `Unsupported action: ${action}`, { status: 400 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id') || searchParams.get('name');
+    if (!id) {
+      return err('BAD_REQUEST', 'Worker id or name is required', { status: 400 });
+    }
+
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    const actorId = user?.id || 'user_active_session';
+    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
+    const actionIntent: ActionIntent = {
+      intentId: crypto.randomUUID(),
+      actor: {
+        id: actorId,
+        type: 'user',
+        tenantId,
+        roles: ['tenant_developer'],
+      },
+      targetService: 'compute',
+      actionVerb: 'delete_worker',
+      resourceUri: `compute://workers/${id}`,
+      parameters: { id },
+      idempotencyKey: `worker_del_${Date.now()}_${id}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    const gatewayResult = await processActionIntent(actionIntent);
+    if (gatewayResult.status === 'executed') {
+      fallbackWorkers = fallbackWorkers.filter(w => w.id !== id && w.name !== id);
+      try {
+        await supabase.from('cloud_workers').delete().or(`id.eq.${id},name.eq.${id}`);
+      } catch {}
+      return ok({ message: `Worker ${id} deleted.`, gateway: gatewayResult });
+    }
+
+    return ok(gatewayResult, { status: 202 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
   }
 }

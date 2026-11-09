@@ -10,6 +10,10 @@ export interface ProvisioningAdapter {
   createService(serviceId: string, params: Record<string, any>): Promise<{ success: boolean; data?: any; error?: string }>;
   suspendService(serviceId: string): Promise<{ success: boolean; error?: string }>;
   terminateService(serviceId: string): Promise<{ success: boolean; error?: string }>;
+  restartService?(serviceId: string): Promise<{ success: boolean; error?: string }>;
+  snapshotService?(serviceId: string, snapshotName: string): Promise<{ success: boolean; data?: any; error?: string }>;
+  listSnapshots?(serviceId: string): Promise<{ success: boolean; data?: any; error?: string }>;
+  getMetrics?(serviceId: string): Promise<{ success: boolean; data?: any; error?: string }>;
 }
 
 import { PterodactylAdapter } from './pterodactyl';
@@ -17,6 +21,8 @@ import { ProxmoxAdapter } from './proxmox';
 import { HestiaCPAdapter } from './hestiacp';
 import { CyberPanelAdapter } from './cyberpanel';
 import { createClient } from '@supabase/supabase-js';
+
+export { ProvisioningEngine, type ServiceMetrics } from './ProvisioningEngine';
 
 /**
  * Triggered by the Fulfillment Engine (Phase 2)

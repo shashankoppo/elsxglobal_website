@@ -1,0 +1,15 @@
+# VaultHost Full Self-Hosted Stack
+# Usage: docker compose -f docker-compose.full-stack.yml up -d
+version: '3.8'
+
+include:
+  # PowerDNS
+  - docker-compose.dns.yml
+  # MinIO
+  - docker-compose.storage.yml
+  # LiteLLM
+  - docker-compose.ai-gateway.yml
+  # FRP Tunnels
+  - docker-compose.tunnel.yml
+  # RabbitMQ Queues
+  - docker-compose.rabbitmq.yml

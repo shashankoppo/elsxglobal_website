@@ -1,0 +1,21 @@
+# MinIO Object Storage (S3-compatible)
+version: '3.8'
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_DOMAIN: ${MINIO_DOMAIN:-storage.vaulthost.cloud}
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+volumes:
+  minio-data:

@@ -1,10 +1,12 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { createServerClient } from '@/lib/supabase/server';
 import { processActionIntent } from '@/lib/action-gateway/gateway';
 import { ActionIntent } from '@/lib/action-gateway/types';
+import { ok, err } from '@/lib/core/api-response';
 
-interface FirewallRule {
+export interface FirewallRule {
   id: string;
   type: 'IP_CIDR' | 'COUNTRY' | 'ASN';
   value: string;
@@ -12,6 +14,19 @@ interface FirewallRule {
   hits24h: number;
   description: string;
   enabled: boolean;
+}
+
+export interface AttackLog {
+  id: string;
+  timestamp: string;
+  targetDomain: string;
+  vector: string;
+  peakRate: string;
+  scrubbingCenter: string;
+  layer: string;
+  status: string;
+  mitigationMethod: string;
+  packetsDropped: string;
 }
 
 let underAttackMode = false;
@@ -22,7 +37,7 @@ let firewallRules: FirewallRule[] = [
   { id: 'fwr-03', type: 'COUNTRY', value: 'RU, CN (Tor Exit)', action: 'JS Challenge', hits24h: 91400, description: 'Non-domestic sensitive endpoint challenge', enabled: true },
 ];
 
-const ATTACK_LOGS = [
+const ATTACK_LOGS: AttackLog[] = [
   {
     id: 'atk-901',
     timestamp: '2 min ago',
@@ -51,8 +66,10 @@ const ATTACK_LOGS = [
 
 export async function GET() {
   try {
-    return NextResponse.json({
-      success: true,
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+
+    return ok({
       telemetry: {
         currentScrubbingGbps: 340,
         attacksBlockedToday: 1842,
@@ -62,10 +79,11 @@ export async function GET() {
       },
       attackLogs: ATTACK_LOGS,
       firewallRules,
+      user: user ? { id: user.id, email: user.email } : null,
     });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
   }
 }
 
@@ -74,53 +92,192 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, rule, enabled, options, intent } = body;
 
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    const actorId = user?.id || 'user_active_session';
+    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
     if (intent) {
       const result = await processActionIntent(intent as ActionIntent, options);
-      return NextResponse.json(result);
+      return ok(result);
     }
 
     if (action === 'toggle_under_attack') {
-      underAttackMode = typeof enabled === 'boolean' ? enabled : !underAttackMode;
-      return NextResponse.json({ success: true, underAttackMode });
+      const targetState = typeof enabled === 'boolean' ? enabled : !underAttackMode;
+
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_admin'],
+        },
+        targetService: 'network',
+        actionVerb: 'toggle_under_attack',
+        resourceUri: `security://firewall/under_attack`,
+        parameters: { enabled: targetState },
+        idempotencyKey: `sec_attack_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        underAttackMode = targetState;
+        return ok({ underAttackMode, gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
     }
 
     if (action === 'add_rule') {
       const { type, value, action: ruleAction = 'Block', description = 'Manual rule' } = rule || {};
       if (!type || !value) {
-        return NextResponse.json({ success: false, error: 'Rule type and value are required.' }, { status: 400 });
+        return err('BAD_REQUEST', 'Rule type and value are required.', { status: 400 });
       }
 
-      const newRule: FirewallRule = {
-        id: `fwr-${Date.now()}`,
-        type,
-        value,
-        action: ruleAction,
-        hits24h: 0,
-        description,
-        enabled: true,
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_admin'],
+        },
+        targetService: 'network',
+        actionVerb: 'add_firewall_rule',
+        resourceUri: `security://firewall/rules/${encodeURIComponent(value)}`,
+        parameters: { type, value, action: ruleAction, description },
+        idempotencyKey: `sec_rule_${Date.now()}_${encodeURIComponent(value)}`,
+        createdAt: new Date().toISOString(),
       };
-      firewallRules.push(newRule);
-      return NextResponse.json({ success: true, rule: newRule });
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        const newRule: FirewallRule = {
+          id: `fwr-${Date.now()}`,
+          type,
+          value,
+          action: ruleAction,
+          hits24h: 0,
+          description,
+          enabled: true,
+        };
+        firewallRules.push(newRule);
+        return ok({ rule: newRule, gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
     }
 
     if (action === 'toggle_rule') {
       const { id } = body;
       const target = firewallRules.find(r => r.id === id);
-      if (target) {
-        target.enabled = !target.enabled;
+      if (!target) {
+        return err('NOT_FOUND', 'Rule not found', { status: 404 });
       }
-      return NextResponse.json({ success: true, enabled: target?.enabled });
+
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_admin'],
+        },
+        targetService: 'network',
+        actionVerb: 'toggle_firewall_rule',
+        resourceUri: `security://firewall/rules/${id}`,
+        parameters: { id, nextEnabled: !target.enabled },
+        idempotencyKey: `sec_toggle_${Date.now()}_${id}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        target.enabled = !target.enabled;
+        return ok({ enabled: target.enabled, gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
     }
 
     if (action === 'delete_rule') {
       const { id } = body;
-      firewallRules = firewallRules.filter(r => r.id !== id);
-      return NextResponse.json({ success: true, message: `Rule ${id} deleted.` });
+      if (!id) {
+        return err('BAD_REQUEST', 'Rule ID is required', { status: 400 });
+      }
+
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_admin'],
+        },
+        targetService: 'network',
+        actionVerb: 'delete_firewall_rule',
+        resourceUri: `security://firewall/rules/${id}`,
+        parameters: { id },
+        idempotencyKey: `sec_del_${Date.now()}_${id}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        firewallRules = firewallRules.filter(r => r.id !== id);
+        return ok({ message: `Rule ${id} deleted.`, gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
     }
 
-    return NextResponse.json({ success: false, error: `Unsupported action: ${action}` }, { status: 400 });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+    return err('BAD_REQUEST', `Unsupported action: ${action}`, { status: 400 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return err('BAD_REQUEST', 'Rule ID is required', { status: 400 });
+    }
+
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    const actorId = user?.id || 'user_active_session';
+    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
+    const actionIntent: ActionIntent = {
+      intentId: crypto.randomUUID(),
+      actor: {
+        id: actorId,
+        type: 'user',
+        tenantId,
+        roles: ['tenant_admin'],
+      },
+      targetService: 'network',
+      actionVerb: 'delete_firewall_rule',
+      resourceUri: `security://firewall/rules/${id}`,
+      parameters: { id },
+      idempotencyKey: `sec_del_${Date.now()}_${id}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    const gatewayResult = await processActionIntent(actionIntent);
+    if (gatewayResult.status === 'executed') {
+      firewallRules = firewallRules.filter(r => r.id !== id);
+      return ok({ message: `Rule ${id} deleted.`, gateway: gatewayResult });
+    }
+
+    return ok(gatewayResult, { status: 202 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
   }
 }

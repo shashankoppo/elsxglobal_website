@@ -1,0 +1,20 @@
+# Coolify - Self-hosted Vercel/Netlify alternative
+version: '3.8'
+services:
+  coolify:
+    image: ghcr.io/coollabsio/coolify:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"   # Coolify web UI
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - coolify-data:/data/coolify
+    environment:
+      APP_ENV: production
+      DB_CONNECTION: sqlite
+      APP_KEY: ${COOLIFY_APP_KEY:-base64:changeme}
+      APP_URL: ${COOLIFY_URL:-http://pages.vaulthost.cloud:8000}
+      QUEUE_CONNECTION: sync
+      COOLIFY_AUTO_UPDATE: disabled
+volumes:
+  coolify-data:

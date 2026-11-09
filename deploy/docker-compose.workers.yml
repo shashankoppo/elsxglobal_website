@@ -1,0 +1,20 @@
+# workerd - Cloudflare's open source Edge Workers runtime
+version: '3.8'
+services:
+  workerd-api:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "8787:8787"  # workers management API
+    volumes:
+      - workerd-configs:/app/workers
+      - ./workerd-api-server.js:/app/server.js
+    command: ["node", "server.js"]
+    environment:
+      PORT: "8787"
+      WORKERS_DIR: "/app/workers"
+      WORKERD_BIN: "/usr/local/bin/workerd"
+
+volumes:
+  workerd-configs:

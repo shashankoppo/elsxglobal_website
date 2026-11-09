@@ -1,11 +1,12 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { processActionIntent } from '@/lib/action-gateway/gateway';
 import { ActionIntent } from '@/lib/action-gateway/types';
+import { ok, err } from '@/lib/core/api-response';
 
-interface Bucket {
+export interface Bucket {
   id: string;
   name: string;
   region: string;
@@ -15,6 +16,14 @@ interface Bucket {
   corsEnabled: boolean;
   created: string;
   egressCostSavedUsd: number;
+}
+
+export interface StorageCredential {
+  id: string;
+  accessKey: string;
+  name: string;
+  permissions: string;
+  lastUsed: string;
 }
 
 let fallbackBuckets: Bucket[] = [
@@ -53,7 +62,7 @@ let fallbackBuckets: Bucket[] = [
   },
 ];
 
-let fallbackKeys = [
+let fallbackKeys: StorageCredential[] = [
   { id: 'key-01', accessKey: 'vh_r2_live_9f83a8b27c1094ea', name: 'Production Backend API', permissions: 'Read-Write', lastUsed: '3 min ago' },
   { id: 'key-02', accessKey: 'vh_r2_back_3e21d019fba82c91', name: 'Automated Backup Agent', permissions: 'Admin', lastUsed: '4 hours ago' },
 ];
@@ -61,58 +70,87 @@ let fallbackKeys = [
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const bucketName = searchParams.get('bucket');
+    const bucketName = searchParams.get('bucket') || searchParams.get('name');
 
-    const totalStorageGb = fallbackBuckets.reduce((sum, b) => sum + b.sizeGb, 0);
-    const totalObjects = fallbackBuckets.reduce((sum, b) => sum + b.objects, 0);
-    const totalEgressSaved = fallbackBuckets.reduce((sum, b) => sum + b.egressCostSavedUsd, 0);
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
 
-    return NextResponse.json({
-      success: true,
+    // Try Supabase first
+    let buckets = fallbackBuckets;
+    try {
+      const { data: dbBuckets, error } = await supabase
+        .from('cloud_storage_buckets')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && dbBuckets && dbBuckets.length > 0) {
+        buckets = dbBuckets.map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          region: b.region || 'Auto (Anycast Edge)',
+          objects: b.objects_count || 0,
+          sizeGb: b.size_bytes ? Number((b.size_bytes / (1024 * 1024 * 1024)).toFixed(2)) : 0,
+          publicAccess: Boolean(b.public_access),
+          corsEnabled: Boolean(b.cors_enabled),
+          created: b.created_at ? new Date(b.created_at).toISOString().split('T')[0] : '2026-01-01',
+          egressCostSavedUsd: b.egress_saved_usd || 0,
+        }));
+      }
+    } catch {}
+
+    const totalStorageGb = buckets.reduce((sum, b) => sum + b.sizeGb, 0);
+    const totalObjects = buckets.reduce((sum, b) => sum + b.objects, 0);
+    const totalEgressSaved = buckets.reduce((sum, b) => sum + b.egressCostSavedUsd, 0);
+
+    return ok({
       stats: {
-        totalBuckets: fallbackBuckets.length,
+        totalBuckets: buckets.length,
         totalStorageGb: totalStorageGb.toFixed(1),
         totalObjects: totalObjects.toLocaleString(),
         totalEgressSavedUsd: totalEgressSaved.toFixed(2),
         egressFee: '$0.00 (Zero Egress Network)',
       },
-      buckets: fallbackBuckets,
+      buckets,
       credentials: fallbackKeys,
-      activeBucket: bucketName ? fallbackBuckets.find(b => b.name === bucketName) : null,
+      activeBucket: bucketName ? buckets.find(b => b.name === bucketName) || null : null,
+      user: user ? { id: user.id, email: user.email } : null,
     });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, bucket, options, intent } = body;
+    const { action, bucket, name: rawName, options, intent } = body;
+
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    const actorId = user?.id || 'user_active_session';
+    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
 
     if (intent) {
       const result = await processActionIntent(intent as ActionIntent, options);
-      return NextResponse.json(result);
+      return ok(result);
     }
 
     if (action === 'create_bucket') {
-      const { name, region = 'Auto (Anycast Edge)', publicAccess = false } = bucket || {};
+      const name = bucket?.name || rawName;
+      const region = bucket?.region || body.region || 'Auto (Anycast Edge)';
+      const publicAccess = bucket?.publicAccess ?? body.publicAccess ?? false;
 
       if (!name || !/^[a-z0-9.-]{3,63}$/.test(name)) {
-        return NextResponse.json({
-          success: false,
-          error: 'Bucket name must be 3-63 lowercase alphanumeric characters, dashes, or dots.',
-        }, { status: 400 });
+        return err('BAD_REQUEST', 'Bucket name must be 3-63 lowercase alphanumeric characters, dashes, or dots.', { status: 400 });
       }
 
-      // Action Gateway intent
       const actionIntent: ActionIntent = {
         intentId: crypto.randomUUID(),
         actor: {
-          id: 'user_active_session',
+          id: actorId,
           type: 'user',
-          tenantId: 'ten_portal_default',
+          tenantId,
           roles: ['tenant_admin'],
         },
         targetService: 'storage',
@@ -139,38 +177,175 @@ export async function POST(req: NextRequest) {
         };
         fallbackBuckets.push(newBucket);
 
-        return NextResponse.json({
-          success: true,
+        try {
+          await supabase.from('cloud_storage_buckets').insert({
+            tenant_id: tenantId,
+            name,
+            region,
+            public_access: Boolean(publicAccess),
+            cors_enabled: true,
+          });
+        } catch {}
+
+        return ok({
           status: 'executed',
           bucket: newBucket,
           gateway: gatewayResult,
         });
       }
 
-      return NextResponse.json(gatewayResult, { status: 202 });
+      return ok(gatewayResult, { status: 202 });
+    }
+
+    if (action === 'delete_bucket') {
+      const name = bucket?.name || rawName || body.name || body.id;
+      if (!name) {
+        return err('BAD_REQUEST', 'Bucket name is required for deletion', { status: 400 });
+      }
+
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_admin'],
+        },
+        targetService: 'storage',
+        actionVerb: 'delete_bucket',
+        resourceUri: `storage://r2/${name}`,
+        parameters: { name },
+        idempotencyKey: `bucket_del_${Date.now()}_${name}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        fallbackBuckets = fallbackBuckets.filter(b => b.name !== name && b.id !== name);
+        try {
+          await supabase.from('cloud_storage_buckets').delete().or(`name.eq.${name},id.eq.${name}`);
+        } catch {}
+        return ok({ message: `Bucket ${name} deleted.`, gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
     }
 
     if (action === 'create_credential') {
-      const newKey = {
-        id: `key-${Date.now()}`,
-        accessKey: `vh_r2_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
-        name: body.name || 'New S3 Access Key',
-        permissions: body.permissions || 'Read-Write',
-        lastUsed: 'Never',
+      const credName = body.name || 'New S3 Access Key';
+      const permissions = body.permissions || 'Read-Write';
+
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_admin'],
+        },
+        targetService: 'storage',
+        actionVerb: 'create_credential',
+        resourceUri: `storage://credentials/${encodeURIComponent(credName)}`,
+        parameters: { name: credName, permissions },
+        idempotencyKey: `storage_key_${Date.now()}`,
+        createdAt: new Date().toISOString(),
       };
-      fallbackKeys.push(newKey);
-      return NextResponse.json({ success: true, key: newKey });
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        const newKey: StorageCredential = {
+          id: `key-${Date.now()}`,
+          accessKey: `vh_r2_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
+          name: credName,
+          permissions,
+          lastUsed: 'Never',
+        };
+        fallbackKeys.push(newKey);
+        return ok({ key: newKey, gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
     }
 
     if (action === 'revoke_credential') {
       const { id } = body;
-      fallbackKeys = fallbackKeys.filter(k => k.id !== id);
-      return NextResponse.json({ success: true, message: `Key ${id} revoked.` });
+      if (!id) {
+        return err('BAD_REQUEST', 'Credential ID is required', { status: 400 });
+      }
+
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: {
+          id: actorId,
+          type: 'user',
+          tenantId,
+          roles: ['tenant_admin'],
+        },
+        targetService: 'storage',
+        actionVerb: 'revoke_credential',
+        resourceUri: `storage://credentials/${id}`,
+        parameters: { id },
+        idempotencyKey: `storage_revoke_${Date.now()}_${id}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, options);
+      if (gatewayResult.status === 'executed') {
+        fallbackKeys = fallbackKeys.filter(k => k.id !== id);
+        return ok({ message: `Key ${id} revoked.`, gateway: gatewayResult });
+      }
+
+      return ok(gatewayResult, { status: 202 });
     }
 
-    return NextResponse.json({ success: false, error: `Unsupported action: ${action}` }, { status: 400 });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+    return err('BAD_REQUEST', `Unsupported action: ${action}`, { status: 400 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const name = searchParams.get('name') || searchParams.get('bucket') || searchParams.get('id');
+    if (!name) {
+      return err('BAD_REQUEST', 'Bucket name or ID is required', { status: 400 });
+    }
+
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    const actorId = user?.id || 'user_active_session';
+    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
+    const actionIntent: ActionIntent = {
+      intentId: crypto.randomUUID(),
+      actor: {
+        id: actorId,
+        type: 'user',
+        tenantId,
+        roles: ['tenant_admin'],
+      },
+      targetService: 'storage',
+      actionVerb: 'delete_bucket',
+      resourceUri: `storage://r2/${name}`,
+      parameters: { name },
+      idempotencyKey: `bucket_del_${Date.now()}_${name}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    const gatewayResult = await processActionIntent(actionIntent);
+    if (gatewayResult.status === 'executed') {
+      fallbackBuckets = fallbackBuckets.filter(b => b.name !== name && b.id !== name);
+      try {
+        await supabase.from('cloud_storage_buckets').delete().or(`name.eq.${name},id.eq.${name}`);
+      } catch {}
+      return ok({ message: `Bucket ${name} deleted.`, gateway: gatewayResult });
+    }
+
+    return ok(gatewayResult, { status: 202 });
+  } catch (caughtErr: unknown) {
+    const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
+    return err('INTERNAL_ERROR', errorMsg, { status: 500 });
   }
 }

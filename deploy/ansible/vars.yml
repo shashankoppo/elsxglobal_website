@@ -1,0 +1,22 @@
+# EDIT THESE before running playbooks
+proxmox_host: "YOUR_PROXMOX_IP"
+proxmox_api_user: "root@pam"
+proxmox_token_id: "vaulthost"
+proxmox_token_secret: "YOUR_TOKEN_SECRET"
+proxmox_node: "pve"
+
+# Proxmox host and LXC IP mappings (used in inventory.yml)
+proxmox_ip: "192.168.1.100"
+dns_lxc_ip: "192.168.1.200"
+storage_lxc_ip: "192.168.1.201"
+ai_lxc_ip: "192.168.1.202"
+tunnel_lxc_ip: "192.168.1.203"
+queue_lxc_ip: "192.168.1.204"
+
+# Domain & Service Endpoints
+base_domain: "vaulthost.cloud"
+dns_subdomain: "ns1"
+storage_subdomain: "storage"
+ai_subdomain: "ai"
+tunnel_subdomain: "tunnel"
+queue_subdomain: "queue"

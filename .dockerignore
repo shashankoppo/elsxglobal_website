@@ -1,20 +1,50 @@
-# Docker ignore
+# ─── Node / Next.js build artefacts ───────────────────────────────────────────
 node_modules
-npm-debug.log
 .next
+.next-prod
+out
 dist
-.git
+build
+
+# ─── Environment & secrets ────────────────────────────────────────────────────
 .env
-.env.local
-.env.production
-.env.development
-.DS_Store
-*.md
-!README.md
+.env.*
+!.env.example
+
+# ─── Dev tooling ──────────────────────────────────────────────────────────────
+.git
+.gitignore
 .vscode
 .idea
-.vercel
-.netlify
+.editorconfig
+*.log
+npm-debug.log*
 coverage
 .nyc_output
-*.log
+
+# ─── OS cruft ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Local Supabase (not needed to build the Next.js app) ─────────────────────
+supabase-docker
+supabase-production
+supabase/.branches
+supabase/.temp
+
+# ─── Deploy / infra configs (not needed in Next.js image) ─────────────────────
+deploy
+docker
+
+# ─── Docs & scratch ───────────────────────────────────────────────────────────
+docs
+scratch
+*.md
+!README.md
+
+# ─── Test artefacts ───────────────────────────────────────────────────────────
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx

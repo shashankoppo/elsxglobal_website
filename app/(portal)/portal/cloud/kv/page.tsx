@@ -132,7 +132,7 @@ export default function KvManagementPage() {
   };
 
   useEffect(() => {
-    loadNamespaces();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -556,9 +556,11 @@ export default function KvManagementPage() {
 
         <div className="p-3.5 rounded-xl bg-ink border border-hairline font-mono text-xs text-green-400 leading-relaxed overflow-x-auto">
           <code>
-            <span className="text-text-muted-v4">// Read from Edge KV</span><br />
-            const value = await env.{selectedNamespace ? selectedNamespace.name.toUpperCase().replace(/-/g, '_') : 'MY_KV'}.get(&apos;your-key&apos;, &apos;json&apos;);<br /><br />
-            <span className="text-text-muted-v4">// Write with 1-hour TTL</span><br />
+            {/* Read from Edge KV */}
+            <span className="text-green-500">{'// Read from Edge KV'}</span><br />
+            {'const value = await env.'}{selectedNamespace ? selectedNamespace.name.toUpperCase().replace(/-/g, '_') : 'MY_KV'}{".get('your-key', 'json');"}<br /><br />
+            {/* Write with 1-hour TTL */}
+            <span className="text-green-500">{'// Write with 1-hour TTL'}</span><br />
             await env.{selectedNamespace ? selectedNamespace.name.toUpperCase().replace(/-/g, '_') : 'MY_KV'}.put(&apos;your-key&apos;, JSON.stringify(data), &#123; expirationTtl: 3600 &#125;);
           </code>
         </div>

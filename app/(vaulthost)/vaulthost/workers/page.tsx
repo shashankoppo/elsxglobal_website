@@ -137,70 +137,99 @@ export default function VaultWorkersPage() {
       </div>
 
       {/* Pricing */}
-      <div className="v4-section bg-ink-surface-2 border-y border-hairline">
+      <section className="v4-section border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <h2 className="v4-display text-text-primary-v4 text-center mb-16">Simple, predictable pricing</h2>
-          </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Free */}
-            <ScrollReveal>
-              <div className="v4-panel p-8 rounded-2xl flex flex-col h-full">
-                <h3 className="text-2xl font-medium text-text-primary-v4 mb-2">Free</h3>
-                <div className="text-4xl font-bold text-text-primary-v4 mb-6">₹0<span className="text-lg text-text-muted-v4 font-normal">/mo</span></div>
-                <ul className="space-y-4 mb-8 flex-1">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-5 h-5 text-signal mr-3 flex-shrink-0" /> 100K requests / day</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-5 h-5 text-signal mr-3 flex-shrink-0" /> 10ms CPU time per request</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-5 h-5 text-signal mr-3 flex-shrink-0" /> Community support</li>
+          <div className="text-center mb-12">
+            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {/* Free tier */}
+            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+              <div>
+                <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Get started with edge compute at zero cost for side projects.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 100K requests / day</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10ms CPU limit per request</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Basic KV store access</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Global Anycast across 300+ PoPs</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
                 </ul>
-                <Link href="/portal" className="v4-btn-secondary w-full justify-center rounded-btn py-3">Get Started</Link>
               </div>
-            </ScrollReveal>
-            
-            {/* Pro */}
-            <ScrollReveal delay={0.1}>
-              <div className="v4-panel p-8 rounded-2xl flex flex-col h-full border-signal border relative">
-                <div className="absolute top-0 right-8 -translate-y-1/2 bg-signal text-ink text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Most Popular</div>
-                <h3 className="text-2xl font-medium text-text-primary-v4 mb-2">Pro</h3>
-                <div className="text-4xl font-bold text-text-primary-v4 mb-6">₹149<span className="text-lg text-text-muted-v4 font-normal">/mo</span></div>
-                <ul className="space-y-4 mb-8 flex-1">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-5 h-5 text-signal mr-3 flex-shrink-0" /> Unlimited requests</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-5 h-5 text-signal mr-3 flex-shrink-0" /> 30s CPU time per request</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-5 h-5 text-signal mr-3 flex-shrink-0" /> Email support</li>
+              <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
+            </div>
+            {/* Pro tier — highlighted */}
+            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
+              <div>
+                <div className="text-signal text-sm font-medium mb-2">PRO</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹699 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Production-ready edge compute for growing web apps and APIs.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited requests (fair use)</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 30s CPU limit per request</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> KV + Storage + D1 native bindings</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Custom domains &amp; SSL</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Priority email &amp; ticket support</li>
                 </ul>
-                <Link href="/portal" className="v4-btn-primary w-full justify-center rounded-btn py-3">Upgrade to Pro</Link>
               </div>
-            </ScrollReveal>
-
-            {/* Enterprise */}
-            <ScrollReveal delay={0.2}>
-              <div className="v4-panel p-8 rounded-2xl flex flex-col h-full">
-                <h3 className="text-2xl font-medium text-text-primary-v4 mb-2">Enterprise</h3>
-                <div className="text-4xl font-bold text-text-primary-v4 mb-6">Custom</div>
-                <ul className="space-y-4 mb-8 flex-1">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-5 h-5 text-signal mr-3 flex-shrink-0" /> Custom SLA</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-5 h-5 text-signal mr-3 flex-shrink-0" /> Dedicated account manager</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-5 h-5 text-signal mr-3 flex-shrink-0" /> Custom deployment options</li>
+              <Link href="/vaulthost/checkout?plan=workers-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
+            </div>
+            {/* Business tier */}
+            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+              <div>
+                <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹2,499 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Enterprise-grade edge compute with guaranteed 99.999% SLA.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited requests</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> No CPU execution limits</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> All bindings + Private peering</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 99.999% uptime SLA guarantee</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 24/7 dedicated support engineer</li>
                 </ul>
-                <Link href="/contact" className="v4-btn-secondary w-full justify-center rounded-btn py-3">Contact Sales</Link>
               </div>
-            </ScrollReveal>
+              <Link href="/vaulthost/checkout?plan=workers-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
+            </div>
+          </div>
+          {/* Competitor comparison */}
+          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
+            <table className="w-full text-sm">
+              <thead className="bg-ink-surface-2 text-text-secondary-v4">
+                <tr>
+                  <th className="py-3 px-4 text-left font-medium">Provider</th>
+                  <th className="py-3 px-4 text-left font-medium">Pricing</th>
+                  <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                <tr className="bg-signal/5">
+                  <td className="py-3 px-4 font-semibold text-signal">VaultHost Workers</td>
+                  <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹699/mo Pro</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">&lt;5ms latency, zero cold starts, 300+ edge locations in India &amp; global</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">Cloudflare Workers</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹1,750/mo ($20)</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Paid plan baseline for pro apps with usage multipliers</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">AWS Lambda@Edge</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹4,500+/mo</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹35/M requests + CPU duration + outbound data egress fees</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">Vercel Edge Functions</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹1,650/mo ($20/seat)</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Per-seat license fees + limited CPU execution duration</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
-
-      {/* Premium CTA */}
-      <div className="v4-section" style={{ background: 'linear-gradient(135deg, rgba(10,18,36,0.98), rgba(6,12,24,1))' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-16">
-          <ScrollReveal>
-            <h2 className="v4-display text-white mb-6">Deploy your first Worker in 60 seconds</h2>
-            <p className="text-text-secondary-v4 max-w-2xl mx-auto mb-10 text-lg">Join thousands of developers building fast, global applications without managing servers.</p>
-            <Link href="/portal" className="v4-btn-primary inline-flex items-center rounded-btn px-8 py-4 text-lg">
-              Get Started for Free <Terminal className="ml-2 w-5 h-5" />
-            </Link>
-          </ScrollReveal>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

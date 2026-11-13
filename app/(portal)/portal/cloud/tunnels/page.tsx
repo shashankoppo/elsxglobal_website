@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Lock, Plus, Terminal, Activity, Copy, Check,
-  Shield, Server, ArrowUpRight, CheckCircle2, Trash2
+  Lock, Plus, Terminal, Activity, Copy, Check, Download,
+  Shield, Server, ArrowUpRight, CheckCircle2, Trash2, FileText, X
 } from 'lucide-react';
 import { PanelCard } from '@/components/ui/panel-card';
 
@@ -14,9 +14,10 @@ const INITIAL_TUNNELS = [
     name: 'homelab-k8s-ingress',
     hostname: 'k8s.elsxglobal.cloud',
     localTarget: 'http://localhost:8080',
-    status: 'HEALTHY',
+    status: 'ONLINE',
     uptime: '14 days',
     connections: 4,
+    token: 'vh_tun_tok_live_8a92f0c1',
     created: '2026-08-10'
   },
   {
@@ -24,9 +25,10 @@ const INITIAL_TUNNELS = [
     name: 'internal-crm-backend',
     hostname: 'crm.elsxglobal.cloud',
     localTarget: 'http://192.168.1.45:3000',
-    status: 'HEALTHY',
+    status: 'ONLINE',
     uptime: '28 days',
     connections: 2,
+    token: 'vh_tun_tok_live_7b81e3d4',
     created: '2026-07-28'
   },
 ];
@@ -38,6 +40,61 @@ export default function TunnelsManagementPage() {
   const [newTarget, setNewTarget] = useState('http://localhost:3000');
   const [createdToken, setCreatedToken] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedConnectCmd, setCopiedConnectCmd] = useState(false);
+  const [copiedConfigId, setCopiedConfigId] = useState<string | null>(null);
+  const [activeConfigTunnel, setActiveConfigTunnel] = useState<any | null>(null);
+
+  // Sync real tunnel status and token from API
+  useEffect(() => {
+    fetch('/api/cloud/tunnel')
+      .then(res => res.json())
+      .then(data => {
+        if (data.tunnels && Array.isArray(data.tunnels) && data.tunnels.length > 0) {
+          const mapped = data.tunnels.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            hostname: t.publicUrl ? t.publicUrl.replace('https://', '') : `${t.name}.edge.vaulthost.cloud`,
+            localTarget: t.target || 'http://localhost:8080',
+            status: t.status === 'connected' ? 'ONLINE' : t.status === 'provisioning' ? 'PROVISIONING' : 'OFFLINE',
+            uptime: t.connectedAt ? 'Connected' : 'Just now',
+            connections: t.status === 'connected' ? 2 : 0,
+            token: t.token || `vh_tun_tok_${t.id}`,
+            created: t.createdAt ? t.createdAt.split('T')[0] : 'Today'
+          }));
+          setTunnels(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const generateFrpcToml = (t: any) => `[common]
+server_addr = ingress.vaulthost.cloud
+server_port = 7000
+token = ${t.token || 'vh_tun_' + t.id}
+
+[${t.name}]
+type = http
+local_ip = 127.0.0.1
+local_port = 8080
+subdomain = ${t.name}
+`;
+
+  const handleCopyFrpcConfig = (id: string, config: string) => {
+    navigator.clipboard.writeText(config);
+    setCopiedConfigId(id);
+    setTimeout(() => setCopiedConfigId(null), 2000);
+  };
+
+  const handleDownloadFrpcConfig = (t: any) => {
+    const config = generateFrpcToml(t);
+    const element = document.createElement('a');
+    const file = new Blob([config], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    element.download = `${t.name}-frpc.toml`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +109,7 @@ export default function TunnelsManagementPage() {
       status: 'HEALTHY',
       uptime: 'Just now',
       connections: 1,
+      token: fakeToken,
       created: 'Today'
     };
 
@@ -107,6 +165,46 @@ export default function TunnelsManagementPage() {
         </div>
       </div>
 
+      {/* frpc Installation & Quick Connect Guide */}
+      <div className="v4-panel p-5 rounded-2xl border border-hairline bg-ink-surface space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-hairline">
+          <div className="flex items-center gap-2">
+            <Terminal className="h-4 w-4 text-signal" />
+            <span className="text-xs font-bold text-text-primary-v4 font-mono">
+              Fast Reverse Proxy (frpc) Client Setup
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              const cmd = `# Install frpc\ncurl -Lo frpc https://github.com/fatedier/frp/releases/download/v0.60.0/frp_0.60.0_linux_amd64.tar.gz\n# Or on Mac:\nbrew install frpc\n\n# Save your config and run:\nfrpc -c frpc.toml`;
+              navigator.clipboard.writeText(cmd);
+              setCopiedConnectCmd(true);
+              setTimeout(() => setCopiedConnectCmd(false), 2000);
+            }}
+            className="text-xs text-signal hover:underline flex items-center gap-1 font-mono font-medium"
+          >
+            {copiedConnectCmd ? <Check className="h-3.5 w-3.5 text-good" /> : <Copy className="h-3.5 w-3.5" />}
+            {copiedConnectCmd ? 'Copied Commands' : 'Copy Commands'}
+          </button>
+        </div>
+
+        <p className="text-xs text-text-secondary-v4">
+          Connect your homelab, private Kubernetes cluster, or localhost server to VaultHost using high-speed multiplexed TCP tunnels:
+        </p>
+
+        <div className="p-3.5 rounded-xl bg-ink border border-hairline font-mono text-xs text-green-400 leading-relaxed overflow-x-auto">
+          <pre className="text-[11px] leading-relaxed">
+{`# Install frpc
+curl -Lo frpc https://github.com/fatedier/frp/releases/download/v0.60.0/frp_0.60.0_linux_amd64.tar.gz
+# Or on Mac:
+brew install frpc
+
+# Save your config and run:
+frpc -c frpc.toml`}
+          </pre>
+        </div>
+      </div>
+
       {/* Tunnels List */}
       <div className="v4-panel rounded-2xl border border-hairline bg-ink-surface overflow-hidden">
         <div className="p-4 border-b border-hairline flex items-center justify-between">
@@ -124,25 +222,65 @@ export default function TunnelsManagementPage() {
                 <th className="py-3 px-4">Edge Hostname</th>
                 <th className="py-3 px-4">Local Target</th>
                 <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">frpc.toml Config</th>
                 <th className="py-3 px-4">Active Conns</th>
                 <th className="py-3 px-4">Uptime</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {tunnels.map((t) => (
-                <tr key={t.id} className="hover:bg-ink-surface-2/60 transition-colors font-mono">
-                  <td className="py-3 px-4 font-bold text-text-primary-v4">{t.name}</td>
-                  <td className="py-3 px-4 text-signal">{t.hostname}</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">{t.localTarget}</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-good/15 text-good border border-good/20 font-bold">
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-text-muted-v4">{t.connections} active</td>
-                  <td className="py-3 px-4 text-text-muted-v4">{t.uptime}</td>
-                </tr>
-              ))}
+              {tunnels.map((t: any) => {
+                const isOnline = t.status === 'ONLINE' || t.status === 'HEALTHY' || t.status === 'connected';
+                const isProvisioning = t.status === 'PROVISIONING' || t.status === 'provisioning';
+                const configText = generateFrpcToml(t);
+
+                return (
+                  <tr key={t.id} className="hover:bg-ink-surface-2/60 transition-colors font-mono">
+                    <td className="py-3 px-4 font-bold text-text-primary-v4">{t.name}</td>
+                    <td className="py-3 px-4 text-signal">{t.hostname}</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">{t.localTarget}</td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                        isOnline
+                          ? 'bg-good/15 text-good border-good/20'
+                          : isProvisioning
+                          ? 'bg-amber-500/15 text-amber-400 border-amber-500/20'
+                          : 'bg-red-500/15 text-red-400 border-red-500/20'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-good animate-pulse' : isProvisioning ? 'bg-amber-400' : 'bg-red-400'}`} />
+                        {isOnline ? 'Online' : isProvisioning ? 'Provisioning' : 'Offline'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleCopyFrpcConfig(t.id, configText)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-ink-surface-2 border border-hairline hover:border-signal/40 text-[10px] text-text-secondary-v4 hover:text-text-primary-v4 transition-colors"
+                          title="Copy frpc.toml configuration"
+                        >
+                          {copiedConfigId === t.id ? <Check className="w-3 h-3 text-good" /> : <Copy className="w-3 h-3" />}
+                          {copiedConfigId === t.id ? 'Copied' : 'Copy Config'}
+                        </button>
+                        <button
+                          onClick={() => handleDownloadFrpcConfig(t)}
+                          className="p-1 rounded bg-ink-surface-2 border border-hairline hover:border-signal/40 text-text-secondary-v4 hover:text-text-primary-v4 transition-colors"
+                          title="Download frpc.toml file"
+                        >
+                          <Download className="w-3 h-3 text-signal" />
+                        </button>
+                        <button
+                          onClick={() => setActiveConfigTunnel(t)}
+                          className="p-1 rounded bg-ink-surface-2 border border-hairline hover:border-signal/40 text-text-secondary-v4 hover:text-text-primary-v4 transition-colors"
+                          title="View frpc.toml"
+                        >
+                          <FileText className="w-3 h-3 text-cyan-400" />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-text-muted-v4">{t.connections} active</td>
+                    <td className="py-3 px-4 text-text-muted-v4">{t.uptime}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -231,6 +369,54 @@ export default function TunnelsManagementPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* View frpc.toml Config Modal */}
+      {activeConfigTunnel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="v4-panel max-w-lg w-full p-6 rounded-3xl border border-hairline bg-ink-surface shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-hairline">
+              <h3 className="text-base font-bold text-text-primary-v4 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-signal" /> frpc.toml Config: {activeConfigTunnel.name}
+              </h3>
+              <button onClick={() => setActiveConfigTunnel(null)} className="text-text-muted-v4 hover:text-text-primary-v4">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-text-secondary-v4">
+              Save this file as <code className="text-signal bg-ink px-1 rounded">frpc.toml</code> on your local client machine to connect this tunnel:
+            </p>
+
+            <div className="bg-black p-4 rounded-xl border border-white/10 font-mono text-xs text-green-400 overflow-x-auto">
+              <pre>{generateFrpcToml(activeConfigTunnel)}</pre>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-hairline">
+              <button
+                onClick={() => handleDownloadFrpcConfig(activeConfigTunnel)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-btn bg-ink-surface-2 border border-hairline text-xs font-semibold text-text-primary-v4 hover:border-signal/40"
+              >
+                <Download className="w-3.5 h-3.5 text-signal" /> Download frpc.toml
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleCopyFrpcConfig(activeConfigTunnel.id, generateFrpcToml(activeConfigTunnel))}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-btn v4-btn-primary text-xs font-semibold shadow-glow"
+                >
+                  {copiedConfigId === activeConfigTunnel.id ? <Check className="w-3.5 h-3.5 text-good" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedConfigId === activeConfigTunnel.id ? 'Copied to Clipboard' : 'Copy Config'}
+                </button>
+                <button
+                  onClick={() => setActiveConfigTunnel(null)}
+                  className="px-3 py-1.5 rounded-btn text-xs text-text-muted-v4 hover:text-text-primary-v4"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

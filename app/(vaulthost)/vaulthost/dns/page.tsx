@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { PageHeroV4 } from '@/components/ui/page-hero-v4';
 import { PanelCard } from '@/components/ui/panel-card';
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
-import { ArrowRight, Globe, Share2, Shield, Activity, Lock, Code } from 'lucide-react';
+import { ArrowRight, Globe, Share2, Shield, Activity, Lock, Code, Check } from 'lucide-react';
 import { DNSPropagationChecker } from '@/components/vaulthost/interactive/DNSPropagationChecker';
 import { DNSApiPlayground } from '@/components/vaulthost/interactive/DNSApiPlayground';
 
@@ -154,50 +154,73 @@ export default function VaultDNSPage() {
             </div>
           </ScrollReveal>
 
+          {/* ── Pricing ───────────────────────────────── */}
           <ScrollReveal delay={0.4}>
             <div className="mb-24">
-              <h2 className="text-3xl font-light mb-12 text-center v4-display">Simple Pricing</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-8 rounded-2xl border border-white/10 bg-white/5 flex flex-col">
-                  <h3 className="text-xl font-medium mb-2">Free</h3>
-                  <div className="text-3xl font-light mb-6">₹0<span className="text-sm text-gray-400">/mo</span></div>
-                  <ul className="space-y-3 text-gray-400 mb-8 flex-1 text-sm">
-                    <li>✓ 5 Zones</li>
-                    <li>✓ Unlimited queries</li>
-                    <li>✓ DNSSEC</li>
-                    <li>✓ API Access</li>
+              <div className="text-center mb-10">
+                <h2 className="v4-display text-text-primary-v4 mb-3">Simple, Transparent Pricing</h2>
+                <p className="text-text-muted-v4 text-sm">Higher than GoDaddy. Way below AWS. No surprise bills.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                {/* Free */}
+                <div className="v4-panel rounded-2xl p-7 border border-hairline flex flex-col">
+                  <div className="text-xs font-semibold tracking-widest text-text-muted-v4 mb-2">FREE</div>
+                  <div className="text-4xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                  <p className="text-text-secondary-v4 text-sm mb-5">Fast, reliable DNS resolution for personal websites.</p>
+                  <ul className="space-y-2 text-sm text-text-secondary-v4 mb-6 flex-1">
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> 500K queries / month</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Up to 5 DNS zones</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Sub-10ms global propagation</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Standard DDoS protection</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Community support</li>
                   </ul>
-                  <Link href="/portal" className="block text-center py-3 rounded-lg border border-white/20 hover:bg-white/10 transition-colors">
-                    Start Free
-                  </Link>
+                  <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn text-center py-2.5 text-sm">Start Free →</Link>
                 </div>
-                <div className="p-8 rounded-2xl border border-signal/50 bg-signal/5 flex flex-col relative">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-signal text-black text-xs font-bold px-3 py-1 rounded-full">RECOMMENDED</div>
-                  <h3 className="text-xl font-medium mb-2 text-signal">Pro</h3>
-                  <div className="text-3xl font-light mb-6 text-white">₹199<span className="text-sm text-gray-400">/mo</span></div>
-                  <ul className="space-y-3 text-gray-300 mb-8 flex-1 text-sm">
-                    <li>✓ Unlimited Zones</li>
-                    <li>✓ GeoDNS Routing</li>
-                    <li>✓ Health-check Failover</li>
-                    <li>✓ Weighted Routing</li>
+                {/* Pro — highlighted */}
+                <div className="v4-panel rounded-2xl p-7 border-2 border-signal relative flex flex-col">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-signal text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-wider">MOST POPULAR</div>
+                  <div className="text-xs font-semibold tracking-widest text-signal mb-2">PRO</div>
+                  <div className="text-4xl font-bold text-text-primary-v4 mb-1">₹199 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                  <p className="text-text-secondary-v4 text-sm mb-5">High-query authoritative DNS with DNSSEC and health check routing.</p>
+                  <ul className="space-y-2 text-sm text-text-secondary-v4 mb-6 flex-1">
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> 10M queries / month</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Up to 50 DNS zones</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> DNSSEC 1-click automatic signing</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Health checks &amp; failover routing</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Priority email support</li>
                   </ul>
-                  <Link href="/portal" className="block text-center py-3 rounded-lg bg-signal text-black font-medium hover:bg-signal/90 transition-colors">
-                    Upgrade to Pro
-                  </Link>
+                  <Link href="/vaulthost/checkout?plan=dns-pro" className="v4-btn-primary rounded-btn text-center py-2.5 text-sm">Get Started →</Link>
                 </div>
-                <div className="p-8 rounded-2xl border border-white/10 bg-white/5 flex flex-col">
-                  <h3 className="text-xl font-medium mb-2">Enterprise</h3>
-                  <div className="text-3xl font-light mb-6">Custom</div>
-                  <ul className="space-y-3 text-gray-400 mb-8 flex-1 text-sm">
-                    <li>✓ Custom SLAs</li>
-                    <li>✓ Dedicated Support</li>
-                    <li>✓ Audit Logs</li>
-                    <li>✓ Advanced Analytics</li>
+                {/* Business */}
+                <div className="v4-panel rounded-2xl p-7 border border-hairline flex flex-col">
+                  <div className="text-xs font-semibold tracking-widest text-text-muted-v4 mb-2">BUSINESS</div>
+                  <div className="text-4xl font-bold text-text-primary-v4 mb-1">₹799 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                  <p className="text-text-secondary-v4 text-sm mb-5">Mission-critical enterprise DNS with vanity nameservers and 100% SLA.</p>
+                  <ul className="space-y-2 text-sm text-text-secondary-v4 mb-6 flex-1">
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Unlimited queries / month</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Unlimited DNS zones</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Custom vanity nameservers</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> Anycast BGP routing across 300+ PoPs</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-signal shrink-0" /> 100% uptime SLA guarantee</li>
                   </ul>
-                  <Link href="/portal" className="block text-center py-3 rounded-lg border border-white/20 hover:bg-white/10 transition-colors">
-                    Contact Sales
-                  </Link>
+                  <Link href="/vaulthost/checkout?plan=dns-business" className="v4-btn-primary rounded-btn text-center py-2.5 text-sm">Get Started →</Link>
                 </div>
+              </div>
+              {/* Competitor table */}
+              <div className="overflow-x-auto rounded-2xl border border-hairline">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-ink-surface-2 border-b border-hairline">
+                    <th className="py-3 px-5 text-left text-text-muted-v4 font-medium">Provider</th>
+                    <th className="py-3 px-5 text-left text-text-muted-v4 font-medium">Entry Price</th>
+                    <th className="py-3 px-5 text-left text-text-muted-v4 font-medium">Notes</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-hairline">
+                    <tr><td className="py-3 px-5 text-signal font-semibold">VaultHost</td><td className="py-3 px-5 text-text-primary-v4">₹199/mo</td><td className="py-3 px-5 text-text-muted-v4">Zero egress. Indian data centers.</td></tr>
+                    <tr><td className="py-3 px-5 text-text-secondary-v4">AWS</td><td className="py-3 px-5 text-text-secondary-v4">₹42/zone+queries</td><td className="py-3 px-5 text-text-muted-v4">Route53 query &amp; zone pricing</td></tr>
+                    <tr><td className="py-3 px-5 text-text-secondary-v4">Google Cloud</td><td className="py-3 px-5 text-text-secondary-v4">₹20/zone</td><td className="py-3 px-5 text-text-muted-v4">No built-in DDoS defense on base tier</td></tr>
+                    <tr><td className="py-3 px-5 text-text-secondary-v4">GoDaddy</td><td className="py-3 px-5 text-text-secondary-v4">Free with domain</td><td className="py-3 px-5 text-text-muted-v4">72ms avg latency, limited Anycast PoPs</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </ScrollReveal>

@@ -131,8 +131,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action = 'create_namespace', name, namespace, cluster = 'k3s-edge-bom1', region = 'Mumbai, India', options = {}, intent } = body;
-    const finalName = name || namespace;
+    const { action = 'create_namespace', name, namespace, displayName, plan, cluster = 'k3s-edge-bom1', region = 'Mumbai, India', options = {}, intent } = body;
+    const finalName = name || namespace || displayName;
 
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
@@ -142,6 +142,39 @@ export async function POST(req: NextRequest) {
     if (intent) {
       const result = await processActionIntent(intent as ActionIntent, options);
       return ok(result);
+    }
+
+    if (action === 'delete') {
+      const targetId = body.namespaceId || body.id || finalName;
+      if (!targetId) {
+        return err('BAD_REQUEST', 'Namespace ID is required for deletion', { status: 400 });
+      }
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: { id: actorId, type: 'user', tenantId, roles: ['tenant_admin'] },
+        targetService: 'compute',
+        actionVerb: 'delete',
+        resourceUri: `compute://k3s/namespaces/${targetId}`,
+        parameters: { namespace: targetId },
+        idempotencyKey: `k3s_del_${Date.now()}_${targetId}`,
+        createdAt: new Date().toISOString(),
+      };
+      const execOptions = {
+        ...options,
+        tenantPolicyOverrides: [
+          ...(options.tenantPolicyOverrides || []),
+          { tenantId, enforceTier: 2 as const },
+        ],
+      };
+      const gatewayResult = await processActionIntent(actionIntent, execOptions);
+      if (gatewayResult.status === 'executed') {
+        fallbackNamespaces = fallbackNamespaces.filter(n => n.id !== targetId && n.name !== targetId);
+        try {
+          await supabase.from('cloud_containers').delete().or(`id.eq.${targetId},name.eq.${targetId}`);
+        } catch {}
+        return ok({ message: `Namespace ${targetId} deleted.`, gateway: gatewayResult });
+      }
+      return ok(gatewayResult, { status: 202 });
     }
 
     if (!finalName) {

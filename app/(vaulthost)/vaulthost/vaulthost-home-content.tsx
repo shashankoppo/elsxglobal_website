@@ -6,7 +6,8 @@ import {
   Server, HardDrive, Lock, Network, Cpu, Layout, Boxes, Eye, Monitor,
   Mail, RefreshCw, Layers, ShieldCheck, Bot, Sparkles, Terminal, Activity,
   ArrowUpRight, BarChart3, Radio, FileText, CheckCircle2, ChevronRight, Cloud,
-  Copy, Sliders, ExternalLink, Play, Search, Clock, Key
+  Copy, Sliders, ExternalLink, Play, Search, Clock, Key,
+  Workflow, MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import { PanelCard } from '@/components/ui/panel-card';

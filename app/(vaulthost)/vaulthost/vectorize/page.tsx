@@ -6,7 +6,7 @@ import { ScrollReveal } from '@/components/ui/scroll-reveal';
 import { 
   Database, Zap, Search, Activity, 
   Layers, Image as ImageIcon, CheckCircle, ArrowRight,
-  ShieldAlert, Repeat, LayoutGrid
+  ShieldAlert, Repeat, LayoutGrid, Check
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -147,86 +147,98 @@ export default function VectorizePage() {
         </div>
       </section>
 
-      {/* Tech Specs Table */}
-      <section className="v4-section">
+      {/* Pricing */}
+      <section className="v4-section border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <div className="text-center mb-16">
-              <h2 className="v4-display text-text-primary-v4 mb-4">Compare Plans</h2>
+          <div className="text-center mb-12">
+            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {/* Free tier */}
+            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+              <div>
+                <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Semantic vector index for developer prototypes and testing.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 100K indexed vectors</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Up to 1536 dimensions</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Cosine &amp; Dot product metrics</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 50ms p95 search latency</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
+                </ul>
+              </div>
+              <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
             </div>
-          </ScrollReveal>
-
-          <div className="max-w-5xl mx-auto overflow-hidden rounded-xl border border-hairline bg-ink">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-ink-surface border-b border-hairline">
-                  <th className="py-5 px-6 text-sm font-semibold text-text-primary-v4">Feature</th>
-                  <th className="py-5 px-6 text-sm font-semibold text-text-primary-v4">Free</th>
-                  <th className="py-5 px-6 text-sm font-semibold text-signal">Pro (₹1,499/mo)</th>
-                  <th className="py-5 px-6 text-sm font-semibold text-text-primary-v4">Enterprise</th>
+            {/* Pro tier — highlighted */}
+            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
+              <div>
+                <div className="text-signal text-sm font-medium mb-2">PRO</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹1,499 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Fast vector search for production RAG and AI search workflows.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10M indexed vectors</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Up to 3072 dimensions</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Metadata filtering &amp; namespaces</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Sub-15ms p95 search latency</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Priority email support</li>
+                </ul>
+              </div>
+              <Link href="/vaulthost/checkout?plan=vectorize-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
+            </div>
+            {/* Business tier */}
+            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+              <div>
+                <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹3,999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">100M vector cluster with dedicated memory &amp; hybrid search.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 100M indexed vectors</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Dedicated vector memory instances</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Real-time live indexing &amp; updates</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Hybrid lexical + semantic search</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 99.99% search SLA &amp; dedicated support</li>
+                </ul>
+              </div>
+              <Link href="/vaulthost/checkout?plan=vectorize-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
+            </div>
+          </div>
+          {/* Competitor comparison */}
+          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
+            <table className="w-full text-sm">
+              <thead className="bg-ink-surface-2 text-text-secondary-v4">
+                <tr>
+                  <th className="py-3 px-4 text-left font-medium">Provider</th>
+                  <th className="py-3 px-4 text-left font-medium">Pricing</th>
+                  <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-secondary-v4">Max Vectors per Index</td>
-                  <td className="py-4 px-6 text-text-primary-v4">100,000</td>
-                  <td className="py-4 px-6 text-signal font-medium">10,000,000</td>
-                  <td className="py-4 px-6 text-text-primary-v4">Custom</td>
+                <tr className="bg-signal/5">
+                  <td className="py-3 px-4 font-semibold text-signal">VaultHost Vectorize</td>
+                  <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹1,499 Pro / ₹3,999 Business</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Sub-15ms vector search, 1536/3072 dims, hybrid search, India low latency</td>
                 </tr>
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-secondary-v4">Query Dimensions</td>
-                  <td className="py-4 px-6 text-text-primary-v4">Up to 1536</td>
-                  <td className="py-4 px-6 text-text-primary-v4">Up to 1536</td>
-                  <td className="py-4 px-6 text-text-primary-v4">Up to 3072</td>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">Pinecone</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹5,800/mo ($70) starter</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Expensive entry baseline with no true free tier for production apps</td>
                 </tr>
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-secondary-v4">Supported Distances</td>
-                  <td className="py-4 px-6 text-text-primary-v4">Cosine, Dot</td>
-                  <td className="py-4 px-6 text-text-primary-v4">Cosine, Dot, Euclidean</td>
-                  <td className="py-4 px-6 text-text-primary-v4">All + Custom Metrics</td>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">Weaviate Cloud</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹4,150/mo ($50)</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">High memory usage multipliers as indexed documents scale</td>
                 </tr>
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-secondary-v4">Metadata Filtering</td>
-                  <td className="py-4 px-6 text-text-primary-v4"><CheckCircle className="w-5 h-5 text-text-muted-v4" /></td>
-                  <td className="py-4 px-6 text-text-primary-v4"><CheckCircle className="w-5 h-5 text-signal" /></td>
-                  <td className="py-4 px-6 text-text-primary-v4"><CheckCircle className="w-5 h-5 text-signal" /></td>
-                </tr>
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-secondary-v4">Namespace Isolation</td>
-                  <td className="py-4 px-6 text-text-muted-v4">-</td>
-                  <td className="py-4 px-6 text-text-primary-v4"><CheckCircle className="w-5 h-5 text-signal" /></td>
-                  <td className="py-4 px-6 text-text-primary-v4"><CheckCircle className="w-5 h-5 text-signal" /></td>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">Qdrant Cloud</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹3,300/mo ($40)</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Cluster management overhead and cross-continental egress billing</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 border-t border-hairline">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <div 
-              className="rounded-[2rem] p-12 md:p-20 text-center border border-hairline/50 relative overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, rgba(10,18,36,0.98), rgba(6,12,24,1))' }}
-            >
-              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-signal/10 via-transparent to-transparent pointer-events-none" />
-              <h2 className="v4-display text-text-primary-v4 mb-6 relative z-10">Ready to build your RAG system?</h2>
-              <p className="text-xl text-text-secondary-v4 mb-10 max-w-2xl mx-auto relative z-10">
-                Start indexing your data in seconds. Fast, durable, and built entirely for the modern AI stack.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-                <Link href="/portal" className="v4-btn-primary rounded-btn group">
-                  Start building RAG 
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link href="/docs/vectorize" className="v4-btn-secondary rounded-btn">
-                  API Docs
-                </Link>
-              </div>
-            </div>
-          </ScrollReveal>
         </div>
       </section>
     </div>

@@ -6,6 +6,7 @@ import { PageHeroV4 } from '@/components/ui/page-hero-v4';
 import { PanelCard } from '@/components/ui/panel-card';
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
 import { Search, Shield, RefreshCw, Globe, Lock, Layers, ArrowRight, Zap, Check } from 'lucide-react';
+import { DOMAIN_PRICING } from '@/lib/data/cloud-pricing';
 
 export default function VaultDomainsPage() {
   return (
@@ -39,13 +40,12 @@ export default function VaultDomainsPage() {
               </div>
               <div className="flex flex-wrap justify-center gap-4 text-text-secondary-v4 text-sm font-medium">
                 <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.com ₹899/yr</span>
-                <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.in ₹299/yr</span>
+                <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.in ₹699/yr</span>
                 <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.io ₹3,499/yr</span>
-                <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.co.in ₹199/yr</span>
                 <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.org ₹999/yr</span>
-                <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.net ₹999/yr</span>
+                <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.net ₹1,099/yr</span>
                 <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.dev ₹1,299/yr</span>
-                <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.ai ₹7,499/yr</span>
+                <span className="bg-ink-surface-2 px-3 py-1 rounded-full border border-hairline">.ai ₹5,999/yr</span>
               </div>
             </div>
           </ScrollReveal>
@@ -162,89 +162,95 @@ export default function VaultDomainsPage() {
         </div>
       </section>
 
-      {/* TLD Directory */}
-      <section className="v4-section bg-ink-surface">
+      {/* TLD Directory & Full Pricing Table */}
+      <section className="v4-section bg-ink-surface border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-12">
-              <h2 className="v4-display text-text-primary-v4">Find Your Niche</h2>
-              <p className="text-text-secondary-v4 mt-4">Over 400 top-level domains available for registration.</p>
+              <h2 className="v4-display text-text-primary-v4">Domain Pricing Directory</h2>
+              <p className="text-text-secondary-v4 mt-4">Transparent registration, renewal, and transfer rates. Zero renewal price gouging.</p>
             </div>
           </ScrollReveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-            <div className="v4-panel p-6 border border-hairline rounded-2xl">
-              <h4 className="text-text-primary-v4 font-bold mb-4 border-b border-hairline pb-2">Business</h4>
-              <ul className="space-y-3 text-text-secondary-v4">
-                <li className="flex justify-between"><span>.com</span> <span>₹899</span></li>
-                <li className="flex justify-between"><span>.biz</span> <span>₹1,299</span></li>
-                <li className="flex justify-between"><span>.co</span> <span>₹1,999</span></li>
-                <li className="flex justify-between"><span>.store</span> <span>₹399</span></li>
-                <li className="flex justify-between"><span>.shop</span> <span>₹299</span></li>
-              </ul>
-            </div>
+          <div className="overflow-x-auto rounded-2xl border border-hairline mb-16 bg-ink">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-ink-surface-2 border-b border-hairline">
+                  <th className="py-3 px-4 text-left font-medium text-text-muted-v4">Extension</th>
+                  <th className="py-3 px-4 text-right font-medium text-text-muted-v4">Registration</th>
+                  <th className="py-3 px-4 text-right font-medium text-text-muted-v4">Renewal</th>
+                  <th className="py-3 px-4 text-right font-medium text-text-muted-v4">Transfer</th>
+                  <th className="py-3 px-4 text-center font-medium text-text-muted-v4">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {DOMAIN_PRICING.map((item) => (
+                  <tr key={item.tld} className={`hover:bg-ink-surface/50 transition-colors ${item.popular ? 'bg-signal/5' : ''}`}>
+                    <td className="py-3.5 px-4 font-bold text-text-primary-v4 flex items-center gap-2">
+                      {item.tld}
+                      {item.popular && (
+                        <span className="text-[10px] bg-signal text-ink font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">Popular</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-semibold text-signal">₹{item.registration.toLocaleString()}</td>
+                    <td className="py-3.5 px-4 text-right text-text-secondary-v4">₹{item.renewal.toLocaleString()}</td>
+                    <td className="py-3.5 px-4 text-right text-text-secondary-v4">₹{item.transfer.toLocaleString()}</td>
+                    <td className="py-3.5 px-4 text-center">
+                      <Link 
+                        href={`/vaulthost/checkout?plan=domain-${item.tld.replace('.', '')}&tld=${item.tld}`}
+                        className="v4-btn-primary text-xs px-3.5 py-1.5 rounded-btn inline-block font-medium hover:opacity-90"
+                      >
+                        Register →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-            <div className="v4-panel p-6 border border-hairline rounded-2xl">
-              <h4 className="text-text-primary-v4 font-bold mb-4 border-b border-hairline pb-2">India</h4>
-              <ul className="space-y-3 text-text-secondary-v4">
-                <li className="flex justify-between"><span>.in</span> <span>₹299</span></li>
-                <li className="flex justify-between"><span>.co.in</span> <span>₹199</span></li>
-                <li className="flex justify-between"><span>.net.in</span> <span>₹299</span></li>
-                <li className="flex justify-between"><span>.org.in</span> <span>₹299</span></li>
-                <li className="flex justify-between"><span>.ind.in</span> <span>₹299</span></li>
-              </ul>
-            </div>
-
-            <div className="v4-panel p-6 border border-hairline rounded-2xl">
-              <h4 className="text-text-primary-v4 font-bold mb-4 border-b border-hairline pb-2">Tech</h4>
-              <ul className="space-y-3 text-text-secondary-v4">
-                <li className="flex justify-between"><span>.io</span> <span>₹3,499</span></li>
-                <li className="flex justify-between"><span>.dev</span> <span>₹1,299</span></li>
-                <li className="flex justify-between"><span>.app</span> <span>₹1,299</span></li>
-                <li className="flex justify-between"><span>.cloud</span> <span>₹1,499</span></li>
-                <li className="flex justify-between"><span>.tech</span> <span>₹399</span></li>
-              </ul>
-            </div>
-
-            <div className="v4-panel p-6 border border-hairline rounded-2xl">
-              <h4 className="text-text-primary-v4 font-bold mb-4 border-b border-hairline pb-2">AI / ML</h4>
-              <ul className="space-y-3 text-text-secondary-v4">
-                <li className="flex justify-between"><span>.ai</span> <span>₹7,499</span></li>
-                <li className="flex justify-between"><span>.ml</span> <span>₹2,999</span></li>
-                <li className="flex justify-between"><span>.bot</span> <span>₹2,499</span></li>
-                <li className="flex justify-between"><span>.net</span> <span>₹999</span></li>
-                <li className="flex justify-between"><span>.network</span> <span>₹1,299</span></li>
-              </ul>
-            </div>
-
-            <div className="v4-panel p-6 border border-hairline rounded-2xl">
-              <h4 className="text-text-primary-v4 font-bold mb-4 border-b border-hairline pb-2">Startups</h4>
-              <ul className="space-y-3 text-text-secondary-v4">
-                <li className="flex justify-between"><span>.vc</span> <span>₹2,999</span></li>
-                <li className="flex justify-between"><span>.startup</span> <span>₹1,499</span></li>
-                <li className="flex justify-between"><span>.agency</span> <span>₹1,499</span></li>
-                <li className="flex justify-between"><span>.studio</span> <span>₹1,999</span></li>
-                <li className="flex justify-between"><span>.design</span> <span>₹2,499</span></li>
-              </ul>
+          {/* Competitor comparison */}
+          <div className="mb-16">
+            <h3 className="text-xl font-medium text-text-primary-v4 text-center mb-6">How VaultHost Compares on Domains</h3>
+            <div className="border border-hairline rounded-2xl overflow-hidden bg-ink">
+              <table className="w-full text-sm">
+                <thead className="bg-ink-surface-2 text-text-secondary-v4 border-b border-hairline">
+                  <tr>
+                    <th className="py-3.5 px-4 text-left font-medium">Registrar</th>
+                    <th className="py-3.5 px-4 text-left font-medium">.COM Pricing</th>
+                    <th className="py-3.5 px-4 text-left font-medium">WHOIS Privacy</th>
+                    <th className="py-3.5 px-4 text-left font-medium">Renewal Policy</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  <tr className="bg-signal/5">
+                    <td className="py-3.5 px-4 font-semibold text-signal">VaultHost Domains</td>
+                    <td className="py-3.5 px-4 font-medium text-text-primary-v4">₹899 1st yr / ₹999 renewal</td>
+                    <td className="py-3.5 px-4 text-signal font-medium">FREE forever included</td>
+                    <td className="py-3.5 px-4 text-text-secondary-v4">Predictable wholesale renewal rate, zero surprise hikes</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3.5 px-4 text-text-primary-v4">GoDaddy</td>
+                    <td className="py-3.5 px-4 text-text-secondary-v4">₹899 1st yr / ₹2,199 renewal</td>
+                    <td className="py-3.5 px-4 text-text-muted-v4">₹499/yr extra per domain</td>
+                    <td className="py-3.5 px-4 text-text-secondary-v4">Aggressive 150%+ price hike on year 2, mandatory add-on fees</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3.5 px-4 text-text-primary-v4">Namecheap</td>
+                    <td className="py-3.5 px-4 text-text-secondary-v4">₹950 1st yr / ₹1,350 renewal</td>
+                    <td className="py-3.5 px-4 text-text-secondary-v4">Free basic privacy</td>
+                    <td className="py-3.5 px-4 text-text-secondary-v4">Slow standard DNS propagation, extra fees for premium Anycast DNS</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3.5 px-4 text-text-primary-v4">Google Domains / Squarespace</td>
+                    <td className="py-3.5 px-4 text-text-secondary-v4">₹1,650/yr flat</td>
+                    <td className="py-3.5 px-4 text-text-secondary-v4">Included</td>
+                    <td className="py-3.5 px-4 text-text-secondary-v4">High flat baseline pricing across all standard domains</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="v4-section">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <ScrollReveal>
-            <h2 className="v4-display text-text-primary-v4 mb-6">Ready to secure your identity?</h2>
-            <p className="text-text-secondary-v4 mb-10 max-w-2xl mx-auto">
-              Join thousands of businesses that trust VaultHost to manage and protect their digital footprint.
-            </p>
-            <div className="flex justify-center">
-              <Link href="/portal/signup" className="v4-btn-primary inline-flex items-center px-8 py-4 text-lg">
-                Register your domain today <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
-            </div>
-          </ScrollReveal>
         </div>
       </section>
     </div>

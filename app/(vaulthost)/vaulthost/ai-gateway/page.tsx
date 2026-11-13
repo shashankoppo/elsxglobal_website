@@ -7,7 +7,7 @@ import { ScrollReveal } from '@/components/ui/scroll-reveal';
 import { 
   Zap, Activity, LayoutGrid, Clock, ShieldCheck, 
   BarChart4, FileJson, GitBranch, TerminalSquare, 
-  CheckCircle, ArrowRight
+  CheckCircle, ArrowRight, Check
 } from 'lucide-react';
 import { AIGatewayTester } from '@/components/vaulthost/interactive/AIGatewayTester';
 
@@ -219,81 +219,97 @@ export default function AIGatewayPage() {
       </section>
 
       {/* Pricing */}
-      <section className="v4-section">
+      <section className="v4-section border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <div className="text-center mb-16">
-              <h2 className="v4-display text-text-primary-v4 mb-4">Simple, transparent pricing</h2>
-            </div>
-          </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <PanelCard className="p-8 bg-ink-surface-2 border-hairline flex flex-col">
-              <h3 className="text-2xl font-semibold text-text-primary-v4 mb-2">Free</h3>
-              <div className="text-text-muted-v4 mb-6">Great for side projects</div>
-              <div className="text-4xl font-bold text-text-primary-v4 mb-8">₹0<span className="text-lg text-text-muted-v4 font-normal">/mo</span></div>
-              <ul className="space-y-4 text-sm text-text-secondary-v4 mb-8 flex-1">
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> 10K requests / month</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> 1 AI Provider</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> Basic Request Logging</li>
-              </ul>
-              <Link href="/portal" className="v4-btn-secondary w-full justify-center">Get Started</Link>
-            </PanelCard>
-            
-            <PanelCard className="p-8 bg-ink border-signal relative flex flex-col">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-signal text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Most Popular</div>
-              <h3 className="text-2xl font-semibold text-text-primary-v4 mb-2">Pro</h3>
-              <div className="text-text-muted-v4 mb-6">For production applications</div>
-              <div className="text-4xl font-bold text-text-primary-v4 mb-8">₹999<span className="text-lg text-text-muted-v4 font-normal">/mo</span></div>
-              <ul className="space-y-4 text-sm text-text-secondary-v4 mb-8 flex-1">
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> 500K requests / month</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> Unlimited AI Providers</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> Semantic Caching</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> Custom Rate Limits</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> Fallback & Routing Rules</li>
-              </ul>
-              <Link href="/portal" className="v4-btn-primary w-full justify-center">Upgrade to Pro</Link>
-            </PanelCard>
-
-            <PanelCard className="p-8 bg-ink-surface-2 border-hairline flex flex-col">
-              <h3 className="text-2xl font-semibold text-text-primary-v4 mb-2">Enterprise</h3>
-              <div className="text-text-muted-v4 mb-6">For massive scale</div>
-              <div className="text-4xl font-bold text-text-primary-v4 mb-8">Custom</div>
-              <ul className="space-y-4 text-sm text-text-secondary-v4 mb-8 flex-1">
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> Unlimited requests</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> Dedicated Proxy Instances</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> Custom SLA (99.99%)</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-signal" /> Enterprise SSO & RBAC</li>
-              </ul>
-              <Link href="/contact" className="v4-btn-secondary w-full justify-center">Contact Sales</Link>
-            </PanelCard>
+          <div className="text-center mb-12">
+            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 border-t border-hairline">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <div 
-              className="rounded-[2rem] p-12 md:p-20 text-center border border-hairline/50 relative overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, rgba(10,18,36,0.98), rgba(6,12,24,1))' }}
-            >
-              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-signal/10 via-transparent to-transparent pointer-events-none" />
-              <h2 className="v4-display text-text-primary-v4 mb-6 relative z-10">Stop overpaying for AI APIs</h2>
-              <p className="text-xl text-text-secondary-v4 mb-10 max-w-2xl mx-auto relative z-10">
-                Join thousands of developers using VaultAI Gateway to scale their AI features with confidence, reliability, and cost-efficiency.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-                <Link href="/portal" className="v4-btn-primary rounded-btn group">
-                  Connect your first AI provider 
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link href="/docs/ai-gateway" className="v4-btn-secondary rounded-btn">
-                  Read the Docs
-                </Link>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {/* Free tier */}
+            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+              <div>
+                <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Unified AI API gateway for hobbyists and developers.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10K requests / month</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 1 Connected AI provider</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Basic request logging &amp; analytics</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Standard latency monitoring</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
+                </ul>
               </div>
+              <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
             </div>
-          </ScrollReveal>
+            {/* Pro tier — highlighted */}
+            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
+              <div>
+                <div className="text-signal text-sm font-medium mb-2">PRO</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Intelligent caching and fallback routing for AI apps.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 1M requests / month</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited AI providers</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Semantic caching (save 40-60% tokens)</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Custom rate limits &amp; budget alerts</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Automated fallback &amp; model routing</li>
+                </ul>
+              </div>
+              <Link href="/vaulthost/checkout?plan=ai-gateway-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
+            </div>
+            {/* Business tier */}
+            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+              <div>
+                <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹3,999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Enterprise AI proxy fleet with dedicated throughput.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10M requests / month</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited AI providers</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Dedicated low-latency proxy instances</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Enterprise RBAC &amp; audit logging</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 99.99% uptime SLA &amp; dedicated support</li>
+                </ul>
+              </div>
+              <Link href="/vaulthost/checkout?plan=ai-gateway-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
+            </div>
+          </div>
+          {/* Competitor comparison */}
+          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
+            <table className="w-full text-sm">
+              <thead className="bg-ink-surface-2 text-text-secondary-v4">
+                <tr>
+                  <th className="py-3 px-4 text-left font-medium">Provider</th>
+                  <th className="py-3 px-4 text-left font-medium">Pricing</th>
+                  <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                <tr className="bg-signal/5">
+                  <td className="py-3 px-4 font-semibold text-signal">VaultHost AI Gateway</td>
+                  <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹999 Pro / ₹3,999 Business</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Semantic caching, 15+ models, drop-in OpenAI SDK URL switch, zero regional egress</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">Portkey</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹8,200/mo ($99)</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">High entry cost for startups and indie developers</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">Helicone</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹4,150/mo ($50)</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Lower request limit before aggressive usage overages</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">AWS Bedrock Gateway</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Custom enterprise quote</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Requires complex IAM setup and vendor lock-in to AWS services</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>

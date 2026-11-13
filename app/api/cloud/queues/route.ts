@@ -230,6 +230,44 @@ export async function POST(req: NextRequest) {
       return ok(gatewayResult, { status: 202 });
     }
 
+    if (action === 'purge') {
+      const targetQueue = queueName || queueId || name || body.id;
+      if (!targetQueue) {
+        return err('BAD_REQUEST', 'Queue name is required to purge', { status: 400 });
+      }
+
+      const actionIntent: ActionIntent = {
+        intentId: crypto.randomUUID(),
+        actor: { id: actorId, type: 'user', tenantId, roles: ['tenant_operator'] },
+        targetService: 'compute',
+        actionVerb: 'purge',
+        resourceUri: `compute://queues/${targetQueue}/messages`,
+        parameters: { queue: targetQueue },
+        idempotencyKey: `queue_purge_${Date.now()}_${targetQueue}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      const execOptions = {
+        ...options,
+        tenantPolicyOverrides: [
+          ...(options.tenantPolicyOverrides || []),
+          { tenantId, enforceTier: 1 as const },
+        ],
+      };
+
+      const gatewayResult = await processActionIntent(actionIntent, execOptions);
+      if (gatewayResult.status === 'executed') {
+        const q = fallbackQueues.find(queue => queue.id === targetQueue || queue.name === targetQueue);
+        if (q) {
+          q.messagesAvailable = 0;
+          q.messagesInFlight = 0;
+          q.messagesDelayed = 0;
+        }
+        return ok({ status: 'executed', message: `Queue ${targetQueue} purged.`, gateway: gatewayResult });
+      }
+      return ok(gatewayResult, { status: 202 });
+    }
+
     return err('BAD_REQUEST', `Unsupported action: ${action}`, { status: 400 });
   } catch (caughtErr: unknown) {
     const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';

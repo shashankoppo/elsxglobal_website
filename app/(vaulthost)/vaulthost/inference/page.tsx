@@ -6,7 +6,7 @@ import { ScrollReveal } from '@/components/ui/scroll-reveal';
 import { 
   Zap, Cpu, Layers, Activity, 
   Workflow, Database, Image as ImageIcon, 
-  MessageSquare, Settings, CheckCircle, ArrowRight 
+  MessageSquare, Settings, CheckCircle, ArrowRight, Check 
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -183,81 +183,152 @@ export default function InferencePage() {
         </div>
       </section>
 
-      {/* Pricing Table */}
-      <section className="v4-section bg-ink-surface-2 border-y border-hairline">
+      {/* Pricing */}
+      <section className="v4-section border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <div className="text-center mb-16">
-              <h2 className="v4-display text-text-primary-v4 mb-4">Usage-based Pricing</h2>
-              <p className="text-text-secondary-v4 text-lg">No minimums. No monthly subscriptions. Just pay for what you use.</p>
+          <div className="text-center mb-12">
+            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {/* Free tier */}
+            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+              <div>
+                <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Test top open-weight models with a daily free token allowance.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 100K tokens / day free</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Llama 3 8B &amp; Whisper v3 access</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> OpenAI-compatible endpoint</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Streaming responses</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
+                </ul>
+              </div>
+              <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
             </div>
-          </ScrollReveal>
-          
-          <div className="max-w-4xl mx-auto overflow-hidden rounded-xl border border-hairline bg-ink">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-ink-surface border-b border-hairline">
-                  <th className="py-4 px-6 text-sm font-medium text-text-secondary-v4 uppercase tracking-wider">Model</th>
-                  <th className="py-4 px-6 text-sm font-medium text-text-secondary-v4 uppercase tracking-wider">Type</th>
-                  <th className="py-4 px-6 text-sm font-medium text-text-secondary-v4 uppercase tracking-wider">Price</th>
+            {/* Pro tier — highlighted */}
+            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
+              <div>
+                <div className="text-signal text-sm font-medium mb-2">PRO</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Production inference with 50M tokens included + pay-as-you-go.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 50M tokens included / month</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Llama 3 70B &amp; Mixtral access</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Rock bottom overage: ₹0.08/1M (8B)</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 50 concurrent streams</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Priority GPU queue</li>
+                </ul>
+              </div>
+              <Link href="/vaulthost/checkout?plan=inference-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
+            </div>
+            {/* Business tier */}
+            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+              <div>
+                <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
+                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹3,999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                <p className="text-text-secondary-v4 text-sm mb-6">Dedicated GPU clusters with guaranteed tokens/sec throughput.</p>
+                <ul className="space-y-3 mb-8 text-sm">
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 250M tokens included / month</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited concurrent streams</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Custom weights &amp; LoRA fine-tunes</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Sub-20ms TTFT in India</li>
+                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 99.95% inference SLA guarantee</li>
+                </ul>
+              </div>
+              <Link href="/vaulthost/checkout?plan=inference-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
+            </div>
+          </div>
+
+          {/* Per-token table */}
+          <div className="mb-12">
+            <h3 className="text-xl font-medium text-text-primary-v4 text-center mb-6">Per-Token Model Rates</h3>
+            <div className="max-w-4xl mx-auto overflow-hidden rounded-xl border border-hairline bg-ink">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-ink-surface border-b border-hairline">
+                    <th className="py-3 px-5 font-medium text-text-secondary-v4 uppercase tracking-wider">Model</th>
+                    <th className="py-3 px-5 font-medium text-text-secondary-v4 uppercase tracking-wider">Type</th>
+                    <th className="py-3 px-5 font-medium text-text-secondary-v4 uppercase tracking-wider">VaultHost Price</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  <tr className="hover:bg-ink-surface/50 transition-colors">
+                    <td className="py-3.5 px-5 text-text-primary-v4 font-medium">Llama 3 8B (Meta)</td>
+                    <td className="py-3.5 px-5 text-text-muted-v4">Text / LLM</td>
+                    <td className="py-3.5 px-5 text-signal font-semibold">₹0.08 <span className="text-text-muted-v4 font-normal">/ 1M tokens</span></td>
+                  </tr>
+                  <tr className="hover:bg-ink-surface/50 transition-colors">
+                    <td className="py-3.5 px-5 text-text-primary-v4 font-medium">Llama 3 70B (Meta)</td>
+                    <td className="py-3.5 px-5 text-text-muted-v4">Text / LLM</td>
+                    <td className="py-3.5 px-5 text-signal font-semibold">₹0.60 <span className="text-text-muted-v4 font-normal">/ 1M tokens</span></td>
+                  </tr>
+                  <tr className="hover:bg-ink-surface/50 transition-colors">
+                    <td className="py-3.5 px-5 text-text-primary-v4 font-medium">GPT-4o (Proxy via Gateway)</td>
+                    <td className="py-3.5 px-5 text-text-muted-v4">Proprietary LLM</td>
+                    <td className="py-3.5 px-5 text-text-primary-v4">₹8.00 <span className="text-text-muted-v4 font-normal">/ 1M tokens</span></td>
+                  </tr>
+                  <tr className="hover:bg-ink-surface/50 transition-colors">
+                    <td className="py-3.5 px-5 text-text-primary-v4 font-medium">Mixtral 8x7B MoE</td>
+                    <td className="py-3.5 px-5 text-text-muted-v4">Text / LLM</td>
+                    <td className="py-3.5 px-5 text-text-primary-v4">₹0.24 <span className="text-text-muted-v4 font-normal">/ 1M tokens</span></td>
+                  </tr>
+                  <tr className="hover:bg-ink-surface/50 transition-colors">
+                    <td className="py-3.5 px-5 text-text-primary-v4 font-medium">Stable Diffusion XL</td>
+                    <td className="py-3.5 px-5 text-text-muted-v4">Image Gen</td>
+                    <td className="py-3.5 px-5 text-text-primary-v4">₹0.80 <span className="text-text-muted-v4 font-normal">/ image</span></td>
+                  </tr>
+                  <tr className="hover:bg-ink-surface/50 transition-colors">
+                    <td className="py-3.5 px-5 text-text-primary-v4 font-medium">Whisper Large v3</td>
+                    <td className="py-3.5 px-5 text-text-muted-v4">Speech-to-Text</td>
+                    <td className="py-3.5 px-5 text-text-primary-v4">₹0.005 <span className="text-text-muted-v4 font-normal">/ min audio</span></td>
+                  </tr>
+                  <tr className="hover:bg-ink-surface/50 transition-colors">
+                    <td className="py-3.5 px-5 text-text-primary-v4 font-medium">nomic-embed-text</td>
+                    <td className="py-3.5 px-5 text-text-muted-v4">Embeddings</td>
+                    <td className="py-3.5 px-5 text-text-primary-v4">₹0.02 <span className="text-text-muted-v4 font-normal">/ 1M tokens</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Competitor comparison */}
+          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
+            <table className="w-full text-sm">
+              <thead className="bg-ink-surface-2 text-text-secondary-v4">
+                <tr>
+                  <th className="py-3 px-4 text-left font-medium">Provider</th>
+                  <th className="py-3 px-4 text-left font-medium">Token Pricing</th>
+                  <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-primary-v4 font-medium">Llama 3 8B (Meta)</td>
-                  <td className="py-4 px-6 text-text-muted-v4">Text / LLM</td>
-                  <td className="py-4 px-6 text-text-primary-v4">₹0.05 <span className="text-text-muted-v4 text-sm">/ 1M tokens</span></td>
+                <tr className="bg-signal/5">
+                  <td className="py-3 px-4 font-semibold text-signal">VaultHost Inference</td>
+                  <td className="py-3 px-4 font-medium text-text-primary-v4">₹0.08 / 1M (8B) · ₹0.60 / 1M (70B) · ₹8 / 1M (GPT-4o)</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Zero cold starts, local India edge servers (&lt;20ms TTFT), true pay-per-token</td>
                 </tr>
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-primary-v4 font-medium">Llama 3 70B (Meta)</td>
-                  <td className="py-4 px-6 text-text-muted-v4">Text / LLM</td>
-                  <td className="py-4 px-6 text-text-primary-v4">₹0.50 <span className="text-text-muted-v4 text-sm">/ 1M tokens</span></td>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">AWS Bedrock</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹2.20 - ₹25 / 1M tokens</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Higher minimum billings, unpredictable on-demand pricing surges</td>
                 </tr>
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-primary-v4 font-medium">Stable Diffusion XL</td>
-                  <td className="py-4 px-6 text-text-muted-v4">Image Gen</td>
-                  <td className="py-4 px-6 text-text-primary-v4">₹1.00 <span className="text-text-muted-v4 text-sm">/ image (1024x1024)</span></td>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">Azure OpenAI</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹12.50 - ₹50 / 1M tokens</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">Proprietary model vendor lock-in with strict geographic availability</td>
                 </tr>
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-primary-v4 font-medium">Whisper Large v3</td>
-                  <td className="py-4 px-6 text-text-muted-v4">Speech-to-Text</td>
-                  <td className="py-4 px-6 text-text-primary-v4">₹0.006 <span className="text-text-muted-v4 text-sm">/ min audio</span></td>
-                </tr>
-                <tr className="hover:bg-ink-surface/50 transition-colors">
-                  <td className="py-4 px-6 text-text-primary-v4 font-medium">nomic-embed-text</td>
-                  <td className="py-4 px-6 text-text-muted-v4">Embeddings</td>
-                  <td className="py-4 px-6 text-text-primary-v4">₹0.01 <span className="text-text-muted-v4 text-sm">/ 1M tokens</span></td>
+                <tr>
+                  <td className="py-3 px-4 text-text-primary-v4">Together AI</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">₹1.50 - ₹7 / 1M tokens</td>
+                  <td className="py-3 px-4 text-text-secondary-v4">US-hosted endpoints introduce 200ms+ network latency to India apps</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <div 
-              className="rounded-[2rem] p-12 md:p-20 text-center border border-hairline/50 relative overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, rgba(10,18,36,0.98), rgba(6,12,24,1))' }}
-            >
-              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-signal/10 via-transparent to-transparent pointer-events-none" />
-              <h2 className="v4-display text-text-primary-v4 mb-6 relative z-10">Start Inferencing Today</h2>
-              <p className="text-xl text-text-secondary-v4 mb-10 max-w-2xl mx-auto relative z-10">
-                Unlock top-tier open source AI models with zero cold starts, infinite scaling, and industry-leading latency.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-                <Link href="/portal" className="v4-btn-primary rounded-btn group">
-                  Run your first inference free
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link href="/docs/inference/models" className="v4-btn-secondary rounded-btn">
-                  Browse Models
-                </Link>
-              </div>
-            </div>
-          </ScrollReveal>
         </div>
       </section>
     </div>

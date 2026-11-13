@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { PageHeroV4 } from '@/components/ui/page-hero-v4';
 import { PanelCard } from '@/components/ui/panel-card';
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
-import { ArrowRight, Lock, ShieldOff, Users, FileText, LayoutDashboard, Cloud } from 'lucide-react';
+import { ArrowRight, Lock, ShieldOff, Users, FileText, LayoutDashboard, Cloud, Check } from 'lucide-react';
 import { TunnelCLIGenerator } from '@/components/vaulthost/interactive/TunnelCLIGenerator';
 
 export default function VaultTunnelPage() {
@@ -148,69 +148,95 @@ export default function VaultTunnelPage() {
 
           <ScrollReveal delay={0.4}>
             <div className="mb-24">
-              <h2 className="text-3xl font-light mb-12 text-center v4-display">Tunnel Pricing</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-8 rounded-2xl border border-white/10 bg-white/5 flex flex-col">
-                  <h3 className="text-xl font-medium mb-2">Free</h3>
-                  <div className="text-3xl font-light mb-6">₹0<span className="text-sm text-gray-400">/mo</span></div>
-                  <ul className="space-y-3 text-gray-400 mb-8 flex-1 text-sm">
-                    <li>✓ 3 Tunnels</li>
-                    <li>✓ HTTP/HTTPS protocols</li>
-                    <li>✓ Basic Access Control</li>
-                    <li>✓ CLI Support</li>
-                  </ul>
-                  <Link href="/portal" className="block text-center py-3 rounded-lg border border-white/20 hover:bg-white/10 transition-colors">
-                    Start Free
-                  </Link>
+              <div className="text-center mb-12">
+                <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
+                <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                {/* Free tier */}
+                <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+                  <div>
+                    <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
+                    <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                    <p className="text-text-secondary-v4 text-sm mb-6">Expose 1 local development service without opening ports.</p>
+                    <ul className="space-y-3 mb-8 text-sm">
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 1 Active encrypted tunnel</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> HTTP / HTTPS protocol support</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> *.vaulthost.link public subdomains</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10GB tunnel bandwidth / month</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
+                    </ul>
+                  </div>
+                  <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
                 </div>
-                <div className="p-8 rounded-2xl border border-signal/50 bg-signal/5 flex flex-col relative">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-signal text-black text-xs font-bold px-3 py-1 rounded-full">RECOMMENDED</div>
-                  <h3 className="text-xl font-medium mb-2 text-signal">Pro</h3>
-                  <div className="text-3xl font-light mb-6 text-white">₹349<span className="text-sm text-gray-400">/mo</span></div>
-                  <ul className="space-y-3 text-gray-300 mb-8 flex-1 text-sm">
-                    <li>✓ Unlimited Tunnels</li>
-                    <li>✓ TCP & RDP Support</li>
-                    <li>✓ Advanced Identity Policies</li>
-                    <li>✓ Kubernetes Ingress</li>
-                  </ul>
-                  <Link href="/portal" className="block text-center py-3 rounded-lg bg-signal text-black font-medium hover:bg-signal/90 transition-colors">
-                    Upgrade to Pro
-                  </Link>
+                {/* Pro tier — highlighted */}
+                <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
+                  <div>
+                    <div className="text-signal text-sm font-medium mb-2">PRO</div>
+                    <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹299 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                    <p className="text-text-secondary-v4 text-sm mb-6">Unlimited tunnels with custom domains &amp; TCP forwarding.</p>
+                    <ul className="space-y-3 mb-8 text-sm">
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited active encrypted tunnels</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Custom domain CNAME mapping</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> TCP, UDP, SSH &amp; RDP forwarding</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 500GB high-speed bandwidth</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Priority email support</li>
+                    </ul>
+                  </div>
+                  <Link href="/vaulthost/checkout?plan=tunnel-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
                 </div>
-                <div className="p-8 rounded-2xl border border-white/10 bg-white/5 flex flex-col">
-                  <h3 className="text-xl font-medium mb-2">Enterprise</h3>
-                  <div className="text-3xl font-light mb-6">Custom</div>
-                  <ul className="space-y-3 text-gray-400 mb-8 flex-1 text-sm">
-                    <li>✓ Custom SLAs</li>
-                    <li>✓ Dedicated Subnet</li>
-                    <li>✓ SSO Integrations</li>
-                    <li>✓ Compliance Reports</li>
-                  </ul>
-                  <Link href="/portal" className="block text-center py-3 rounded-lg border border-white/20 hover:bg-white/10 transition-colors">
-                    Contact Sales
-                  </Link>
+                {/* Business tier */}
+                <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+                  <div>
+                    <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
+                    <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
+                    <p className="text-text-secondary-v4 text-sm mb-6">Dedicated FRP relay nodes with Zero Trust SAML identity access.</p>
+                    <ul className="space-y-3 mb-8 text-sm">
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Dedicated FRP edge relay servers</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited tunnel bandwidth</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Zero Trust Access SSO / SAML integration</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> IP allowlisting &amp; CIDR policy rules</li>
+                      <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 99.99% tunnel SLA &amp; dedicated support</li>
+                    </ul>
+                  </div>
+                  <Link href="/vaulthost/checkout?plan=tunnel-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
                 </div>
               </div>
-            </div>
-          </ScrollReveal>
 
-          <ScrollReveal delay={0.5}>
-            <div 
-              className="rounded-3xl p-12 text-center border border-white/10 relative overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, rgba(10,18,36,0.98), rgba(6,12,24,1))' }}
-            >
-              <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-              <div className="relative z-10">
-                <h2 className="text-4xl font-light mb-6 v4-display">Connect your infrastructure safely.</h2>
-                <p className="text-gray-400 mb-8 max-w-2xl mx-auto text-lg">
-                  Stop exposing ports to the public internet. Connect local apps, internal tools, and databases securely.
-                </p>
-                <Link 
-                  href="/portal" 
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white text-black font-medium hover:bg-gray-100 transition-colors"
-                >
-                  Install VaultTunnel CLI <ArrowRight className="w-5 h-5" />
-                </Link>
+              {/* Competitor comparison */}
+              <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
+                <table className="w-full text-sm">
+                  <thead className="bg-ink-surface-2 text-text-secondary-v4">
+                    <tr>
+                      <th className="py-3 px-4 text-left font-medium">Provider</th>
+                      <th className="py-3 px-4 text-left font-medium">Pricing</th>
+                      <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hairline">
+                    <tr className="bg-signal/5">
+                      <td className="py-3 px-4 font-semibold text-signal">VaultHost Tunnel</td>
+                      <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹299 Pro / ₹999 Business</td>
+                      <td className="py-3 px-4 text-text-secondary-v4">WireGuard &amp; FRP encrypted tunnels, custom domains, TCP/UDP support, Indian relays</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 px-4 text-text-primary-v4">ngrok Pro</td>
+                      <td className="py-3 px-4 text-text-secondary-v4">₹1,650/mo ($20) per seat</td>
+                      <td className="py-3 px-4 text-text-secondary-v4">Costly seat licensing and strict bandwidth throttles</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 px-4 text-text-primary-v4">Pinggy</td>
+                      <td className="py-3 px-4 text-text-secondary-v4">₹820/mo ($10)</td>
+                      <td className="py-3 px-4 text-text-secondary-v4">Single-user only, limited global points of presence</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 px-4 text-text-primary-v4">LocalXpose</td>
+                      <td className="py-3 px-4 text-text-secondary-v4">₹650/mo ($8)</td>
+                      <td className="py-3 px-4 text-text-secondary-v4">US-only server hops add notable network ping to India endpoints</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </ScrollReveal>

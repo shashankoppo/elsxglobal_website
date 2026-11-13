@@ -3,7 +3,7 @@ import {
   ShoppingCart, Plus, Building2, MapPin, BookOpen, FileText, Users,
   Phone, Briefcase, ShieldCheck, Zap, Network, HardDrive, Lock,
   Layers, Boxes, Monitor, Brain, Bot, Eye, Smartphone, RefreshCw,
-  Scale, type LucideIcon,
+  Scale, GitBranch, BarChart3, MessageSquare, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -84,6 +84,7 @@ export const VAULTHOST_MENU: NavMenu = {
     {
       heading: 'Storage & Data',
       items: [
+        { label: 'VaultBase (Supabase)', href: '/vaulthost/managed-supabase', desc: 'Managed Postgres & Auth', icon: Database },
         { label: 'Object Storage (R2)', href: '/vaulthost/storage', desc: 'S3 compatible, 0 egress', icon: HardDrive },
         { label: 'KV Store', href: '/vaulthost/kv', desc: 'Global key-value', icon: Database },
         { label: 'Edge SQL (D1)', href: '/vaulthost/database', desc: 'SQLite at edge', icon: Database },
@@ -115,16 +116,18 @@ export const VAULTHOST_MENU: NavMenu = {
       ],
     },
     {
-      heading: 'Developer Tools',
+      heading: 'Developer & SaaS Tools',
       items: [
+        { label: 'VaultGit (Gitea)', href: '/vaulthost/vaultgit', desc: 'Self-hosted Git & Actions', icon: GitBranch },
+        { label: 'VaultAutomation (n8n)', href: '/vaulthost/vaultautomation', desc: 'Visual workflow canvas', icon: Zap },
+        { label: 'VaultAnalytics', href: '/vaulthost/vaultanalytics', desc: 'Metabase + Plausible', icon: BarChart3 },
+        { label: 'VaultChat (Mattermost)', href: '/vaulthost/vaultchat', desc: 'Enterprise team chat', icon: MessageSquare },
         { label: 'Stream (Video)', href: '/vaulthost/stream', desc: 'Upload, transcode, play', icon: Monitor },
         { label: 'Images', href: '/vaulthost/images', desc: 'WebP/AVIF optimization', icon: Eye },
-        { label: 'Analytics', href: '/vaulthost/analytics', desc: 'Privacy-first, no cookies', icon: Zap },
         { label: 'Email Routing', href: '/vaulthost/email-routing', desc: '@yourdomain forwarding', icon: Mail },
         { label: 'Monitoring', href: '/vaulthost/monitoring', desc: 'Metrics, logs, traces', icon: Monitor },
         { label: 'CI/CD', href: '/vaulthost/ci-cd', desc: 'Build & deploy pipelines', icon: RefreshCw },
         { label: 'Domains', href: '/vaulthost/domains', desc: '15+ TLDs', icon: ShoppingCart },
-        { label: 'Email', href: '/vaulthost/email', desc: 'Professional email', icon: Mail },
       ],
     },
     {

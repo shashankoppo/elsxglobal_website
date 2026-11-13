@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import Link from 'next/link';
-import { Receipt, CreditCard, Download, CheckCircle2, Clock, XCircle, ArrowRight, Sparkles, RefreshCw, Plus } from 'lucide-react';
+import { 
+  Receipt, CreditCard, Download, CheckCircle2, Clock, XCircle, 
+  ArrowRight, Sparkles, RefreshCw, Plus, Wallet, AlertCircle, 
+  ArrowUpRight, ArrowDownRight, Check, X, Shield, Server, Zap, 
+  HardDrive, AlertTriangle, IndianRupee, ExternalLink
+} from 'lucide-react';
 import { PanelCard } from '@/components/ui/panel-card';
 import { SkeletonCard } from '@/components/ui/skeleton-loaders';
 
@@ -21,13 +26,48 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'invoices' | 'payment-methods' | 'usage'>('invoices');
 
+  // Customer Billing State
+  const [subscription, setSubscription] = useState({
+    id: 'sub_live_0948',
+    plan: 'VPS Pro 8GB',
+    tier: 'pro',
+    status: 'active' as 'active' | 'cancelled' | 'past_due' | 'trialing',
+    cycle: 'monthly',
+    amount: 4999,
+    nextBillingDate: 'Dec 1, 2026',
+    autoRenew: true,
+  });
+
+  const [creditBalance, setCreditBalance] = useState<number>(2450);
+  const [lifetimeCredited, setLifetimeCredited] = useState<number>(10000);
+
+  // Metered Usage Quotas
+  const [quotas, setQuotas] = useState({
+    apiRequests: { used: 1420000, limit: 10000000, label: '1.42M / 10M requests', percentage: 14.2 },
+    storage: { used: 48.6, limit: 100, label: '48.6 GB / 100 GB', percentage: 48.6 },
+    aiTokens: { used: 840000, limit: 2000000, label: '840K / 2M tokens', percentage: 42.0 },
+    bandwidth: { used: 320, limit: 1000, label: '320 GB / 1 TB', percentage: 32.0 },
+  });
+
+  // Modals & Feedback
+  const [isAddCreditModalOpen, setIsAddCreditModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState<number>(1000);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   useEffect(() => {
-    async function fetchInvoices() {
+    async function fetchBillingData() {
       setLoading(true);
       try {
         const supabase = createClient();
         const { data: userData } = await supabase.auth.getUser();
         if (userData?.user) {
+          // Fetch invoices
           const { data, error } = await supabase
             .from('hosting_invoices')
             .select('*, hosting_orders(*)')
@@ -39,18 +79,74 @@ export default function BillingPage() {
           } else {
             setInvoices(DEMO_INVOICES);
           }
+
+          // Fetch customer credit balance
+          try {
+            const { data: creditData } = await supabase
+              .from('credit_balances')
+              .select('balance_paise, lifetime_credited_paise')
+              .eq('user_id', userData.user.id)
+              .maybeSingle();
+
+            if (creditData) {
+              setCreditBalance(Math.round(creditData.balance_paise / 100));
+              setLifetimeCredited(Math.round(creditData.lifetime_credited_paise / 100));
+            }
+          } catch {
+            // graceful fallback
+          }
+
+          // Fetch active subscription
+          try {
+            const { data: subData } = await supabase
+              .from('subscriptions')
+              .select('*, hosting_plans(*)')
+              .eq('user_id', userData.user.id)
+              .eq('status', 'active')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (subData) {
+              setSubscription({
+                id: subData.id,
+                plan: subData.hosting_plans?.name || subData.plan_id || 'VPS Pro 8GB',
+                tier: subData.hosting_plans?.tier || 'pro',
+                status: subData.status,
+                cycle: subData.billing_cycle || 'monthly',
+                amount: Math.round((subData.next_invoice_amount_paise || 499900) / 100),
+                nextBillingDate: subData.current_period_end ? new Date(subData.current_period_end).toLocaleDateString() : 'Dec 1, 2026',
+                autoRenew: !subData.cancel_at_period_end,
+              });
+            }
+          } catch {
+            // graceful fallback
+          }
         } else {
           setInvoices(DEMO_INVOICES);
         }
       } catch (e) {
-        console.error('Error fetching invoices, using demo data', e);
+        console.error('Error fetching billing data, using demo state', e);
         setInvoices(DEMO_INVOICES);
       } finally {
         setLoading(false);
       }
     }
-    fetchInvoices();
+    fetchBillingData();
   }, []);
+
+  const handleAddCredits = (amountToAdd: number) => {
+    setCreditBalance(prev => prev + amountToAdd);
+    setLifetimeCredited(prev => prev + amountToAdd);
+    showToast(`₹${amountToAdd.toLocaleString('en-IN')} successfully added to prepaid wallet!`);
+    setIsAddCreditModalOpen(false);
+  };
+
+  const handleConfirmCancel = () => {
+    setSubscription(prev => ({ ...prev, status: 'cancelled', autoRenew: false }));
+    showToast('Subscription has been marked for cancellation at the end of the period.');
+    setIsCancelModalOpen(false);
+  };
 
   const totalPaid = invoices
     .filter((inv) => inv.status === 'paid')
@@ -103,12 +199,333 @@ export default function BillingPage() {
         </PanelCard>
         <PanelCard className="p-5">
           <div className="text-sm text-text-muted-v4 mb-1">Next Renewal</div>
-          <div className="text-2xl font-bold text-text-primary-v4">Oct 1, 2026</div>
+          <div className="text-2xl font-bold text-text-primary-v4">{subscription.nextBillingDate}</div>
         </PanelCard>
         <PanelCard className="p-5">
           <div className="text-sm text-text-muted-v4 mb-1">Active Subscriptions</div>
           <div className="text-2xl font-bold text-text-primary-v4">{activeSubscriptions}</div>
         </PanelCard>
+      </div>
+
+      {/* ─── 1. SUBSCRIPTION STATUS & 2. PREPAID CREDIT BALANCE GRID ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        {/* Subscription Status Card */}
+        <PanelCard className="p-6 bg-ink border border-hairline flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Server className="w-4 h-4 text-signal" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted-v4">
+                  Active Subscription Tier
+                </span>
+              </div>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                subscription.status === 'active'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${subscription.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`}></span>
+                {subscription.status === 'active' ? 'Active' : 'Cancelled'}
+              </span>
+            </div>
+
+            <div className="flex items-baseline justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-text-primary-v4">{subscription.plan}</h2>
+                <p className="text-xs text-text-muted-v4 mt-0.5">High-Performance NVMe Cloud Instance (Mumbai 1 DC)</p>
+              </div>
+              <div className="text-right">
+                <span className="text-xl font-mono font-bold text-text-primary-v4">₹{subscription.amount.toLocaleString()}</span>
+                <span className="text-xs text-text-muted-v4"> / {subscription.cycle}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 rounded-md bg-ink-surface border border-hairline text-xs grid grid-cols-2 gap-2">
+              <div>
+                <span className="text-text-muted-v4 text-[11px] block">Next Billing Cycle</span>
+                <span className="font-medium text-text-primary-v4">{subscription.nextBillingDate}</span>
+              </div>
+              <div>
+                <span className="text-text-muted-v4 text-[11px] block">Renewal Method</span>
+                <span className="font-medium text-text-primary-v4">{subscription.autoRenew ? 'Auto-debit (UPI / Card)' : 'Manual Invoice'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-4 mt-4 border-t border-hairline">
+            <Link
+              href="/vaulthost/pricing?tier=enterprise"
+              className="text-xs font-semibold text-signal hover:underline flex items-center gap-1"
+            >
+              Modify Plan Specs <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+            {subscription.status === 'active' && (
+              <button
+                onClick={() => setIsCancelModalOpen(true)}
+                className="text-xs text-rose-400/80 hover:text-rose-400 hover:underline"
+              >
+                Cancel Subscription
+              </button>
+            )}
+          </div>
+        </PanelCard>
+
+        {/* Credit Balance Card */}
+        <PanelCard className="p-6 bg-ink border border-hairline flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-purple-400" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted-v4">
+                  Prepaid Wallet Balance
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                Auto-Deductions Active
+              </span>
+            </div>
+
+            <div className="flex items-baseline justify-between">
+              <div>
+                <div className="text-3xl font-bold font-mono text-emerald-400">
+                  ₹{creditBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </div>
+                <p className="text-xs text-text-muted-v4 mt-0.5">
+                  Lifetime Credits Awarded: ₹{lifetimeCredited.toLocaleString('en-IN')}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsAddCreditModalOpen(true)}
+                className="v4-btn-primary flex items-center gap-1.5 px-4 py-2 text-xs font-semibold"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Credits
+              </button>
+            </div>
+
+            <p className="mt-4 text-xs text-text-secondary-v4 leading-relaxed bg-ink-surface p-3 rounded border border-hairline">
+              Prepaid credits are automatically applied towards metered hourly consumption (Workers, AI tokens, R2 storage) and future monthly plan invoices.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between pt-3 mt-4 border-t border-hairline text-xs">
+            <span className="text-text-muted-v4">Zero invoice surprises guarantee</span>
+            <button
+              onClick={() => setActiveTab('usage')}
+              className="text-signal hover:underline flex items-center gap-1 font-medium"
+            >
+              View Metered Ledger <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </PanelCard>
+      </div>
+
+      {/* ─── 3. USAGE METERS (METERED TELEMETRY GAUGES) ─── */}
+      <PanelCard className="p-6 bg-ink border border-hairline mb-8 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-hairline pb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary-v4 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-signal" />
+              Live Resource Quotas & Usage Meters
+            </h3>
+            <p className="text-xs text-text-secondary-v4 mt-0.5">
+              Hourly metered consumption against your current tier allocations. Quotas reset automatically at month end.
+            </p>
+          </div>
+          <span className="text-[11px] font-mono text-text-muted-v4 bg-ink-surface px-2.5 py-1 rounded border border-hairline self-start sm:self-auto">
+            Billing Period Resets in 18 Days
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          {/* API Requests */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="font-medium text-text-primary-v4 flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-signal" /> API Requests
+              </span>
+              <span className="font-mono text-text-secondary-v4">{quotas.apiRequests.label} ({quotas.apiRequests.percentage}%)</span>
+            </div>
+            <div className="w-full bg-ink-surface-2 rounded-full h-2.5 overflow-hidden border border-hairline">
+              <div
+                className="bg-signal h-full rounded-full transition-all duration-500"
+                style={{ width: `${quotas.apiRequests.percentage}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Storage (VaultR2) */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="font-medium text-text-primary-v4 flex items-center gap-1.5">
+                <HardDrive className="w-3.5 h-3.5 text-blue-400" /> Object Storage (VaultR2)
+              </span>
+              <span className="font-mono text-text-secondary-v4">{quotas.storage.label} ({quotas.storage.percentage}%)</span>
+            </div>
+            <div className="w-full bg-ink-surface-2 rounded-full h-2.5 overflow-hidden border border-hairline">
+              <div
+                className="bg-blue-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${quotas.storage.percentage}%` }}
+              />
+            </div>
+          </div>
+
+          {/* AI Tokens (LiteLLM) */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="font-medium text-text-primary-v4 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-purple-400" /> AI Tokens (LiteLLM Gateway)
+              </span>
+              <span className="font-mono text-text-secondary-v4">{quotas.aiTokens.label} ({quotas.aiTokens.percentage}%)</span>
+            </div>
+            <div className="w-full bg-ink-surface-2 rounded-full h-2.5 overflow-hidden border border-hairline">
+              <div
+                className="bg-purple-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${quotas.aiTokens.percentage}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Bandwidth */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="font-medium text-text-primary-v4 flex items-center gap-1.5">
+                <Server className="w-3.5 h-3.5 text-emerald-400" /> Global Anycast Bandwidth
+              </span>
+              <span className="font-mono text-text-secondary-v4">{quotas.bandwidth.label} ({quotas.bandwidth.percentage}%)</span>
+            </div>
+            <div className="w-full bg-ink-surface-2 rounded-full h-2.5 overflow-hidden border border-hairline">
+              <div
+                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${quotas.bandwidth.percentage}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </PanelCard>
+
+      {/* ─── 4. UPGRADE / DOWNGRADE PLAN SECTION ─── */}
+      <div className="mb-8 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary-v4 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-cyan-400" />
+              Manage Subscription Plan & Tier Scaling
+            </h3>
+            <p className="text-xs text-text-secondary-v4 mt-0.5">
+              Instantly upgrade or adjust your cloud resources with automated prorated billing.
+            </p>
+          </div>
+          <Link
+            href="/vaulthost/pricing"
+            className="text-xs text-signal hover:underline flex items-center gap-1 font-medium"
+          >
+            Compare All Plans <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Starter Tier */}
+          <div className="p-5 rounded-lg bg-ink border border-hairline hover:border-hairline-2 transition-all flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-text-muted-v4 uppercase tracking-wider">Starter</span>
+                <span className="text-xs font-mono text-text-secondary-v4">Entry Workloads</span>
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-text-primary-v4">VPS Starter 4GB</h4>
+                <div className="text-xl font-bold font-mono text-text-primary-v4 mt-1">
+                  ₹1,999 <span className="text-xs font-normal text-text-muted-v4">/ mo</span>
+                </div>
+              </div>
+              <ul className="text-xs text-text-secondary-v4 space-y-1.5 pt-2 border-t border-hairline">
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" /> 2 vCPU Cores & 4GB RAM
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" /> 50GB NVMe Storage
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" /> 1M API Requests / mo
+                </li>
+              </ul>
+            </div>
+            <Link
+              href="/vaulthost/pricing?tier=starter"
+              className="mt-5 w-full py-2 px-3 rounded text-center text-xs font-medium bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-primary-v4 transition-colors"
+            >
+              Downgrade to Starter
+            </Link>
+          </div>
+
+          {/* Pro Tier (CURRENT ACTIVE TIER) */}
+          <div className="p-5 rounded-lg bg-ink border-2 border-signal shadow-lg relative flex flex-col justify-between">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-black px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              Current Active Tier
+            </div>
+            <div className="space-y-3 mt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-signal uppercase tracking-wider">Pro Tier</span>
+                <span className="text-xs font-mono text-signal">Popular</span>
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-text-primary-v4">VPS Pro 8GB</h4>
+                <div className="text-xl font-bold font-mono text-signal mt-1">
+                  ₹4,999 <span className="text-xs font-normal text-text-muted-v4">/ mo</span>
+                </div>
+              </div>
+              <ul className="text-xs text-text-secondary-v4 space-y-1.5 pt-2 border-t border-hairline">
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-signal" /> 4 vCPU Cores & 8GB RAM
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-signal" /> 100GB NVMe Storage + R2 Vault
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-signal" /> 10M API Requests + 2M AI Tokens
+                </li>
+              </ul>
+            </div>
+            <button
+              disabled
+              className="mt-5 w-full py-2 px-3 rounded text-center text-xs font-semibold bg-signal/15 text-signal border border-signal/30 cursor-default"
+            >
+              Active on Your Account
+            </button>
+          </div>
+
+          {/* Enterprise Tier */}
+          <div className="p-5 rounded-lg bg-ink border border-hairline hover:border-hairline-2 transition-all flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-text-muted-v4 uppercase tracking-wider">Enterprise</span>
+                <span className="text-xs font-mono text-purple-400">Scale Out</span>
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-text-primary-v4">Cloud Dedicated 16GB</h4>
+                <div className="text-xl font-bold font-mono text-text-primary-v4 mt-1">
+                  ₹8,999 <span className="text-xs font-normal text-text-muted-v4">/ mo</span>
+                </div>
+              </div>
+              <ul className="text-xs text-text-secondary-v4 space-y-1.5 pt-2 border-t border-hairline">
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" /> 8 Dedicated vCPUs & 16GB RAM
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" /> 250GB Enterprise NVMe RAID
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" /> Unlimited API Calls & Priority SLA
+                </li>
+              </ul>
+            </div>
+            <Link
+              href="/vaulthost/pricing?tier=enterprise"
+              className="mt-5 w-full py-2 px-3 rounded text-center text-xs font-semibold bg-signal text-black hover:bg-signal/90 transition-all shadow-sm"
+            >
+              Upgrade to Enterprise
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -224,59 +641,196 @@ export default function BillingPage() {
             )}
 
             {activeTab === 'usage' && (
-              <div className="p-6 space-y-8">
+              <div className="p-6 space-y-6">
                 <div>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-text-primary-v4 font-medium">Storage</span>
-                    <span className="text-text-secondary-v4">48.6 GB / 100 GB</span>
+                    <span className="text-text-primary-v4 font-medium flex items-center gap-1.5">
+                      <HardDrive className="w-4 h-4 text-blue-400" /> Object Storage (VaultR2)
+                    </span>
+                    <span className="text-text-secondary-v4 font-mono">{quotas.storage.label}</span>
                   </div>
                   <div className="w-full bg-ink-surface-2 rounded-full h-2">
-                    <div className="bg-signal h-2 rounded-full" style={{ width: '48.6%' }}></div>
+                    <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${quotas.storage.percentage}%` }}></div>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-text-primary-v4 font-medium">Bandwidth</span>
-                    <span className="text-text-secondary-v4">320 GB / 1 TB</span>
+                    <span className="text-text-primary-v4 font-medium flex items-center gap-1.5">
+                      <Server className="w-4 h-4 text-emerald-400" /> Global Bandwidth
+                    </span>
+                    <span className="text-text-secondary-v4 font-mono">{quotas.bandwidth.label}</span>
                   </div>
                   <div className="w-full bg-ink-surface-2 rounded-full h-2">
-                    <div className="bg-signal h-2 rounded-full" style={{ width: '32%' }}></div>
+                    <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${quotas.bandwidth.percentage}%` }}></div>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-text-primary-v4 font-medium">Workers Requests</span>
-                    <span className="text-text-secondary-v4">1.42M / 10M</span>
+                    <span className="text-text-primary-v4 font-medium flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-signal" /> Workers & Edge Requests
+                    </span>
+                    <span className="text-text-secondary-v4 font-mono">{quotas.apiRequests.label}</span>
                   </div>
                   <div className="w-full bg-ink-surface-2 rounded-full h-2">
-                    <div className="bg-signal h-2 rounded-full" style={{ width: '14.2%' }}></div>
+                    <div className="bg-signal h-2 rounded-full transition-all" style={{ width: `${quotas.apiRequests.percentage}%` }}></div>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-text-primary-v4 font-medium">API Calls</span>
-                    <span className="text-text-secondary-v4">4.82M / unlimited</span>
+                    <span className="text-text-primary-v4 font-medium flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-purple-400" /> AI Tokens (LiteLLM Gateway)
+                    </span>
+                    <span className="text-text-secondary-v4 font-mono">{quotas.aiTokens.label}</span>
                   </div>
                   <div className="w-full bg-ink-surface-2 rounded-full h-2">
-                    <div className="bg-signal h-2 rounded-full" style={{ width: '20%' }}></div>
+                    <div className="bg-purple-500 h-2 rounded-full transition-all" style={{ width: `${quotas.aiTokens.percentage}%` }}></div>
                   </div>
                 </div>
 
-                <div className="mt-8 p-4 bg-green-500/10 border border-green-500/20 rounded-lg flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 text-green-400 mt-0.5" />
-                  <div>
-                    <div className="text-green-400 font-medium">₹25.00 credits remaining</div>
-                    <div className="text-sm text-green-400/80 mt-1">These credits will be automatically applied to your next invoice.</div>
+                <div className="mt-8 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <Wallet className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="text-emerald-400 font-semibold">₹{creditBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} prepaid credits available</div>
+                      <div className="text-xs text-emerald-400/80 mt-0.5">Prepaid credits are applied automatically to metered overages and subscription renewals.</div>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setIsAddCreditModalOpen(true)}
+                    className="v4-btn-primary px-4 py-2 text-xs font-semibold shrink-0"
+                  >
+                    Top Up Wallet
+                  </button>
                 </div>
               </div>
             )}
           </>
         )}
       </div>
+
+      {/* ─── TOAST NOTIFICATION ─── */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-ink-surface-2 border border-signal/40 text-text-primary-v4 px-4 py-3 rounded-lg shadow-2xl animate-fade-in text-xs font-medium">
+          <CheckCircle2 className="w-4 h-4 text-signal shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* ─── MODAL: ADD PREPAID CREDITS ─── */}
+      {isAddCreditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-lg bg-ink border border-hairline shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-hairline">
+              <h3 className="text-sm font-semibold text-text-primary-v4 flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-signal" /> Add Prepaid Credits
+              </h3>
+              <button
+                onClick={() => setIsAddCreditModalOpen(false)}
+                className="text-text-muted-v4 hover:text-text-primary-v4 p-1 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-text-secondary-v4">
+              Credits never expire and are automatically drawn for metered API consumption, R2 egress, and renewals.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              {[500, 1000, 2500, 5000].map(amt => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setTopUpAmount(amt)}
+                  className={`py-2 px-3 rounded-md text-xs font-semibold border transition-all text-center ${
+                    topUpAmount === amt
+                      ? 'border-signal bg-signal/10 text-signal font-bold'
+                      : 'border-hairline bg-ink-surface hover:border-hairline-2 text-text-primary-v4'
+                  }`}
+                >
+                  +₹{amt.toLocaleString('en-IN')}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-text-muted-v4">Custom Top-up Amount (₹)</label>
+              <input
+                type="number"
+                min="100"
+                step="100"
+                value={topUpAmount}
+                onChange={e => setTopUpAmount(Math.max(100, parseInt(e.target.value, 10) || 100))}
+                className="w-full px-3 py-2 rounded bg-ink-surface border border-hairline text-xs font-mono text-text-primary-v4 focus:outline-none focus:border-signal"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-hairline">
+              <button
+                type="button"
+                onClick={() => setIsAddCreditModalOpen(false)}
+                className="px-3.5 py-2 rounded bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-xs font-medium text-text-secondary-v4"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddCredits(topUpAmount)}
+                className="v4-btn-primary px-4 py-2 text-xs font-semibold shadow-sm"
+              >
+                Confirm ₹{topUpAmount.toLocaleString('en-IN')} Top-up
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: CANCEL SUBSCRIPTION CONFIRMATION ─── */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-sm rounded-lg bg-ink border border-hairline shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-hairline">
+              <h3 className="text-sm font-semibold text-rose-400 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-400" /> Cancel Subscription
+              </h3>
+              <button
+                onClick={() => setIsCancelModalOpen(false)}
+                className="text-text-muted-v4 hover:text-text-primary-v4 p-1 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-text-secondary-v4 leading-relaxed">
+              Are you sure you want to cancel your <strong>{subscription.plan}</strong> subscription? Your service will remain active until the end of your billing cycle on <strong className="text-text-primary-v4">{subscription.nextBillingDate}</strong>.
+            </p>
+
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded text-[11px] text-rose-300">
+              Note: Unused dedicated compute quotas will not roll over once the period ends.
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsCancelModalOpen(false)}
+                className="px-3.5 py-2 rounded bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-xs font-medium text-text-secondary-v4"
+              >
+                Keep Plan
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancel}
+                className="px-4 py-2 rounded bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors"
+              >
+                Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,12 +10,13 @@ import {
   LayoutDashboard, Server, Receipt, LifeBuoy, LogOut, Menu, Loader2,
   Users, CreditCard, Package, Wallet, Plus, ShieldCheck, Globe,
   X as XIcon, RefreshCw, Send, Database as DbIcon, Settings,
-  ChevronRight, Search, Tag, Sparkles, ShieldAlert, Zap, HardDrive, Network
+  ChevronRight, Search, Tag, Sparkles, ShieldAlert, Zap, HardDrive, Network,
+  IndianRupee
 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
-export type Tab = 'overview' | 'orders' | 'plans' | 'addons' | 'coupons' | 'services' | 'users' | 'tickets' | 'invoices' | 'leads' | 'payments' | 'emails' | 'settings-payment' | 'settings-provisioning' | 'settings-site' | 'settings-integrations' | 'settings-nodes' | 'cloud' | 'approval-queue' | 'actions' | 'ai-governance' | 'security' | 'workers' | 'storage' | 'dns';
+export type Tab = 'overview' | 'orders' | 'plans' | 'addons' | 'coupons' | 'services' | 'users' | 'tickets' | 'invoices' | 'leads' | 'payments' | 'billing' | 'emails' | 'settings-payment' | 'settings-provisioning' | 'settings-site' | 'settings-integrations' | 'settings-nodes' | 'cloud' | 'approval-queue' | 'actions' | 'ai-governance' | 'security' | 'workers' | 'storage' | 'dns';
 
 interface AdminInfo { email: string; name: string; }
 
@@ -79,6 +80,7 @@ export const navSections: { label: string; items: { id: Tab; link: string; label
   {
     label: 'Finance',
     items: [
+      { id: 'billing', link: '/admin/billing', label: 'Billing Control', icon: IndianRupee },
       { id: 'payments', link: '/admin/payments', label: 'Transactions', icon: Wallet },
       { id: 'leads', link: '/admin/leads', label: 'Odoo Leads', icon: DbIcon },
     ],

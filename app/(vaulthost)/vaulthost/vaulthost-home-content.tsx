@@ -375,6 +375,49 @@ const PRODUCT_CATEGORIES = [
       },
     ],
   },
+  {
+    id: 'saas',
+    name: 'Open-Source SaaS Platform',
+    icon: Layers,
+    tagline: 'Enterprise-grade managed open-source alternatives for Indian data sovereignty',
+    products: [
+      {
+        title: 'VaultBase (Managed Supabase)',
+        desc: 'Postgres 16, Auth, Realtime, Storage, and Edge Functions on Indian Tier-IV data centers.',
+        href: '/vaulthost/managed-supabase',
+        icon: Database,
+        badge: 'Supabase PaaS',
+      },
+      {
+        title: 'VaultGit',
+        desc: 'Self-hosted Git with CI/CD Actions, code review, issues, and container registry. Code stays in India.',
+        href: '/vaulthost/vaultgit',
+        icon: GitBranch,
+        badge: 'Gitea Git',
+      },
+      {
+        title: 'VaultAutomation',
+        desc: 'Managed n8n workflow canvas. Connect 400+ apps visually without code or Zapier price penalties.',
+        href: '/vaulthost/vaultautomation',
+        icon: Workflow,
+        badge: 'Managed n8n',
+      },
+      {
+        title: 'VaultAnalytics',
+        desc: 'Cookieless web analytics (Plausible) and SQL business intelligence dashboards (Metabase) unified.',
+        href: '/vaulthost/vaultanalytics',
+        icon: BarChart3,
+        badge: 'Plausible + Metabase',
+      },
+      {
+        title: 'VaultChat',
+        desc: 'Enterprise messaging built on Mattermost. Slack-compatible channels and threads with Indian data residency.',
+        href: '/vaulthost/vaultchat',
+        icon: MessageSquare,
+        badge: 'Mattermost Chat',
+      },
+    ],
+  },
 ];
 
 /* ══ CLOUDFLARE / AWS COMPARISON MATRIX ══ */

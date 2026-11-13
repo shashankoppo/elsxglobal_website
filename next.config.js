@@ -46,14 +46,17 @@ const nextConfig = {
     ];
   },
   experimental: {
-    // Windows EAGAIN workaround — can be removed on Linux/CI
-    workerThreads: false,
-    cpus: 4,
+    // Windows EAGAIN workaround — only applied on Windows hosts
+    ...(process.platform === 'win32'
+      ? { workerThreads: false, cpus: 4 }
+      : {}),
   },
   webpack: (config) => {
-    config.cache = false;
-    // Force serial processing to reduce concurrent fs calls (Windows workaround)
-    config.parallelism = 1;
+    if (process.platform === 'win32') {
+      config.cache = false;
+      // Force serial processing to reduce concurrent fs calls (Windows workaround)
+      config.parallelism = 1;
+    }
     return config;
   },
 };

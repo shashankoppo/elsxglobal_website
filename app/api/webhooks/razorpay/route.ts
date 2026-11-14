@@ -41,13 +41,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
     }
 
-    // Verify webhook signature
+    // Verify webhook signature (timing-safe)
     const expectedSignature = crypto
       .createHmac('sha256', secret)
       .update(rawBody)
       .digest('hex');
     
-    if (expectedSignature !== signature) {
+    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+    const signatureBuf = Buffer.from(signature, 'utf8');
+    const isValid = expectedBuf.length === signatureBuf.length && crypto.timingSafeEqual(expectedBuf, signatureBuf);
+
+    if (!isValid) {
       console.error('Razorpay webhook: invalid signature');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }

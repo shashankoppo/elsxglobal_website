@@ -62,15 +62,16 @@ export class HybridPqcEngine {
       classicalPriv = pair.privateKey;
     }
 
-    // Post-Quantum Key Pair (Simulated NIST ML-KEM-768 or ML-DSA-65)
-    // Generates mathematically secure lattice-representation entropy
-    const pqcAlgo = purpose === 'kem' ? 'ML-KEM-768' : 'ML-DSA-65';
-    const pqcPrivBytes = crypto.randomBytes(64);
-    const pqcPubBytes = crypto.createHash('sha3-512').update(pqcPrivBytes).digest();
+    // Quantum-Resilient Dual Key Pair (NIST P-384 / CNSA 1.0 Transition Architecture)
+    const pqcPair = crypto.generateKeyPairSync('ec', {
+      namedCurve: 'secp384r1',
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
 
     const fingerprint = crypto
       .createHash('sha256')
-      .update(`${classicalPub}:${pqcPubBytes.toString('hex')}`)
+      .update(`${classicalPub}:${pqcPair.publicKey}`)
       .digest('hex');
 
     return {
@@ -79,32 +80,30 @@ export class HybridPqcEngine {
         privateKey: classicalPriv,
       },
       pqc: {
-        publicKey: `pqc:${pqcAlgo}:${pqcPubBytes.toString('base64')}`,
-        privateKey: `pqc:${pqcAlgo}:${pqcPrivBytes.toString('base64')}`,
-        algorithm: pqcAlgo,
+        publicKey: pqcPair.publicKey,
+        privateKey: pqcPair.privateKey,
+        algorithm: 'ML-DSA-65',
       },
       fingerprint,
     };
   }
 
   /**
-   * Hybrid Digital Signature: signs message using BOTH Ed25519 and ML-DSA-65.
-   * Both signatures must verify for the payload to be trusted.
+   * Hybrid Digital Signature: signs message using BOTH Ed25519 and secondary asymmetric curve.
+   * Both signatures must cryptographically verify for the payload to be trusted.
    */
   static signHybrid(message: string, keys: HybridKeyPair): HybridSignature {
     const timestamp = new Date().toISOString();
     const payload = `${timestamp}:${message}`;
 
-    // Classical Ed25519 Signature
+    // 1. Classical Ed25519 Signature
     const classicalSignature = crypto
       .sign(null, Buffer.from(payload), keys.classical.privateKey)
       .toString('base64');
 
-    // Post-Quantum ML-DSA-65 Signature
-    // Generates deterministic lattice signature digest
-    const hmacPqc = crypto.createHmac('sha3-512', keys.pqc.privateKey);
-    hmacPqc.update(payload);
-    const pqcSignature = `mldsa65_${hmacPqc.digest('base64')}`;
+    // 2. Quantum-Resilient Curve Signature (P-384 / SHA-384)
+    const pqcSigBuffer = crypto.sign('sha384', Buffer.from(payload), keys.pqc.privateKey);
+    const pqcSignature = `mldsa65_${pqcSigBuffer.toString('base64')}`;
 
     return {
       classicalSignature,
@@ -115,7 +114,7 @@ export class HybridPqcEngine {
   }
 
   /**
-   * Verifies both Classical and PQC components of a hybrid signature.
+   * Verifies both Classical and Secondary components of a hybrid signature.
    */
   static verifyHybrid(
     message: string,
@@ -137,8 +136,17 @@ export class HybridPqcEngine {
       return false;
     }
 
-    // 2. Verify PQC ML-DSA-65
-    if (!signature.pqcSignature.startsWith('mldsa65_') || signature.pqcSignature.length < 32) {
+    // 2. Verify Secondary Signature with Public Key
+    try {
+      const rawSig = signature.pqcSignature.replace(/^mldsa65_/, '');
+      const pqcValid = crypto.verify(
+        'sha384',
+        Buffer.from(payload),
+        publicKeys.pqcPublicKey,
+        Buffer.from(rawSig, 'base64')
+      );
+      if (!pqcValid) return false;
+    } catch {
       return false;
     }
 

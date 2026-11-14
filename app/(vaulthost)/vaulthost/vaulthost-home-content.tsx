@@ -645,12 +645,12 @@ export default function VaultHostHomeContent() {
               </div>
 
               {/* Tabs */}
-              <div className="flex items-center gap-1 mt-2 sm:mt-0 font-medium">
+              <div className="flex items-center gap-1 mt-2 sm:mt-0 font-medium overflow-x-auto max-w-full pb-1 terminal-scrollbar">
                 {[
-                  { id: 'anycast', label: '1. Anycast Edge Router', icon: Globe },
-                  { id: 'ai', label: '2. AI Gateway Cache', icon: Bot },
-                  { id: 'calculator', label: '3. Zero Egress vs AWS', icon: Sliders },
-                  { id: 'tunnel', label: '4. Zero-Port Tunnel', icon: Lock },
+                  { id: 'anycast', label: '1. Anycast Edge Router', short: 'Anycast', icon: Globe },
+                  { id: 'ai', label: '2. AI Gateway Cache', short: 'AI Gateway', icon: Bot },
+                  { id: 'calculator', label: '3. Zero Egress vs AWS', short: 'Egress Calc', icon: Sliders },
+                  { id: 'tunnel', label: '4. Zero-Port Tunnel', short: 'Tunnel', icon: Lock },
                 ].map((tab) => {
                   const active = activeCockpitTab === tab.id;
                   const Icon = tab.icon;
@@ -658,14 +658,15 @@ export default function VaultHostHomeContent() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveCockpitTab(tab.id as any)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-colors shrink-0 ${
                         active
                           ? 'bg-signal/20 text-signal border border-signal/40 font-semibold'
                           : 'text-text-muted-v4 hover:text-text-primary-v4'
                       }`}
                     >
-                      <Icon className="h-3.5 w-3.5" />
-                      <span>{tab.label}</span>
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="hidden sm:inline">{tab.label}</span>
+                      <span className="sm:hidden">{tab.short}</span>
                     </button>
                   );
                 })}
@@ -673,7 +674,7 @@ export default function VaultHostHomeContent() {
             </div>
 
             {/* Cockpit Tab Content */}
-            <div className="p-6 sm:p-8">
+            <div className="p-4 sm:p-8">
               {/* TAB 1: ANYCAST EDGE ROUTER */}
               {activeCockpitTab === 'anycast' && (
                 <div className="space-y-6">

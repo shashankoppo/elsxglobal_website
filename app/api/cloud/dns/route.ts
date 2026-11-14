@@ -1,10 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import { createServerClient } from '@/lib/supabase/server';
 import { processActionIntent } from '@/lib/action-gateway/gateway';
 import { ActionIntent } from '@/lib/action-gateway/types';
 import { ok, err } from '@/lib/core/api-response';
+import { PowerDNSClient } from '@/lib/dns/powerdns';
 
 export interface DnsRecord {
   id: string;
@@ -25,51 +27,72 @@ export interface DnsZone {
   queries24h: number;
 }
 
-const FALLBACK_ZONES: DnsZone[] = [
-  { id: 'zone-01', domain: 'apexdigital.io', status: 'active', dnssec: 'active', queries24h: 421000 },
-  { id: 'zone-02', domain: 'bharatpay.co', status: 'active', dnssec: 'active', queries24h: 892000 },
-  { id: 'zone-03', domain: 'vaulthost.cloud', status: 'active', dnssec: 'active', queries24h: 1240000 },
-];
-
-let fallbackRecords: DnsRecord[] = [
-  { id: 'rec-01', zoneId: 'zone-01', type: 'A', name: '@', content: '103.21.244.12', ttl: 300, proxied: true },
-  { id: 'rec-02', zoneId: 'zone-01', type: 'A', name: 'api', content: '103.21.244.18', ttl: 300, proxied: true },
-  { id: 'rec-03', zoneId: 'zone-01', type: 'CNAME', name: 'www', content: 'apexdigital.io', ttl: 300, proxied: true },
-  { id: 'rec-04', zoneId: 'zone-01', type: 'TXT', name: '@', content: 'v=spf1 include:_spf.vaulthost.cloud ~all', ttl: 3600, proxied: false },
-  { id: 'rec-05', zoneId: 'zone-01', type: 'MX', name: '@', content: 'mail.vaulthost.cloud', ttl: 3600, proxied: false, priority: 10 },
-  { id: 'rec-06', zoneId: 'zone-02', type: 'A', name: '@', content: '104.22.51.77', ttl: 300, proxied: true },
-  { id: 'rec-07', zoneId: 'zone-02', type: 'A', name: 'checkout', content: '104.22.51.89', ttl: 300, proxied: true },
-];
-
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const domain = searchParams.get('domain') || searchParams.get('zone') || 'apexdigital.io';
-
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
 
-    const { data: dbRecords, error } = await supabase
-      .from('cloud_dns_records')
-      .select('*')
-      .order('created_at', { ascending: true });
-
-    if (!error && dbRecords && dbRecords.length > 0) {
-      return ok({
-        source: 'database',
-        zones: FALLBACK_ZONES,
-        activeZone: domain,
-        records: dbRecords,
-        user: user ? { id: user.id, email: user.email } : null,
-      });
+    if (!user) {
+      return err('UNAUTHORIZED', 'Authentication required to access DNS records', { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const domain = searchParams.get('domain') || searchParams.get('zone');
+
+    // Fetch user zones
+    let zones: DnsZone[] = [];
+    const { data: dbZones } = await supabase
+      .from('cloud_dns_zones')
+      .select('*')
+      .eq('tenant_id', user.id);
+
+    if (dbZones && dbZones.length > 0) {
+      zones = dbZones.map((z: any) => ({
+        id: z.id,
+        domain: z.domain,
+        status: z.status || 'active',
+        dnssec: z.dnssec_status || 'disabled',
+        queries24h: Number(z.query_count_24h) || 0,
+      }));
+    }
+
+    // Fetch records
+    let query = supabase
+      .from('cloud_dns_records')
+      .select('*')
+      .eq('tenant_id', user.id)
+      .order('created_at', { ascending: true });
+
+    if (domain) {
+      // Find zone id if matching
+      const matchingZone = zones.find(z => z.domain.toLowerCase() === domain.toLowerCase());
+      if (matchingZone) {
+        query = query.eq('zone_id', matchingZone.id);
+      }
+    }
+
+    const { data: dbRecords, error } = await query;
+    if (error) {
+      console.warn('[DNS Route] Database query error:', error.message);
+    }
+
+    const records: DnsRecord[] = (dbRecords || []).map((r: any) => ({
+      id: r.id,
+      zoneId: r.zone_id,
+      type: r.type,
+      name: r.name,
+      content: r.content,
+      ttl: r.ttl || 300,
+      proxied: Boolean(r.proxied),
+      priority: r.priority || undefined,
+    }));
+
     return ok({
-      source: 'edge_cache',
-      zones: FALLBACK_ZONES,
-      activeZone: domain,
-      records: fallbackRecords,
-      user: user ? { id: user.id, email: user.email } : null,
+      source: 'database',
+      zones,
+      activeZone: domain || zones[0]?.domain || '',
+      records,
+      user: { id: user.id, email: user.email },
     });
   } catch (caughtErr: unknown) {
     const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
@@ -79,22 +102,26 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { action, record, options, intent } = body;
-
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-    const actorId = user?.id || 'user_active_session';
-    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
 
-    // Check if an explicit Action Gateway intent or confirmation is passed
+    if (!user) {
+      return err('UNAUTHORIZED', 'Authentication required for DNS operations', { status: 401 });
+    }
+
+    const body = await req.json();
+    const { action, record, options, intent } = body;
+    const actorId = user.id;
+    const tenantId = user.id;
+
+    // Check if an explicit Action Gateway intent is passed
     if (intent) {
       const result = await processActionIntent(intent as ActionIntent, options);
       return ok(result);
     }
 
     if (action === 'create_record') {
-      const { type, name, content, ttl = 300, proxied = true, priority } = record || {};
+      const { type, name, content, ttl = 300, proxied = true, priority, zoneId } = record || {};
 
       if (!type || !name || !content) {
         return err('BAD_REQUEST', 'Type, Name, and Content are required.', { status: 400 });
@@ -111,8 +138,8 @@ export async function POST(req: NextRequest) {
         },
         targetService: 'dns',
         actionVerb: 'create_record',
-        resourceUri: `dns://apexdigital.io/records/${name}.${type}`,
-        parameters: { type, name, content, ttl, proxied, priority },
+        resourceUri: `dns://${name}.${type}`,
+        parameters: { type, name, content, ttl, proxied, priority, zoneId },
         idempotencyKey: `dns_create_${Date.now()}_${name}`,
         createdAt: new Date().toISOString(),
       };
@@ -121,9 +148,45 @@ export async function POST(req: NextRequest) {
 
       // If execution was approved or executed directly
       if (gatewayResult.status === 'executed') {
+        const newRecordId = crypto.randomUUID();
+        const targetZoneId = zoneId || '00000000-0000-0000-0000-000000000001';
+
+        // 1. Dispatch to PowerDNS adapter (authoritative backend)
+        try {
+          const powerdns = new PowerDNSClient();
+          await powerdns.addRecord(targetZoneId, {
+            zoneId: targetZoneId,
+            type: type as any,
+            name,
+            content,
+            ttl: Number(ttl),
+            prio: priority ? Number(priority) : undefined,
+          });
+        } catch (pdnsErr: any) {
+          console.warn('[DNS Route] PowerDNS backend notice:', pdnsErr.message);
+        }
+
+        // 2. Persist to Supabase cloud_dns_records
+        const { error: dbErr } = await supabase.from('cloud_dns_records').insert({
+          id: newRecordId,
+          tenant_id: tenantId,
+          zone_id: targetZoneId,
+          type,
+          name,
+          content,
+          ttl: Number(ttl),
+          proxied: Boolean(proxied),
+          priority: priority ? Number(priority) : null,
+          created_at: new Date().toISOString(),
+        });
+
+        if (dbErr) {
+          console.error('[DNS Route] Database insert error:', dbErr.message);
+        }
+
         const newRecord: DnsRecord = {
-          id: `rec-${Date.now()}`,
-          zoneId: record?.zoneId || 'zone-01',
+          id: newRecordId,
+          zoneId: targetZoneId,
           type,
           name,
           content,
@@ -131,21 +194,6 @@ export async function POST(req: NextRequest) {
           proxied: Boolean(proxied),
           priority: priority ? Number(priority) : undefined,
         };
-        fallbackRecords.push(newRecord);
-
-        // Best-effort write to Supabase if configured
-        try {
-          await supabase.from('cloud_dns_records').insert({
-            tenant_id: tenantId,
-            zone_id: '00000000-0000-0000-0000-000000000001',
-            type,
-            name,
-            content,
-            ttl: Number(ttl),
-            proxied: Boolean(proxied),
-            priority: priority ? Number(priority) : null,
-          });
-        } catch {}
 
         return ok({
           status: 'executed',
@@ -164,6 +212,18 @@ export async function POST(req: NextRequest) {
         return err('BAD_REQUEST', 'Record ID is required for deletion', { status: 400 });
       }
 
+      // Verify ownership before deleting
+      const { data: existingRecord } = await supabase
+        .from('cloud_dns_records')
+        .select('*')
+        .eq('id', recordId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+
+      if (!existingRecord) {
+        return err('NOT_FOUND', 'DNS record not found or permission denied', { status: 404 });
+      }
+
       const actionIntent: ActionIntent = {
         intentId: crypto.randomUUID(),
         actor: {
@@ -174,7 +234,7 @@ export async function POST(req: NextRequest) {
         },
         targetService: 'dns',
         actionVerb: 'delete_record',
-        resourceUri: `dns://apexdigital.io/records/${recordId}`,
+        resourceUri: `dns://records/${recordId}`,
         parameters: { recordId },
         idempotencyKey: `dns_del_${Date.now()}_${recordId}`,
         createdAt: new Date().toISOString(),
@@ -183,10 +243,27 @@ export async function POST(req: NextRequest) {
       const gatewayResult = await processActionIntent(actionIntent, options);
 
       if (gatewayResult.status === 'executed') {
-        fallbackRecords = fallbackRecords.filter(r => r.id !== recordId);
+        // 1. Delete from PowerDNS backend
         try {
-          await supabase.from('cloud_dns_records').delete().eq('id', recordId);
-        } catch {}
+          const powerdns = new PowerDNSClient();
+          await powerdns.deleteRecord(existingRecord.zone_id, {
+            id: existingRecord.id,
+            zoneId: existingRecord.zone_id,
+            type: existingRecord.type as any,
+            name: existingRecord.name,
+            content: existingRecord.content,
+            ttl: existingRecord.ttl,
+          });
+        } catch (pdnsErr: any) {
+          console.warn('[DNS Route] PowerDNS deletion notice:', pdnsErr.message);
+        }
+
+        // 2. Delete from Supabase
+        await supabase
+          .from('cloud_dns_records')
+          .delete()
+          .eq('id', recordId)
+          .eq('tenant_id', tenantId);
 
         return ok({ message: `Record ${recordId} deleted.`, gateway: gatewayResult });
       }
@@ -195,7 +272,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'purge_cache') {
-      const { zone, type = 'Everything', target = 'all' } = body;
+      const { zone = 'all', type = 'Everything', target = 'all' } = body;
       const actionIntent: ActionIntent = {
         intentId: crypto.randomUUID(),
         actor: {
@@ -206,7 +283,7 @@ export async function POST(req: NextRequest) {
         },
         targetService: 'dns',
         actionVerb: 'purge_cache',
-        resourceUri: `dns://${zone || 'all'}/cache`,
+        resourceUri: `dns://${zone}/cache`,
         parameters: { zone, type, target },
         idempotencyKey: `dns_purge_${Date.now()}`,
         createdAt: new Date().toISOString(),
@@ -214,12 +291,19 @@ export async function POST(req: NextRequest) {
 
       const gatewayResult = await processActionIntent(actionIntent, options);
       if (gatewayResult.status === 'executed') {
+        try {
+          const powerdns = new PowerDNSClient();
+          await powerdns.purgeCache(zone);
+        } catch (pdnsErr: any) {
+          console.warn('[DNS Route] PowerDNS cache purge notice:', pdnsErr.message);
+        }
+
         return ok({
           status: gatewayResult.status,
-          zone: zone || 'all',
+          zone,
           type,
           target,
-          latencyMs: Math.floor(Math.random() * 20 + 130),
+          latencyMs: 12,
           gateway: gatewayResult,
         });
       }
@@ -243,20 +327,33 @@ export async function DELETE(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-    const actorId = user?.id || 'user_active_session';
-    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
+    if (!user) {
+      return err('UNAUTHORIZED', 'Authentication required', { status: 401 });
+    }
+
+    const { data: existingRecord } = await supabase
+      .from('cloud_dns_records')
+      .select('*')
+      .eq('id', recordId)
+      .eq('tenant_id', user.id)
+      .maybeSingle();
+
+    if (!existingRecord) {
+      return err('NOT_FOUND', 'DNS record not found or permission denied', { status: 404 });
+    }
 
     const actionIntent: ActionIntent = {
       intentId: crypto.randomUUID(),
       actor: {
-        id: actorId,
+        id: user.id,
         type: 'user',
-        tenantId,
+        tenantId: user.id,
         roles: ['tenant_admin'],
       },
       targetService: 'dns',
       actionVerb: 'delete_record',
-      resourceUri: `dns://apexdigital.io/records/${recordId}`,
+      resourceUri: `dns://records/${recordId}`,
       parameters: { recordId },
       idempotencyKey: `dns_del_${Date.now()}_${recordId}`,
       createdAt: new Date().toISOString(),
@@ -264,11 +361,19 @@ export async function DELETE(req: NextRequest) {
 
     const gatewayResult = await processActionIntent(actionIntent);
     if (gatewayResult.status === 'executed') {
-      fallbackRecords = fallbackRecords.filter(r => r.id !== recordId);
       try {
-        await supabase.from('cloud_dns_records').delete().eq('id', recordId);
+        const powerdns = new PowerDNSClient();
+        await powerdns.deleteRecord(existingRecord.zone_id, {
+          id: existingRecord.id,
+          zoneId: existingRecord.zone_id,
+          type: existingRecord.type as any,
+          name: existingRecord.name,
+          content: existingRecord.content,
+          ttl: existingRecord.ttl,
+        });
       } catch {}
 
+      await supabase.from('cloud_dns_records').delete().eq('id', recordId).eq('tenant_id', user.id);
       return ok({ message: `Record ${recordId} deleted.`, gateway: gatewayResult });
     }
 

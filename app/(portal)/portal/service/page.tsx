@@ -26,37 +26,8 @@ interface ServiceItem {
   price: number;
 }
 
-const DEMO_SERVICES: ServiceItem[] = [
-  {
-    id: 'svc-001',
-    name: 'Production Core API',
-    plan_name: 'VPS Pro 8GB',
-    domain: 'api.myapp.io',
-    status: 'active',
-    ip: '103.21.244.12',
-    specs: { cpu: '4 vCPU (AMD EPYC)', ram: '8 GB DDR5', storage: '160 GB NVMe', bandwidth: '6 TB / mo' },
-    location: 'Mumbai, India (BOM-01)',
-    created_at: '2026-06-01',
-    renewal_date: '2026-10-01',
-    price: 4999,
-  },
-  {
-    id: 'svc-002',
-    name: 'Database Primary Replica',
-    plan_name: 'Shared Business',
-    domain: 'myblog.elsxglobal.com',
-    status: 'active',
-    ip: '104.22.51.77',
-    specs: { cpu: '2 vCPU', ram: '2 GB', storage: '20 GB SSD', bandwidth: '500 GB / mo' },
-    location: 'Bangalore, India (BLR-01)',
-    created_at: '2026-04-15',
-    renewal_date: '2026-10-15',
-    price: 799,
-  },
-];
-
 export default function ServicesManagementPage() {
-  const [services, setServices] = useState<ServiceItem[]>(DEMO_SERVICES);
+  const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'suspended' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,14 +61,12 @@ export default function ServicesManagementPage() {
       const res = await fetch('/api/cloud/vps');
       if (res.ok) {
         const json = await res.json();
-        if (json.instances && json.instances.length > 0) {
-          setServices(json.instances);
-          return;
-        }
+        setServices(json.instances || []);
+        return;
       }
-      setServices(DEMO_SERVICES);
+      setServices([]);
     } catch {
-      setServices(DEMO_SERVICES);
+      setServices([]);
     } finally {
       setLoading(false);
     }
@@ -248,11 +217,11 @@ export default function ServicesManagementPage() {
           </h1>
           <p className="text-text-secondary-v4 text-sm mt-1">Manage active compute nodes, automated backups, and emergency reboot operations.</p>
         </div>
-        <div className="flex gap-2">
-          <button className="v4-btn-secondary px-3 py-2 flex items-center gap-2" onClick={loadData}>
+        <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
+          <button className="v4-btn-secondary px-3 py-2 flex items-center justify-center gap-2 flex-1 sm:flex-initial text-xs sm:text-sm" onClick={loadData}>
             <RefreshCw className="w-4 h-4" /> Refresh
           </button>
-          <Link href="/vaulthost/pricing" className="v4-btn-primary px-4 py-2 flex items-center gap-2 shadow-glow">
+          <Link href="/vaulthost/pricing" className="v4-btn-primary px-4 py-2 flex items-center justify-center gap-2 shadow-glow flex-1 sm:flex-initial text-xs sm:text-sm whitespace-nowrap">
             <Plus className="w-4 h-4" /> Deploy New Service
           </Link>
         </div>
@@ -274,7 +243,7 @@ export default function ServicesManagementPage() {
         </PanelCard>
         <PanelCard className="p-4">
           <div className="text-text-muted-v4 text-xs font-medium uppercase tracking-wider">Next Auto-Renewal</div>
-          <div className="text-2xl font-bold text-text-primary-v4 mt-1">Oct 1, 2026</div>
+          <div className="text-2xl font-bold text-text-primary-v4 mt-1">{services[0]?.renewal_date || 'N/A'}</div>
         </PanelCard>
       </div>
 
@@ -362,8 +331,8 @@ export default function ServicesManagementPage() {
                 </div>
 
                 {/* Meta & Actions */}
-                <div className="flex flex-col items-end gap-3 w-full lg:w-auto">
-                  <div className="text-right">
+                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 w-full lg:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-hairline">
+                  <div className="text-left sm:text-right">
                     <div className="text-base font-bold text-text-primary-v4">₹{svc.price}/mo</div>
                     <div className="text-[11px] text-text-muted-v4">Renews {svc.renewal_date}</div>
                   </div>

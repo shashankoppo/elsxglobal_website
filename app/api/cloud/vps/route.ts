@@ -3,64 +3,11 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@/lib/supabase/server';
 import { processActionIntent } from '@/lib/action-gateway/gateway';
 import { ActionIntent } from '@/lib/action-gateway/types';
 import { TenantPolicyOverride } from '@/lib/action-gateway/risk-classifier';
 import { ProvisioningEngine } from '@/lib/provisioning/ProvisioningEngine';
-
-interface FallbackInstance {
-  id: string;
-  name: string;
-  planName: string;
-  domain: string;
-  ip: string;
-  status: 'running' | 'stopped' | 'rebooting' | 'rebuilding' | 'active' | 'terminated';
-  location: string;
-  specs: {
-    cpu: string;
-    ram: string;
-    storage: string;
-    bandwidth: string;
-  };
-  metrics: {
-    cpuPct: number;
-    ramPct: number;
-    diskPct: number;
-    networkRxMbps: number;
-    networkTxMbps: number;
-  };
-  renewalDate: string;
-  price: number;
-}
-
-const fallbackInstances: FallbackInstance[] = [
-  {
-    id: 'svc-001',
-    name: 'Production Core API',
-    planName: 'VPS Pro 8GB',
-    domain: 'api.myapp.io',
-    ip: '103.21.244.12',
-    status: 'running',
-    location: 'Mumbai, India (BOM-01)',
-    specs: { cpu: '4 vCPU (AMD EPYC)', ram: '8 GB DDR5', storage: '160 GB NVMe', bandwidth: '6 TB / mo' },
-    metrics: { cpuPct: 18.4, ramPct: 54.2, diskPct: 32.1, networkRxMbps: 48.2, networkTxMbps: 112.6 },
-    renewalDate: '2026-10-01',
-    price: 4999,
-  },
-  {
-    id: 'svc-002',
-    name: 'Database Primary Replica',
-    planName: 'Shared Business',
-    domain: 'myblog.elsxglobal.com',
-    ip: '104.22.51.77',
-    status: 'running',
-    location: 'Bangalore, India (BLR-01)',
-    specs: { cpu: '2 vCPU', ram: '2 GB', storage: '20 GB SSD', bandwidth: '500 GB / mo' },
-    metrics: { cpuPct: 8.1, ramPct: 41.0, diskPct: 19.5, networkRxMbps: 12.1, networkTxMbps: 18.4 },
-    renewalDate: '2026-10-15',
-    price: 799,
-  },
-];
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -71,23 +18,82 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
+async function getAuthUser(req: NextRequest) {
+  // 1. Bearer token auth
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.replace('Bearer ', '');
+    try {
+      const supabaseAdmin = getSupabaseAdmin();
+      const { data: userData } = await supabaseAdmin.auth.getUser(token);
+      if (userData?.user) return userData.user;
+    } catch {}
+  }
+
+  // 2. Cookie session auth
+  try {
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) return user;
+  } catch {}
+
+  return null;
+}
+
+async function checkIsAdmin(userId: string): Promise<boolean> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data } = await supabaseAdmin
+      .from('admin_users')
+      .select('id, role')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+    return !!data;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * GET /api/cloud/vps
- * - ?action=metrics&serviceId=xxx: Live Proxmox metrics
- * - ?action=snapshots&serviceId=xxx: List snapshots
+ * - ?action=metrics&serviceId=xxx: Live Proxmox metrics (requires service ownership)
+ * - ?action=snapshots&serviceId=xxx: List snapshots (requires service ownership)
  * - Default: List user's servers from hosting_services table
  */
 export async function GET(req: NextRequest) {
   try {
+    const user = await getAuthUser(req);
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Authentication required' }, { status: 401 });
+    }
+
+    const isAdmin = await checkIsAdmin(user.id);
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action');
     const serviceId = searchParams.get('serviceId') || searchParams.get('instanceId');
+    const supabaseAdmin = getSupabaseAdmin();
 
     // 1. Live metrics query
     if (action === 'metrics') {
       if (!serviceId) {
         return NextResponse.json({ success: false, error: 'serviceId is required for metrics query' }, { status: 400 });
       }
+
+      const { data: service } = await supabaseAdmin
+        .from('hosting_services')
+        .select('id, user_id')
+        .eq('id', serviceId)
+        .maybeSingle();
+
+      if (!service) {
+        return NextResponse.json({ success: false, error: 'Service not found' }, { status: 404 });
+      }
+
+      if (service.user_id !== user.id && !isAdmin) {
+        return NextResponse.json({ success: false, error: 'Forbidden: You do not own this service' }, { status: 403 });
+      }
+
       const metrics = await ProvisioningEngine.getServiceMetrics(serviceId);
       return NextResponse.json({ success: true, serviceId, metrics });
     }
@@ -98,7 +104,20 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'serviceId is required for snapshots query' }, { status: 400 });
       }
 
-      const supabaseAdmin = getSupabaseAdmin();
+      const { data: service } = await supabaseAdmin
+        .from('hosting_services')
+        .select('id, user_id, external_id, adapter, tier')
+        .eq('id', serviceId)
+        .maybeSingle();
+
+      if (!service) {
+        return NextResponse.json({ success: false, error: 'Service not found' }, { status: 404 });
+      }
+
+      if (service.user_id !== user.id && !isAdmin) {
+        return NextResponse.json({ success: false, error: 'Forbidden: You do not own this service' }, { status: 403 });
+      }
+
       const { data: dbSnapshots } = await supabaseAdmin
         .from('backup_snapshots')
         .select('*')
@@ -107,25 +126,17 @@ export async function GET(req: NextRequest) {
 
       let liveSnapshots: any[] = [];
       try {
-        const { data: service } = await supabaseAdmin
-          .from('hosting_services')
-          .select('external_id, adapter, tier')
-          .eq('id', serviceId)
+        const { data: settings } = await supabaseAdmin
+          .from('provisioning_settings')
+          .select('*')
+          .eq('id', 1)
           .single();
 
-        if (service) {
-          const { data: settings } = await supabaseAdmin
-            .from('provisioning_settings')
-            .select('*')
-            .eq('id', 1)
-            .single();
-
-          const adapter = ProvisioningEngine.getAdapter(service.tier || 'vps', service.adapter, settings);
-          if (adapter.listSnapshots) {
-            const snapRes = await adapter.listSnapshots(service.external_id || serviceId);
-            if (snapRes.success && Array.isArray(snapRes.data)) {
-              liveSnapshots = snapRes.data;
-            }
+        const adapter = ProvisioningEngine.getAdapter(service.tier || 'vps', service.adapter, settings);
+        if (adapter.listSnapshots) {
+          const snapRes = await adapter.listSnapshots(service.external_id || serviceId);
+          if (snapRes.success && Array.isArray(snapRes.data)) {
+            liveSnapshots = snapRes.data;
           }
         }
       } catch (e: any) {
@@ -137,24 +148,20 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Default: List user's servers from hosting_services
-    const supabaseAdmin = getSupabaseAdmin();
     let query = supabaseAdmin
       .from('hosting_services')
       .select('*, hosting_plans(*)')
       .order('created_at', { ascending: false });
 
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data: userData } = await supabaseAdmin.auth.getUser(token);
-      if (userData?.user) {
-        query = query.eq('user_id', userData.user.id);
-      }
+    // Allow admins with ?all=true to view all instances, otherwise enforce user_id
+    if (!(isAdmin && searchParams.get('all') === 'true')) {
+      query = query.eq('user_id', user.id);
     }
 
     const { data: services, error } = await query;
     if (error) {
-      console.warn('[VPS Route] Database query error, using fallback instances:', error.message);
+      console.error('[VPS Route] Database query error:', error.message);
+      return NextResponse.json({ success: false, error: 'Failed to retrieve hosting services' }, { status: 500 });
     }
 
     let instances: any[] = [];
@@ -168,11 +175,11 @@ export async function GET(req: NextRequest) {
           name: svc.domain || svc.plan_name || 'Cloud VPS',
           planName: svc.plan_name,
           domain: svc.domain || '',
-          ip: svc.ip_address || '103.21.244.12',
+          ip: svc.ip_address || 'Unassigned',
           status: isRunning ? 'running' : (svc.status === 'stopped' || svc.status === 'suspended' ? 'stopped' : svc.status),
           location: svc.location || 'Mumbai, India (BOM-01)',
           specs: {
-            cpu: svc.hosting_plans?.cpu || planSpecs.cpu || '2 vCPU (EPYC)',
+            cpu: svc.hosting_plans?.cpu || planSpecs.cpu || '2 vCPU',
             ram: svc.hosting_plans?.ram || planSpecs.ram || '4 GB RAM',
             storage: svc.hosting_plans?.storage || planSpecs.storage || '40 GB NVMe',
             bandwidth: svc.hosting_plans?.bandwidth || planSpecs.bandwidth || '2 TB / mo',
@@ -185,22 +192,20 @@ export async function GET(req: NextRequest) {
             networkTxMbps: isRunning ? 12.1 : 0,
           },
           controlPanelUrl: svc.control_panel_url,
-          renewalDate: svc.renewal_date || '2026-11-01',
-          price: svc.hosting_plans?.price_monthly || 999,
+          renewalDate: svc.renewal_date || null,
+          price: svc.hosting_plans?.price_monthly || 0,
         };
       });
     }
 
-    const displayInstances = instances.length > 0 ? instances : fallbackInstances;
-
     return NextResponse.json({
       success: true,
-      instances: displayInstances,
+      instances,
       stats: {
-        totalInstances: displayInstances.length,
-        activeInstances: displayInstances.filter((i: any) => i.status === 'running' || i.status === 'active').length,
-        totalMonthlyCost: displayInstances.reduce((sum: number, i: any) => sum + (Number(i.price) || 0), 0),
-        nextRenewal: 'Nov 1, 2026',
+        totalInstances: instances.length,
+        activeInstances: instances.filter((i: any) => i.status === 'running' || i.status === 'active').length,
+        totalMonthlyCost: instances.reduce((sum: number, i: any) => sum + (Number(i.price) || 0), 0),
+        nextRenewal: instances[0]?.renewalDate || null,
       },
     });
   } catch (err: unknown) {
@@ -219,6 +224,12 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthUser(req);
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Authentication required' }, { status: 401 });
+    }
+
+    const isAdmin = await checkIsAdmin(user.id);
     const body = await req.json();
     const { action, serviceId, instanceId, snapshotName, options, intent } = body;
 
@@ -231,6 +242,22 @@ export async function POST(req: NextRequest) {
     const targetServiceId = serviceId || instanceId;
     if (!targetServiceId) {
       return NextResponse.json({ success: false, error: 'serviceId or instanceId is required' }, { status: 400 });
+    }
+
+    // Verify ownership of the target service
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: targetSvc } = await supabaseAdmin
+      .from('hosting_services')
+      .select('id, user_id, status')
+      .eq('id', targetServiceId)
+      .maybeSingle();
+
+    if (!targetSvc && !isAdmin) {
+      return NextResponse.json({ success: false, error: 'Service not found' }, { status: 404 });
+    }
+
+    if (targetSvc && targetSvc.user_id !== user.id && !isAdmin) {
+      return NextResponse.json({ success: false, error: 'Forbidden: You do not own this service' }, { status: 403 });
     }
 
     const normAction = (action || '').toLowerCase().trim();
@@ -263,24 +290,13 @@ export async function POST(req: NextRequest) {
       targetTier = 1;
     }
 
-    // Determine calling user id if available
-    let actorId = 'user_active_session';
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const supabaseAdmin = getSupabaseAdmin();
-        const { data: userData } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
-        if (userData?.user?.id) actorId = userData.user.id;
-      } catch {}
-    }
-
     const actionIntent: ActionIntent = {
       intentId: crypto.randomUUID(),
       actor: {
-        id: actorId,
+        id: user.id,
         type: 'user',
-        tenantId: 'ten_portal_default',
-        roles: ['tenant_operator'],
+        tenantId: user.id,
+        roles: isAdmin ? ['tenant_admin', 'platform_admin'] : ['tenant_operator'],
       },
       targetService: 'compute',
       actionVerb,
@@ -295,9 +311,9 @@ export async function POST(req: NextRequest) {
     };
 
     const tenantPolicyOverrides: TenantPolicyOverride[] = [
-      { tenantId: 'ten_portal_default', actionVerbPattern: '(start|stop|restart|reboot|power_toggle).*', enforceTier: 1 },
-      { tenantId: 'ten_portal_default', actionVerbPattern: '.*snapshot.*', enforceTier: 1 },
-      { tenantId: 'ten_portal_default', actionVerbPattern: 'terminate.*', enforceTier: 2 },
+      { tenantId: user.id, actionVerbPattern: '(start|stop|restart|reboot|power_toggle).*', enforceTier: 1 },
+      { tenantId: user.id, actionVerbPattern: '.*snapshot.*', enforceTier: 1 },
+      { tenantId: user.id, actionVerbPattern: 'terminate.*', enforceTier: 2 },
     ];
 
     const gatewayResult = await processActionIntent(actionIntent, {
@@ -307,8 +323,6 @@ export async function POST(req: NextRequest) {
 
     // If executed through the Action Gateway, perform the underlying infrastructure mutation
     if (gatewayResult.status === 'executed') {
-      const supabaseAdmin = getSupabaseAdmin();
-
       if (normAction === 'start') {
         await ProvisioningEngine.restartService(targetServiceId);
         await supabaseAdmin.from('hosting_services').update({ status: 'active', updated_at: new Date().toISOString() }).eq('id', targetServiceId);

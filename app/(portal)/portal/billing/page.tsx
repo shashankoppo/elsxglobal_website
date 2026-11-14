@@ -13,40 +13,34 @@ import {
 import { PanelCard } from '@/components/ui/panel-card';
 import { SkeletonCard } from '@/components/ui/skeleton-loaders';
 
-const DEMO_INVOICES = [
-  { id: 'INV-2026-0041', amount: 4999, status: 'paid', created_at: '2026-09-01', plan: 'VPS Pro 8GB', period: 'Sep 2026' },
-  { id: 'INV-2026-0028', amount: 4999, status: 'paid', created_at: '2026-08-01', plan: 'VPS Pro 8GB', period: 'Aug 2026' },
-  { id: 'INV-2026-0014', amount: 4999, status: 'paid', created_at: '2026-07-01', plan: 'VPS Pro 8GB', period: 'Jul 2026' },
-  { id: 'INV-2026-0003', amount: 4999, status: 'paid', created_at: '2026-06-01', plan: 'VPS Pro 8GB', period: 'Jun 2026' },
-];
+interface SubscriptionInfo {
+  id: string;
+  plan: string;
+  tier: string;
+  status: 'active' | 'cancelled' | 'past_due' | 'trialing';
+  cycle: string;
+  amount: number;
+  nextBillingDate: string;
+  autoRenew: boolean;
+}
 
 export default function BillingPage() {
   const router = useRouter();
-  const [invoices, setInvoices] = useState<any[]>(DEMO_INVOICES);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'invoices' | 'payment-methods' | 'usage'>('invoices');
 
   // Customer Billing State
-  const [subscription, setSubscription] = useState({
-    id: 'sub_live_0948',
-    plan: 'VPS Pro 8GB',
-    tier: 'pro',
-    status: 'active' as 'active' | 'cancelled' | 'past_due' | 'trialing',
-    cycle: 'monthly',
-    amount: 4999,
-    nextBillingDate: 'Dec 1, 2026',
-    autoRenew: true,
-  });
-
-  const [creditBalance, setCreditBalance] = useState<number>(2450);
-  const [lifetimeCredited, setLifetimeCredited] = useState<number>(10000);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [creditBalance, setCreditBalance] = useState<number>(0);
+  const [lifetimeCredited, setLifetimeCredited] = useState<number>(0);
 
   // Metered Usage Quotas
   const [quotas, setQuotas] = useState({
-    apiRequests: { used: 1420000, limit: 10000000, label: '1.42M / 10M requests', percentage: 14.2 },
-    storage: { used: 48.6, limit: 100, label: '48.6 GB / 100 GB', percentage: 48.6 },
-    aiTokens: { used: 840000, limit: 2000000, label: '840K / 2M tokens', percentage: 42.0 },
-    bandwidth: { used: 320, limit: 1000, label: '320 GB / 1 TB', percentage: 32.0 },
+    apiRequests: { used: 0, limit: 10000000, label: '0 / 10M requests', percentage: 0 },
+    storage: { used: 0, limit: 100, label: '0 GB / 100 GB', percentage: 0 },
+    aiTokens: { used: 0, limit: 2000000, label: '0 / 2M tokens', percentage: 0 },
+    bandwidth: { used: 0, limit: 1000, label: '0 GB / 1 TB', percentage: 0 },
   });
 
   // Modals & Feedback
@@ -74,10 +68,10 @@ export default function BillingPage() {
             .eq('user_id', userData.user.id)
             .order('created_at', { ascending: false });
             
-          if (!error && data && data.length > 0) {
+          if (!error && data) {
             setInvoices(data);
           } else {
-            setInvoices(DEMO_INVOICES);
+            setInvoices([]);
           }
 
           // Fetch customer credit balance
@@ -110,24 +104,26 @@ export default function BillingPage() {
             if (subData) {
               setSubscription({
                 id: subData.id,
-                plan: subData.hosting_plans?.name || subData.plan_id || 'VPS Pro 8GB',
+                plan: subData.hosting_plans?.name || subData.plan_id || 'Active Plan',
                 tier: subData.hosting_plans?.tier || 'pro',
                 status: subData.status,
                 cycle: subData.billing_cycle || 'monthly',
-                amount: Math.round((subData.next_invoice_amount_paise || 499900) / 100),
-                nextBillingDate: subData.current_period_end ? new Date(subData.current_period_end).toLocaleDateString() : 'Dec 1, 2026',
+                amount: Math.round((subData.next_invoice_amount_paise || 0) / 100),
+                nextBillingDate: subData.current_period_end ? new Date(subData.current_period_end).toLocaleDateString() : 'N/A',
                 autoRenew: !subData.cancel_at_period_end,
               });
+            } else {
+              setSubscription(null);
             }
           } catch {
-            // graceful fallback
+            setSubscription(null);
           }
         } else {
-          setInvoices(DEMO_INVOICES);
+          setInvoices([]);
         }
       } catch (e) {
-        console.error('Error fetching billing data, using demo state', e);
-        setInvoices(DEMO_INVOICES);
+        console.error('Error fetching billing data', e);
+        setInvoices([]);
       } finally {
         setLoading(false);
       }
@@ -143,7 +139,7 @@ export default function BillingPage() {
   };
 
   const handleConfirmCancel = () => {
-    setSubscription(prev => ({ ...prev, status: 'cancelled', autoRenew: false }));
+    setSubscription(prev => prev ? ({ ...prev, status: 'cancelled', autoRenew: false }) : null);
     showToast('Subscription has been marked for cancellation at the end of the period.');
     setIsCancelModalOpen(false);
   };
@@ -175,14 +171,14 @@ export default function BillingPage() {
   };
 
   return (
-    <div className="v4-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="v4-page w-full space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
         <div>
           <div className="text-sm text-text-muted-v4 mb-1">Portal → Billing</div>
-          <h1 className="text-3xl font-bold text-text-primary-v4">Billing & Invoices</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary-v4">Billing & Invoices</h1>
         </div>
-        <button className="v4-btn-secondary flex items-center gap-2 py-2 px-4 text-sm" onClick={() => window.location.reload()}>
+        <button className="v4-btn-secondary flex items-center justify-center gap-2 py-2 px-4 text-sm w-full sm:w-auto" onClick={() => window.location.reload()}>
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
       </div>
@@ -199,76 +195,96 @@ export default function BillingPage() {
         </PanelCard>
         <PanelCard className="p-5">
           <div className="text-sm text-text-muted-v4 mb-1">Next Renewal</div>
-          <div className="text-2xl font-bold text-text-primary-v4">{subscription.nextBillingDate}</div>
+          <div className="text-2xl font-bold text-text-primary-v4">{subscription ? subscription.nextBillingDate : 'N/A'}</div>
         </PanelCard>
         <PanelCard className="p-5">
           <div className="text-sm text-text-muted-v4 mb-1">Active Subscriptions</div>
-          <div className="text-2xl font-bold text-text-primary-v4">{activeSubscriptions}</div>
+          <div className="text-2xl font-bold text-text-primary-v4">{subscription?.status === 'active' ? 1 : 0}</div>
         </PanelCard>
       </div>
 
       {/* ─── 1. SUBSCRIPTION STATUS & 2. PREPAID CREDIT BALANCE GRID ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         {/* Subscription Status Card */}
-        <PanelCard className="p-6 bg-ink border border-hairline flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Server className="w-4 h-4 text-signal" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted-v4">
-                  Active Subscription Tier
+        {subscription ? (
+          <PanelCard className="p-6 bg-ink border border-hairline flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Server className="w-4 h-4 text-signal" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-text-muted-v4">
+                    Active Subscription Tier
+                  </span>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  subscription.status === 'active'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${subscription.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`}></span>
+                  {subscription.status === 'active' ? 'Active' : 'Cancelled'}
                 </span>
               </div>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                subscription.status === 'active'
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${subscription.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`}></span>
-                {subscription.status === 'active' ? 'Active' : 'Cancelled'}
-              </span>
+
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-text-primary-v4">{subscription.plan}</h2>
+                  <p className="text-xs text-text-muted-v4 mt-0.5">High-Performance NVMe Cloud Instance (Mumbai 1 DC)</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl font-mono font-bold text-text-primary-v4">₹{subscription.amount.toLocaleString()}</span>
+                  <span className="text-xs text-text-muted-v4"> / {subscription.cycle}</span>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 rounded-md bg-ink-surface border border-hairline text-xs grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-text-muted-v4 text-[11px] block">Next Billing Cycle</span>
+                  <span className="font-medium text-text-primary-v4">{subscription.nextBillingDate}</span>
+                </div>
+                <div>
+                  <span className="text-text-muted-v4 text-[11px] block">Renewal Method</span>
+                  <span className="font-medium text-text-primary-v4">{subscription.autoRenew ? 'Auto-debit (UPI / Card)' : 'Manual Invoice'}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-baseline justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-text-primary-v4">{subscription.plan}</h2>
-                <p className="text-xs text-text-muted-v4 mt-0.5">High-Performance NVMe Cloud Instance (Mumbai 1 DC)</p>
-              </div>
-              <div className="text-right">
-                <span className="text-xl font-mono font-bold text-text-primary-v4">₹{subscription.amount.toLocaleString()}</span>
-                <span className="text-xs text-text-muted-v4"> / {subscription.cycle}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 p-3 rounded-md bg-ink-surface border border-hairline text-xs grid grid-cols-2 gap-2">
-              <div>
-                <span className="text-text-muted-v4 text-[11px] block">Next Billing Cycle</span>
-                <span className="font-medium text-text-primary-v4">{subscription.nextBillingDate}</span>
-              </div>
-              <div>
-                <span className="text-text-muted-v4 text-[11px] block">Renewal Method</span>
-                <span className="font-medium text-text-primary-v4">{subscription.autoRenew ? 'Auto-debit (UPI / Card)' : 'Manual Invoice'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-4 mt-4 border-t border-hairline">
-            <Link
-              href="/vaulthost/pricing?tier=enterprise"
-              className="text-xs font-semibold text-signal hover:underline flex items-center gap-1"
-            >
-              Modify Plan Specs <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-            {subscription.status === 'active' && (
-              <button
-                onClick={() => setIsCancelModalOpen(true)}
-                className="text-xs text-rose-400/80 hover:text-rose-400 hover:underline"
+            <div className="flex items-center justify-between pt-4 mt-4 border-t border-hairline">
+              <Link
+                href="/vaulthost/pricing?tier=enterprise"
+                className="text-xs font-semibold text-signal hover:underline flex items-center gap-1"
               >
-                Cancel Subscription
-              </button>
-            )}
-          </div>
-        </PanelCard>
+                Modify Plan Specs <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
+              {subscription.status === 'active' && (
+                <button
+                  onClick={() => setIsCancelModalOpen(true)}
+                  className="text-xs text-rose-400/80 hover:text-rose-400 hover:underline"
+                >
+                  Cancel Subscription
+                </button>
+              )}
+            </div>
+          </PanelCard>
+        ) : (
+          <PanelCard className="p-6 bg-ink border border-hairline flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Server className="w-4 h-4 text-signal" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted-v4">
+                  Subscription Status
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-text-primary-v4">No Active Subscriptions</h2>
+              <p className="text-xs text-text-secondary-v4 mt-1">You do not currently have any active hosting plans or cloud subscriptions.</p>
+            </div>
+            <div className="pt-4 mt-6 border-t border-hairline">
+              <Link href="/vaulthost/pricing" className="v4-btn-primary px-4 py-2 text-xs font-semibold inline-flex items-center gap-1.5">
+                Browse Cloud Plans <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </PanelCard>
+        )}
 
         {/* Credit Balance Card */}
         <PanelCard className="p-6 bg-ink border border-hairline flex flex-col justify-between">
@@ -529,21 +545,21 @@ export default function BillingPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-6 border-b border-hairline mb-6">
+      <div className="flex space-x-4 sm:space-x-6 border-b border-hairline mb-6 overflow-x-auto terminal-scrollbar pb-1">
         <button 
-          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'invoices' ? 'border-signal text-signal' : 'border-transparent text-text-muted-v4 hover:text-text-primary-v4'}`}
+          className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'invoices' ? 'border-signal text-signal' : 'border-transparent text-text-muted-v4 hover:text-text-primary-v4'}`}
           onClick={() => setActiveTab('invoices')}
         >
           <Receipt className="w-4 h-4 inline mr-2" /> Invoices
         </button>
         <button 
-          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'payment-methods' ? 'border-signal text-signal' : 'border-transparent text-text-muted-v4 hover:text-text-primary-v4'}`}
+          className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'payment-methods' ? 'border-signal text-signal' : 'border-transparent text-text-muted-v4 hover:text-text-primary-v4'}`}
           onClick={() => setActiveTab('payment-methods')}
         >
           <CreditCard className="w-4 h-4 inline mr-2" /> Payment Methods
         </button>
         <button 
-          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'usage' ? 'border-signal text-signal' : 'border-transparent text-text-muted-v4 hover:text-text-primary-v4'}`}
+          className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'usage' ? 'border-signal text-signal' : 'border-transparent text-text-muted-v4 hover:text-text-primary-v4'}`}
           onClick={() => setActiveTab('usage')}
         >
           <Sparkles className="w-4 h-4 inline mr-2" /> Usage & Credits
@@ -574,29 +590,39 @@ export default function BillingPage() {
                     </tr>
                   </thead>
                   <tbody className="text-sm">
-                    {invoices.map((inv, idx) => (
-                      <tr key={idx} className="border-b border-hairline last:border-0 hover:bg-ink-surface/50">
-                        <td className="px-6 py-4 font-mono text-text-primary-v4">{inv.id}</td>
-                        <td className="px-6 py-4 text-text-secondary-v4">{inv.plan || 'VPS Pro 8GB'}</td>
-                        <td className="px-6 py-4 text-text-secondary-v4">{inv.period || inv.created_at}</td>
-                        <td className="px-6 py-4 font-medium text-text-primary-v4">₹{(Number(inv.amount) || 0).toLocaleString()}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(inv.status)}`}>
-                            {getStatusIcon(inv.status)}
-                            <span className="capitalize">{inv.status}</span>
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button 
-                            className="text-text-muted-v4 hover:text-signal p-1 transition-colors"
-                            onClick={() => router.push('/portal/invoice/' + inv.id)}
-                            title="Download PDF"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
+                    {invoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-text-muted-v4">
+                          <Receipt className="w-10 h-10 mx-auto mb-2 opacity-40 text-text-muted-v4" />
+                          <p className="text-sm font-semibold text-text-primary-v4">No invoices found</p>
+                          <p className="text-xs text-text-secondary-v4 mt-1">Invoices are automatically generated when a hosting plan or addon renews.</p>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      invoices.map((inv, idx) => (
+                        <tr key={idx} className="border-b border-hairline last:border-0 hover:bg-ink-surface/50">
+                          <td className="px-6 py-4 font-mono text-text-primary-v4">{inv.id}</td>
+                          <td className="px-6 py-4 text-text-secondary-v4">{inv.plan || 'VPS Pro 8GB'}</td>
+                          <td className="px-6 py-4 text-text-secondary-v4">{inv.period || inv.created_at}</td>
+                          <td className="px-6 py-4 font-medium text-text-primary-v4">₹{(Number(inv.amount) || 0).toLocaleString()}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(inv.status)}`}>
+                              {getStatusIcon(inv.status)}
+                              <span className="capitalize">{inv.status}</span>
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button 
+                              className="text-text-muted-v4 hover:text-signal p-1 transition-colors"
+                              onClick={() => router.push('/portal/invoice/' + inv.id)}
+                              title="Download PDF"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
                 <div className="p-6 border-t border-hairline bg-ink-surface/30 flex justify-between items-center">
@@ -805,7 +831,7 @@ export default function BillingPage() {
             </div>
 
             <p className="text-xs text-text-secondary-v4 leading-relaxed">
-              Are you sure you want to cancel your <strong>{subscription.plan}</strong> subscription? Your service will remain active until the end of your billing cycle on <strong className="text-text-primary-v4">{subscription.nextBillingDate}</strong>.
+              Are you sure you want to cancel your <strong>{subscription?.plan || 'current'}</strong> subscription? Your service will remain active until the end of your billing cycle on <strong className="text-text-primary-v4">{subscription?.nextBillingDate || 'the period end'}</strong>.
             </p>
 
             <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded text-[11px] text-rose-300">

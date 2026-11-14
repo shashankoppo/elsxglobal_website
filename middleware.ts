@@ -55,9 +55,11 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  const pathname = request.nextUrl.pathname
 
-  const isPortalRoute = request.nextUrl.pathname.startsWith('/portal')
-  const isPortalLoginRoute = request.nextUrl.pathname.startsWith('/portal/login') || request.nextUrl.pathname.startsWith('/portal/signup') || request.nextUrl.pathname.startsWith('/portal/forgot-password') || request.nextUrl.pathname.startsWith('/portal/reset-password');
+  // 1. Customer Portal UI routes protection
+  const isPortalRoute = pathname.startsWith('/portal')
+  const isPortalLoginRoute = pathname.startsWith('/portal/login') || pathname.startsWith('/portal/signup') || pathname.startsWith('/portal/forgot-password') || pathname.startsWith('/portal/reset-password')
 
   if (isPortalRoute && !isPortalLoginRoute && !user) {
     return NextResponse.redirect(new URL('/portal/login', request.url))
@@ -67,20 +69,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/portal', request.url))
   }
 
-  // Admin routes protection
-  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
+  // 2. Admin UI routes protection
+  const isAdminRoute = pathname.startsWith('/admin')
   const isAdminPublicRoute = 
-    request.nextUrl.pathname.startsWith('/admin/login') || 
-    request.nextUrl.pathname.startsWith('/admin/setup') || 
-    request.nextUrl.pathname.startsWith('/admin/reset')
+    pathname.startsWith('/admin/login') || 
+    pathname.startsWith('/admin/setup')
 
   if (isAdminRoute && !isAdminPublicRoute) {
     if (!user) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
 
-    // Because this runs on edge, querying the DB is possible using the Supabase client
-    // We use a service_role client to bypass RLS since the edge might have issues with the anon client + cookies
     const supabaseAdmin = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -104,6 +103,54 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // 3. Admin API routes protection (/api/admin/*)
+  if (pathname.startsWith('/api/admin')) {
+    const adminSecret = request.headers.get('x-admin-secret')
+    const configuredSecret = process.env.ADMIN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
+    const isSecretValid = adminSecret && configuredSecret && adminSecret === configuredSecret
+
+    if (!isSecretValid) {
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized: Admin authentication required' }, { status: 401 })
+      }
+
+      const supabaseAdmin = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          cookies: {
+            get(name: string) { return request.cookies.get(name)?.value },
+            set() {},
+            remove() {}
+          }
+        }
+      )
+
+      const { data: adminUser } = await supabaseAdmin
+        .from('admin_users')
+        .select('id, is_active')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!adminUser || !adminUser.is_active) {
+        return NextResponse.json({ error: 'Forbidden: Admin privileges required' }, { status: 403 })
+      }
+    }
+  }
+
+  // 4. Cloud API routes protection (/api/cloud/*)
+  if (pathname.startsWith('/api/cloud')) {
+    const authHeader = request.headers.get('authorization')
+    const hasBearer = authHeader && authHeader.startsWith('Bearer ')
+    const adminSecret = request.headers.get('x-admin-secret')
+    const configuredSecret = process.env.ADMIN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
+    const isSecretValid = adminSecret && configuredSecret && adminSecret === configuredSecret
+
+    if (!user && !hasBearer && !isSecretValid) {
+      return NextResponse.json({ error: 'Unauthorized: Authentication required for cloud resource APIs' }, { status: 401 })
+    }
+  }
+
   return supabaseResponse
 }
 
@@ -111,5 +158,7 @@ export const config = {
   matcher: [
     '/portal/:path*',
     '/admin/:path*',
+    '/api/admin/:path*',
+    '/api/cloud/:path*',
   ],
 }

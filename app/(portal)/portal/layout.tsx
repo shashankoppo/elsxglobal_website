@@ -62,15 +62,70 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile header */}
-      <div className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-50">
-        <Link href="/portal" className="inline-flex items-center gap-2">
-          <Logo className="h-7 w-7" />
-          <span className="font-semibold">Portal</span>
-        </Link>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-muted">
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+      <div className="lg:hidden flex items-center justify-between px-4 h-16 border-b border-border bg-background/90 backdrop-blur sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 -ml-2 rounded-lg hover:bg-muted text-foreground"
+            aria-label="Toggle navigation"
+          >
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+          <Link href="/portal" className="inline-flex items-center gap-2">
+            <Logo className="h-7 w-7" />
+            <span className="font-semibold text-sm">Portal</span>
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <Link
+            href="/portal/notifications"
+            className="p-2 rounded-lg hover:bg-muted transition-colors relative text-muted-foreground hover:text-foreground"
+            aria-label="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-signal" />
+          </Link>
+
+          <button
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="flex items-center gap-1 p-1 rounded-lg hover:bg-muted transition-colors"
+            aria-label="User menu"
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
+              <User className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+          </button>
+        </div>
       </div>
+
+      {/* User dropdown for both mobile & desktop */}
+      {userMenuOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+          <div className="fixed right-4 lg:right-8 top-16 mt-2 w-56 liquid-glass-strong rounded-2xl p-2 z-50 shadow-2xl bg-ink-surface/98 border border-hairline animate-fade-in">
+            <div className="px-3 py-2 border-b border-border mb-2">
+              <p className="text-sm font-medium truncate">{user?.email || 'User'}</p>
+              <p className="text-xs text-muted-foreground">Customer Portal</p>
+            </div>
+            <Link href="/portal/profile" onClick={() => setUserMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+              <User className="h-4 w-4" />Profile
+            </Link>
+            <Link href="/portal/notifications" onClick={() => setUserMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+              <Bell className="h-4 w-4" />Notifications
+            </Link>
+            <Link href="/portal/billing" onClick={() => setUserMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+              <CreditCard className="h-4 w-4" />Billing
+            </Link>
+            <div className="border-t border-border mt-2 pt-2">
+              <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-500/5 transition-colors">
+                <LogOut className="h-4 w-4" />Sign Out
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="flex">
         {/* Sidebar */}
@@ -165,8 +220,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
         {/* Main content area */}
         <div className="flex-1 lg:ml-0 min-w-0">
-          {/* Topbar */}
-          <header className="sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border">
+          {/* Topbar — Desktop only */}
+          <header className="hidden lg:block sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border">
             <div className="flex items-center justify-between px-4 lg:px-8 h-16">
               <form onSubmit={handleSearch} className="flex-1 max-w-md">
                 <div className="relative">
@@ -182,49 +237,21 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               </form>
 
               <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg hover:bg-muted transition-colors relative">
+                <Link href="/portal/notifications" className="p-2 rounded-lg hover:bg-muted transition-colors relative" aria-label="Notifications">
                   <Bell className="h-4 w-4" />
                   <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+                </Link>
+
+                {/* User dropdown desktop toggle */}
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
-
-                {/* User dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-
-                  {userMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-56 liquid-glass-strong rounded-2xl p-2 z-50 shadow-xl">
-                        <div className="px-3 py-2 border-b border-border mb-2">
-                          <p className="text-sm font-medium truncate">{user?.email || 'User'}</p>
-                          <p className="text-xs text-muted-foreground">Customer Portal</p>
-                        </div>
-                        <Link href="/portal/profile" onClick={() => setUserMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-                          <User className="h-4 w-4" />Profile
-                        </Link>
-                        <Link href="/portal/notifications" onClick={() => setUserMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-                          <Bell className="h-4 w-4" />Notifications
-                        </Link>
-                        <Link href="/portal" onClick={() => setUserMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-                          <CreditCard className="h-4 w-4" />Billing
-                        </Link>
-                        <div className="border-t border-border mt-2 pt-2">
-                          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-500/5 transition-colors">
-                            <LogOut className="h-4 w-4" />Sign Out
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
           </header>

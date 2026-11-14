@@ -73,10 +73,9 @@ export default function PortalDashboardPage() {
       const supabase = createClient();
       const { data: authData } = await supabase.auth.getUser();
       if (!authData.user) {
-        setUser({ id: 'demo-user', email: 'architect@vaulthost.cloud' });
-        setServices(DEMO_DASHBOARD_SERVICES);
-        setInvoices(DEMO_DASHBOARD_INVOICES);
-        setTickets(DEMO_DASHBOARD_TICKETS);
+        setServices([]);
+        setInvoices([]);
+        setTickets([]);
         setLoading(false);
         return;
       }
@@ -95,9 +94,9 @@ export default function PortalDashboardPage() {
         inv = { data: [] };
         t = { data: [] };
       }
-      setServices(s.data && s.data.length > 0 ? s.data : DEMO_DASHBOARD_SERVICES);
-      setInvoices(inv.data && inv.data.length > 0 ? inv.data : DEMO_DASHBOARD_INVOICES);
-      setTickets(t.data && t.data.length > 0 ? t.data : DEMO_DASHBOARD_TICKETS);
+      setServices(s.data || []);
+      setInvoices(inv.data || []);
+      setTickets(t.data || []);
       setLoading(false);
     };
     init();
@@ -126,7 +125,7 @@ export default function PortalDashboardPage() {
       className="space-y-8"
     >
       {/* Header with Glassmorphism */}
-      <motion.div variants={fadeUp} className="relative overflow-hidden rounded-3xl v4-panel p-8 border-signal/20 bg-gradient-to-br from-ink-surface to-background/50">
+      <motion.div variants={fadeUp} className="relative overflow-hidden rounded-2xl sm:rounded-3xl v4-panel p-5 sm:p-8 border-signal/20 bg-gradient-to-br from-ink-surface to-background/50">
         <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
           <Shield className="w-64 h-64 text-signal" />
         </div>
@@ -136,14 +135,14 @@ export default function PortalDashboardPage() {
               <span className="w-2 h-2 rounded-full bg-good animate-pulse" />
               <span className="text-xs font-semibold text-good uppercase tracking-wider">System Operational</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight v4-display text-text-primary-v4 mb-2">
+            <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight v4-display text-text-primary-v4 mb-2">
               Welcome back, <span className="text-signal">{user?.email?.split('@')[0] || 'User'}</span>
             </h1>
-            <p className="text-text-secondary-v4 max-w-xl">
+            <p className="text-sm sm:text-base text-text-secondary-v4 max-w-xl">
               Your infrastructure is running smoothly. Manage your active services, view analytics, and scale resources instantly.
             </p>
           </div>
-          <Link href="/vaulthost" className="inline-flex items-center gap-2 px-6 py-3 rounded-btn v4-btn-primary text-sm whitespace-nowrap group">
+          <Link href="/vaulthost" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-btn v4-btn-primary text-sm whitespace-nowrap group w-full sm:w-auto">
             <Plus className="h-4 w-4" /> Deploy Server
             <ArrowRight className="h-4 w-4 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
           </Link>

@@ -167,7 +167,7 @@ export function ElsxHero() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: EASE, delay: 0.06 }}
-              className="text-[clamp(2.8rem,5.8vw,5rem)] font-bold tracking-[-0.04em] leading-[1.04] text-text-primary-v4 mb-5"
+              className="text-[clamp(2.1rem,5vw,5rem)] font-bold tracking-[-0.04em] leading-[1.08] text-text-primary-v4 mb-5"
             >
               Enterprise transformation
               <br />
@@ -193,18 +193,18 @@ export function ElsxHero() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.22 }}
-              className="flex flex-wrap items-center gap-3 mb-12"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-12"
             >
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2.5 px-6 py-3 rounded-btn text-sm font-semibold v4-btn-primary"
+                className="inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-btn text-sm font-semibold v4-btn-primary w-full sm:w-auto"
               >
                 Schedule Executive Briefing
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/services"
-                className="inline-flex items-center gap-2.5 px-6 py-3 rounded-btn text-sm font-semibold v4-btn-secondary group"
+                className="inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-btn text-sm font-semibold v4-btn-secondary group w-full sm:w-auto"
               >
                 View All Services
                 <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -246,10 +246,10 @@ export function ElsxHero() {
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.22, ease: 'easeOut' }}
                 >
-                  <div className="grid grid-cols-[auto_1fr] gap-8 items-start">
+                  <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 sm:gap-8 items-start">
                     {/* Big stat */}
                     <div>
-                      <p className="text-[3.25rem] font-bold tracking-[-0.04em] leading-none text-text-primary-v4">
+                      <p className="text-4xl sm:text-5xl md:text-[3.25rem] font-bold tracking-[-0.04em] leading-none text-text-primary-v4">
                         {data.stat}
                       </p>
                       <p className="text-xs text-text-muted-v4 mt-1.5 max-w-[18ch] leading-snug">
@@ -257,7 +257,7 @@ export function ElsxHero() {
                       </p>
                     </div>
                     {/* KPIs */}
-                    <div className="border-l border-hairline pl-8 flex flex-col gap-3">
+                    <div className="border-t sm:border-t-0 sm:border-l border-hairline pt-4 sm:pt-0 sm:pl-8 flex flex-col gap-3">
                       <div className="flex gap-6">
                         <div>
                           <p className="text-base font-bold text-text-primary-v4">{data.kpi1}</p>
@@ -380,11 +380,11 @@ export function ElsxHero() {
         className="relative z-10 mt-14 border-t border-hairline overflow-hidden"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y sm:divide-y-0 divide-hairline">
             {TRUST.map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="flex items-center gap-2 px-5 sm:px-7 py-4 border-r border-hairline last:border-r-0 first:pl-0"
+                className="flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-6 py-3.5 sm:py-4 border-r-0 sm:border-r border-hairline last:border-r-0"
               >
                 <Icon className="w-3.5 h-3.5 shrink-0 text-text-muted-v4" />
                 <span className="text-[11px] font-semibold text-text-muted-v4 whitespace-nowrap tracking-wide">

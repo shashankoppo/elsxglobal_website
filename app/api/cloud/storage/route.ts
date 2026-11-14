@@ -1,10 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import { createServerClient } from '@/lib/supabase/server';
 import { processActionIntent } from '@/lib/action-gateway/gateway';
 import { ActionIntent } from '@/lib/action-gateway/types';
 import { ok, err } from '@/lib/core/api-response';
+import { MinIOClient } from '@/lib/storage/minio';
 
 export interface Bucket {
   id: string;
@@ -26,77 +28,53 @@ export interface StorageCredential {
   lastUsed: string;
 }
 
-let fallbackBuckets: Bucket[] = [
-  {
-    id: 'bkt-01',
-    name: 'user-media-uploads',
-    region: 'Auto (Anycast Edge)',
-    objects: 1420500,
-    sizeGb: 312.4,
-    publicAccess: true,
-    corsEnabled: true,
-    created: '2026-02-14',
-    egressCostSavedUsd: 1405.80,
-  },
-  {
-    id: 'bkt-02',
-    name: 'db-backup-snapshots',
-    region: 'Mumbai, India (ap-south)',
-    objects: 84,
-    sizeGb: 840.0,
-    publicAccess: false,
-    corsEnabled: false,
-    created: '2026-03-01',
-    egressCostSavedUsd: 3780.00,
-  },
-  {
-    id: 'bkt-03',
-    name: 'static-frontend-assets',
-    region: 'Auto (Anycast Edge)',
-    objects: 28400,
-    sizeGb: 14.8,
-    publicAccess: true,
-    corsEnabled: true,
-    created: '2026-04-10',
-    egressCostSavedUsd: 66.60,
-  },
-];
-
-let fallbackKeys: StorageCredential[] = [
-  { id: 'key-01', accessKey: 'vh_r2_live_9f83a8b27c1094ea', name: 'Production Backend API', permissions: 'Read-Write', lastUsed: '3 min ago' },
-  { id: 'key-02', accessKey: 'vh_r2_back_3e21d019fba82c91', name: 'Automated Backup Agent', permissions: 'Admin', lastUsed: '4 hours ago' },
-];
-
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const bucketName = searchParams.get('bucket') || searchParams.get('name');
-
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
 
-    // Try Supabase first
-    let buckets = fallbackBuckets;
-    try {
-      const { data: dbBuckets, error } = await supabase
-        .from('cloud_storage_buckets')
-        .select('*')
-        .order('created_at', { ascending: false });
+    if (!user) {
+      return err('UNAUTHORIZED', 'Authentication required to access storage buckets', { status: 401 });
+    }
 
-      if (!error && dbBuckets && dbBuckets.length > 0) {
-        buckets = dbBuckets.map((b: any) => ({
-          id: b.id,
-          name: b.name,
-          region: b.region || 'Auto (Anycast Edge)',
-          objects: b.objects_count || 0,
-          sizeGb: b.size_bytes ? Number((b.size_bytes / (1024 * 1024 * 1024)).toFixed(2)) : 0,
-          publicAccess: Boolean(b.public_access),
-          corsEnabled: Boolean(b.cors_enabled),
-          created: b.created_at ? new Date(b.created_at).toISOString().split('T')[0] : '2026-01-01',
-          egressCostSavedUsd: b.egress_saved_usd || 0,
-        }));
-      }
-    } catch {}
+    const { searchParams } = new URL(req.url);
+    const bucketName = searchParams.get('bucket') || searchParams.get('name');
+
+    let buckets: Bucket[] = [];
+    const { data: dbBuckets, error } = await supabase
+      .from('cloud_storage_buckets')
+      .select('*')
+      .eq('tenant_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (!error && dbBuckets && dbBuckets.length > 0) {
+      buckets = dbBuckets.map((b: any) => ({
+        id: b.id,
+        name: b.name,
+        region: b.region || 'Auto (Anycast Edge)',
+        objects: Number(b.object_count || b.objects_count || 0),
+        sizeGb: b.size_bytes ? Number((b.size_bytes / (1024 * 1024 * 1024)).toFixed(2)) : 0,
+        publicAccess: Boolean(b.public_access),
+        corsEnabled: Boolean(b.cors_enabled),
+        created: b.created_at ? new Date(b.created_at).toISOString().split('T')[0] : '2026-01-01',
+        egressCostSavedUsd: Number(b.egress_saved_usd || 0),
+      }));
+    }
+
+    // Also fetch storage credentials for user
+    const { data: dbKeys } = await supabase
+      .from('api_keys')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    const credentials: StorageCredential[] = (dbKeys || []).map((k: any) => ({
+      id: k.id,
+      accessKey: k.key_prefix ? `${k.key_prefix}...` : k.id,
+      name: k.name || 'S3 API Key',
+      permissions: 'Read-Write',
+      lastUsed: k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : 'Never',
+    }));
 
     const totalStorageGb = buckets.reduce((sum, b) => sum + b.sizeGb, 0);
     const totalObjects = buckets.reduce((sum, b) => sum + b.objects, 0);
@@ -111,9 +89,9 @@ export async function GET(req: NextRequest) {
         egressFee: '$0.00 (Zero Egress Network)',
       },
       buckets,
-      credentials: fallbackKeys,
+      credentials,
       activeBucket: bucketName ? buckets.find(b => b.name === bucketName) || null : null,
-      user: user ? { id: user.id, email: user.email } : null,
+      user: { id: user.id, email: user.email },
     });
   } catch (caughtErr: unknown) {
     const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
@@ -123,13 +101,17 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { action, bucket, name: rawName, options, intent } = body;
-
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-    const actorId = user?.id || 'user_active_session';
-    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
+    if (!user) {
+      return err('UNAUTHORIZED', 'Authentication required for storage operations', { status: 401 });
+    }
+
+    const body = await req.json();
+    const { action, bucket, name: rawName, options, intent } = body;
+    const actorId = user.id;
+    const tenantId = user.id;
 
     if (intent) {
       const result = await processActionIntent(intent as ActionIntent, options);
@@ -137,7 +119,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'create_bucket') {
-      const name = bucket?.name || rawName;
+      const name = (bucket?.name || rawName || '').toLowerCase().trim();
       const region = bucket?.region || body.region || 'Auto (Anycast Edge)';
       const publicAccess = bucket?.publicAccess ?? body.publicAccess ?? false;
 
@@ -164,8 +146,22 @@ export async function POST(req: NextRequest) {
       const gatewayResult = await processActionIntent(actionIntent, options);
 
       if (gatewayResult.status === 'executed') {
+        const bucketId = crypto.randomUUID();
+
+        // 1. Dispatch to MinIO S3 backend
+        try {
+          const minio = new MinIOClient();
+          await minio.createBucket(name, region);
+          if (publicAccess) {
+            await minio.setBucketPolicy(name, 'public-read');
+          }
+        } catch (minioErr: any) {
+          console.warn('[Storage Route] MinIO backend notice:', minioErr.message);
+        }
+
+        // 2. Persist to Supabase cloud_storage_buckets
         const newBucket: Bucket = {
-          id: `bkt-${Date.now()}`,
+          id: bucketId,
           name,
           region,
           objects: 0,
@@ -175,17 +171,16 @@ export async function POST(req: NextRequest) {
           created: new Date().toISOString().split('T')[0],
           egressCostSavedUsd: 0,
         };
-        fallbackBuckets.push(newBucket);
 
-        try {
-          await supabase.from('cloud_storage_buckets').insert({
-            tenant_id: tenantId,
-            name,
-            region,
-            public_access: Boolean(publicAccess),
-            cors_enabled: true,
-          });
-        } catch {}
+        await supabase.from('cloud_storage_buckets').insert({
+          id: bucketId,
+          tenant_id: tenantId,
+          name,
+          region,
+          public_access: Boolean(publicAccess),
+          cors_enabled: true,
+          created_at: new Date().toISOString(),
+        });
 
         return ok({
           status: 'executed',
@@ -201,6 +196,18 @@ export async function POST(req: NextRequest) {
       const name = bucket?.name || rawName || body.name || body.id;
       if (!name) {
         return err('BAD_REQUEST', 'Bucket name is required for deletion', { status: 400 });
+      }
+
+      // Check ownership
+      const { data: existingBucket } = await supabase
+        .from('cloud_storage_buckets')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .or(`name.eq.${name},id.eq.${name}`)
+        .maybeSingle();
+
+      if (!existingBucket) {
+        return err('NOT_FOUND', 'Bucket not found or permission denied', { status: 404 });
       }
 
       const actionIntent: ActionIntent = {
@@ -221,10 +228,21 @@ export async function POST(req: NextRequest) {
 
       const gatewayResult = await processActionIntent(actionIntent, options);
       if (gatewayResult.status === 'executed') {
-        fallbackBuckets = fallbackBuckets.filter(b => b.name !== name && b.id !== name);
+        // 1. Delete from MinIO
         try {
-          await supabase.from('cloud_storage_buckets').delete().or(`name.eq.${name},id.eq.${name}`);
-        } catch {}
+          const minio = new MinIOClient();
+          await minio.deleteBucket(existingBucket.name);
+        } catch (minioErr: any) {
+          console.warn('[Storage Route] MinIO deletion notice:', minioErr.message);
+        }
+
+        // 2. Delete from Supabase
+        await supabase
+          .from('cloud_storage_buckets')
+          .delete()
+          .eq('id', existingBucket.id)
+          .eq('tenant_id', tenantId);
+
         return ok({ message: `Bucket ${name} deleted.`, gateway: gatewayResult });
       }
 
@@ -253,14 +271,25 @@ export async function POST(req: NextRequest) {
 
       const gatewayResult = await processActionIntent(actionIntent, options);
       if (gatewayResult.status === 'executed') {
+        const keyPrefix = `vh_r2_${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
+        const keyId = crypto.randomUUID();
+
+        await supabase.from('api_keys').insert({
+          id: keyId,
+          user_id: user.id,
+          name: credName,
+          key_prefix: keyPrefix,
+          created_at: new Date().toISOString(),
+        });
+
         const newKey: StorageCredential = {
-          id: `key-${Date.now()}`,
-          accessKey: `vh_r2_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
+          id: keyId,
+          accessKey: `${keyPrefix}...`,
           name: credName,
           permissions,
           lastUsed: 'Never',
         };
-        fallbackKeys.push(newKey);
+
         return ok({ key: newKey, gateway: gatewayResult });
       }
 
@@ -291,7 +320,12 @@ export async function POST(req: NextRequest) {
 
       const gatewayResult = await processActionIntent(actionIntent, options);
       if (gatewayResult.status === 'executed') {
-        fallbackKeys = fallbackKeys.filter(k => k.id !== id);
+        await supabase
+          .from('api_keys')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
+
         return ok({ message: `Key ${id} revoked.`, gateway: gatewayResult });
       }
 
@@ -315,15 +349,28 @@ export async function DELETE(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-    const actorId = user?.id || 'user_active_session';
-    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
+    if (!user) {
+      return err('UNAUTHORIZED', 'Authentication required', { status: 401 });
+    }
+
+    const { data: existingBucket } = await supabase
+      .from('cloud_storage_buckets')
+      .select('*')
+      .eq('tenant_id', user.id)
+      .or(`name.eq.${name},id.eq.${name}`)
+      .maybeSingle();
+
+    if (!existingBucket) {
+      return err('NOT_FOUND', 'Bucket not found or permission denied', { status: 404 });
+    }
 
     const actionIntent: ActionIntent = {
       intentId: crypto.randomUUID(),
       actor: {
-        id: actorId,
+        id: user.id,
         type: 'user',
-        tenantId,
+        tenantId: user.id,
         roles: ['tenant_admin'],
       },
       targetService: 'storage',
@@ -336,10 +383,12 @@ export async function DELETE(req: NextRequest) {
 
     const gatewayResult = await processActionIntent(actionIntent);
     if (gatewayResult.status === 'executed') {
-      fallbackBuckets = fallbackBuckets.filter(b => b.name !== name && b.id !== name);
       try {
-        await supabase.from('cloud_storage_buckets').delete().or(`name.eq.${name},id.eq.${name}`);
+        const minio = new MinIOClient();
+        await minio.deleteBucket(existingBucket.name);
       } catch {}
+
+      await supabase.from('cloud_storage_buckets').delete().eq('id', existingBucket.id).eq('tenant_id', user.id);
       return ok({ message: `Bucket ${name} deleted.`, gateway: gatewayResult });
     }
 

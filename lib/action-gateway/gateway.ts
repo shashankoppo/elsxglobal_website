@@ -432,14 +432,35 @@ async function generateDiffPreview(intent: ActionIntent): Promise<DiffPreview> {
 }
 
 /**
- * Verifies step-up 2FA token (supports TOTP, emergency passcodes, or session re-auth).
+ * Verifies step-up 2FA challenge token or administrative step-up credential.
  */
 function verifyStepUpAuth(actorId: string, token: string): boolean {
-  if (!token || token.length < 6) return false;
-  // Demo master bypass or 6-digit TOTP validation
-  if (token === '2FA-VERIFIED-2026' || token === '123456' || token.startsWith('totp_')) {
-    return true;
+  if (!token || !actorId) return false;
+
+  // 1. Check if token is a valid active challenge ID
+  const challenge = stepUpChallenges.get(token);
+  if (challenge) {
+    if (challenge.actorId === actorId && Date.now() <= challenge.expiresAt) {
+      stepUpChallenges.delete(token);
+      return true;
+    }
+    return false;
   }
+
+  // 2. Check timing-safe admin secret override
+  const adminSecret = process.env.ADMIN_SECRET;
+  if (adminSecret) {
+    try {
+      const bufA = Buffer.from(token, 'utf8');
+      const bufB = Buffer.from(adminSecret, 'utf8');
+      if (bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB)) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
+  }
+
   return false;
 }
 
@@ -448,9 +469,20 @@ function verifyStepUpAuth(actorId: string, token: string): boolean {
  */
 function verifyStaffAuthorization(staffId: string, staffToken: string): boolean {
   if (!staffId || !staffToken) return false;
-  if (staffToken === 'STAFF-AUTH-VALID' || staffToken === 'Admin@2026!' || staffToken.length >= 6) {
-    return true;
+
+  const adminSecret = process.env.ADMIN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (adminSecret) {
+    try {
+      const bufA = Buffer.from(staffToken, 'utf8');
+      const bufB = Buffer.from(adminSecret, 'utf8');
+      if (bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB)) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
   }
+
   return false;
 }
 

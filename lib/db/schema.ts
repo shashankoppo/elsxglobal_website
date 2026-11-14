@@ -1,4 +1,4 @@
-import { timestamp, pgTable, text, primaryKey, integer, boolean, numeric, bigint } from "drizzle-orm/pg-core"
+import { timestamp, pgTable, text, primaryKey, integer, boolean, numeric, bigint, jsonb } from "drizzle-orm/pg-core"
 import type { AdapterAccount } from "@auth/core/adapters"
 
 export const users = pgTable("user", {
@@ -177,4 +177,196 @@ export const cloudVpsInstances = pgTable("cloud_vps_instances", {
   renewalDate: timestamp("renewal_date", { mode: "date" }).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+// ─── Hosting & Provisioning Fleet (Canonical Supabase Tables) ──────
+
+export const hostingPlans = pgTable("hosting_plans", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  tier: text("tier").default("vps").notNull(),
+  priceMonthly: integer("price_monthly").notNull(),
+  priceYearly: integer("price_yearly"),
+  cpu: text("cpu"),
+  ram: text("ram"),
+  storage: text("storage"),
+  bandwidth: text("bandwidth"),
+  specs: jsonb("specs").$type<Record<string, any>>(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const hostingOrders = pgTable("hosting_orders", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  planId: text("plan_id"),
+  status: text("status").default("pending_payment").notNull(),
+  amount: integer("amount").notNull(),
+  currency: text("currency").default("INR").notNull(),
+  billingCycle: text("billing_cycle").default("monthly").notNull(),
+  domain: text("domain"),
+  paymentGateway: text("payment_gateway"),
+  transactionId: text("transaction_id"),
+  razorpayOrderId: text("razorpay_order_id"),
+  notes: text("notes"),
+  customSpecs: jsonb("custom_specs").$type<Record<string, any>>(),
+  addons: jsonb("addons").$type<string[]>(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const hostingServices = pgTable("hosting_services", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  orderId: text("order_id"),
+  planId: text("plan_id"),
+  planName: text("plan_name").notNull(),
+  domain: text("domain"),
+  status: text("status").default("provisioning").notNull(),
+  ipAddress: text("ip_address"),
+  controlPanelUrl: text("control_panel_url"),
+  externalId: text("external_id"),
+  adapter: text("adapter").default("proxmox"),
+  tier: text("tier").default("vps"),
+  location: text("location").default("Mumbai, India (BOM-01)"),
+  renewalDate: timestamp("renewal_date", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const hostingInvoices = pgTable("hosting_invoices", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  orderId: text("order_id"),
+  invoiceNumber: text("invoice_number").notNull().unique(),
+  amount: integer("amount").notNull(),
+  status: text("status").default("paid").notNull(),
+  period: text("period"),
+  pdfUrl: text("pdf_url"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const adminUsers = pgTable("admin_users", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().unique(),
+  email: text("email").notNull().unique(),
+  role: text("role").default("admin").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const paymentSettings = pgTable("payment_settings", {
+  id: integer("id").primaryKey(),
+  isActive: boolean("is_active").default(true).notNull(),
+  razorpayEnabled: boolean("razorpay_enabled").default(true).notNull(),
+  razorpayKeyId: text("razorpay_key_id"),
+  razorpayKeySecret: text("razorpay_key_secret"),
+  razorpayWebhookSecret: text("razorpay_webhook_secret"),
+  upiEnabled: boolean("upi_enabled").default(true).notNull(),
+  upiVpa: text("upi_vpa"),
+  currency: text("currency").default("INR").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const provisioningSettings = pgTable("provisioning_settings", {
+  id: integer("id").primaryKey(),
+  proxmoxUrl: text("proxmox_url"),
+  proxmoxTokenId: text("proxmox_token_id"),
+  proxmoxTokenSecret: text("proxmox_token_secret"),
+  powerdnsUrl: text("powerdns_url"),
+  powerdnsApiKey: text("powerdns_api_key"),
+  minioEndpoint: text("minio_endpoint"),
+  minioAccessKey: text("minio_access_key"),
+  minioSecretKey: text("minio_secret_key"),
+  workerdUrl: text("workerd_url"),
+  litellmBaseUrl: text("litellm_base_url"),
+  litellmMasterKey: text("litellm_master_key"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const supportTickets = pgTable("support_tickets", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  priority: text("priority").default("medium").notNull(),
+  status: text("status").default("open").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const supportReplies = pgTable("support_replies", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  ticketId: text("ticket_id").notNull().references(() => supportTickets.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  message: text("message").notNull(),
+  isStaff: boolean("is_staff").default(false).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const leads = pgTable("leads", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  company: text("company"),
+  serviceInterest: text("service_interest"),
+  message: text("message"),
+  source: text("source").default("contact_form").notNull(),
+  status: text("status").default("new").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const notifications = pgTable("notifications", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").default("system").notNull(),
+  severity: text("severity").default("info").notNull(),
+  read: boolean("read").default(false).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const apiKeys = pgTable("api_keys", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  keyPrefix: text("key_prefix").notNull(),
+  keyHash: text("key_hash"),
+  lastUsedAt: timestamp("last_used_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const userProfiles = pgTable("user_profiles", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().unique(),
+  displayName: text("display_name"),
+  phone: text("phone"),
+  country: text("country"),
+  company: text("company"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const creditBalances = pgTable("credit_balances", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().unique(),
+  balancePaise: integer("balance_paise").default(0).notNull(),
+  lifetimeCreditedPaise: integer("lifetime_credited_paise").default(0).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const backupSnapshots = pgTable("backup_snapshots", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  serviceId: text("service_id").notNull().references(() => hostingServices.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  status: text("status").default("completed").notNull(),
+  sizeBytes: bigint("size_bytes", { mode: "number" }).default(0).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 })

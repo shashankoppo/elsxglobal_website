@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
@@ -41,8 +41,27 @@ export async function POST(req: Request) {
       .update(razorpay_order_id + '|' + razorpay_payment_id)
       .digest('hex');
 
-    if (generated_signature !== razorpay_signature) {
+    const expectedBuf = Buffer.from(generated_signature, 'utf8');
+    const signatureBuf = Buffer.from(razorpay_signature, 'utf8');
+    const isValid = expectedBuf.length === signatureBuf.length && crypto.timingSafeEqual(expectedBuf, signatureBuf);
+
+    if (!isValid) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    // Verify order exists and matches razorpay_order_id
+    const { data: order, error: orderErr } = await supabaseAdmin
+      .from('hosting_orders')
+      .select('id, user_id, status, razorpay_order_id')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (orderErr || !order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    if (order.razorpay_order_id && order.razorpay_order_id !== razorpay_order_id) {
+      return NextResponse.json({ error: 'Order transaction mismatch' }, { status: 400 });
     }
 
     // Hand off to the centralized fulfillment engine

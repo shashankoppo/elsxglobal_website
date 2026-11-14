@@ -1,10 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import { createServerClient } from '@/lib/supabase/server';
 import { processActionIntent } from '@/lib/action-gateway/gateway';
 import { ActionIntent } from '@/lib/action-gateway/types';
 import { ok, err } from '@/lib/core/api-response';
+import { WorkerdClient } from '@/lib/workers/workerd';
 
 export interface WorkerBinding {
   type: string;
@@ -36,113 +38,71 @@ export interface WorkerLog {
   duration: string;
 }
 
-let fallbackWorkers: Worker[] = [
-  {
-    id: 'wrk-001',
-    name: 'edge-auth-router',
-    route: 'api.apexdigital.io/auth/*',
-    status: 'running',
-    runtime: 'v8_isolate',
-    memoryLimitMb: 128,
-    cpuLimitMs: 50,
-    deployedAt: '12 min ago',
-    envVars: { JWT_SECRET: '••••••••••••••••', ENVIRONMENT: 'production' },
-    bindings: [
-      { type: 'KV Store', name: 'SESSIONS_KV', resource: 'kv-sess-prod-01' },
-      { type: 'D1 Database', name: 'DB_USERS', resource: 'd1-users-apac' },
-    ],
-    code: `export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    if (url.pathname.startsWith('/auth/verify')) {
-      const authHeader = request.headers.get('Authorization');
-      if (!authHeader) return new Response('Unauthorized', { status: 401 });
-      return Response.json({ valid: true, timestamp: Date.now() });
-    }
-    return new Response('VaultHost Edge Worker Active');
-  }
-};`,
-  },
-  {
-    id: 'wrk-002',
-    name: 'image-transformer-cdn',
-    route: 'media.apexdigital.io/transform/*',
-    status: 'running',
-    runtime: 'v8_isolate',
-    memoryLimitMb: 256,
-    cpuLimitMs: 100,
-    deployedAt: '2 days ago',
-    envVars: { CACHE_TTL: '86400', WEBP_QUALITY: '85' },
-    bindings: [
-      { type: 'VaultR2 Bucket', name: 'MEDIA_BUCKET', resource: 'bkt-user-media' },
-    ],
-    code: `export default {
-  async fetch(request, env) {
-    const { searchParams } = new URL(request.url);
-    const width = searchParams.get('w') || '800';
-    return Response.json({ status: 'optimized', width, format: 'image/webp' });
-  }
-};`,
-  },
-];
-
-const DEMO_LOGS: WorkerLog[] = [
-  { id: '1', time: '11:42:01.204', method: 'GET', path: '/auth/verify', status: 200, colo: 'BOM', duration: '1.2ms' },
-  { id: '2', time: '11:42:02.819', method: 'POST', path: '/auth/token', status: 200, colo: 'BLR', duration: '2.4ms' },
-  { id: '3', time: '11:42:04.102', method: 'GET', path: '/auth/verify', status: 200, colo: 'SIN', duration: '3.1ms' },
-  { id: '4', time: '11:42:05.441', method: 'GET', path: '/auth/verify', status: 401, colo: 'FRA', duration: '0.8ms' },
-  { id: '5', time: '11:42:06.912', method: 'POST', path: '/auth/refresh', status: 200, colo: 'BOM', duration: '1.9ms' },
-  { id: '6', time: '11:42:08.310', method: 'GET', path: '/auth/health', status: 200, colo: 'DEL', duration: '0.5ms' },
-];
-
 export async function GET(req: NextRequest) {
   try {
+    const supabase = createServerClient();
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+
+    if (!user) {
+      return err('UNAUTHORIZED', 'Authentication required to access workers', { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const workerId = searchParams.get('workerId') || searchParams.get('name') || searchParams.get('id');
     const logsOnly = searchParams.get('logs');
 
-    const supabase = createServerClient();
-    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-
     if (logsOnly) {
-      return ok({
-        logs: DEMO_LOGS,
-      });
+      const { data: dbLogs } = await supabase
+        .from('cloud_worker_logs')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(50);
+
+      const logs: WorkerLog[] = (dbLogs || []).map((l: any) => ({
+        id: l.id,
+        time: l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : 'Just now',
+        method: l.method || 'GET',
+        path: l.path || '/',
+        status: l.status_code || 200,
+        colo: l.colo || 'BOM',
+        duration: l.duration_ms ? `${l.duration_ms}ms` : '1.2ms',
+      }));
+
+      return ok({ logs });
     }
 
-    let workers = fallbackWorkers;
-    try {
-      const { data: dbWorkers, error } = await supabase
-        .from('cloud_workers')
-        .select('*')
-        .order('created_at', { ascending: false });
+    let workers: Worker[] = [];
+    const { data: dbWorkers, error } = await supabase
+      .from('cloud_workers')
+      .select('*')
+      .eq('tenant_id', user.id)
+      .order('created_at', { ascending: false });
 
-      if (!error && dbWorkers && dbWorkers.length > 0) {
-        workers = dbWorkers.map((w: any) => ({
-          id: w.id,
-          name: w.name,
-          route: w.route_pattern || w.route,
-          status: w.status || 'running',
-          runtime: w.runtime || 'v8_isolate',
-          memoryLimitMb: w.memory_limit_mb || 128,
-          cpuLimitMs: w.cpu_limit_ms || 50,
-          deployedAt: w.updated_at ? new Date(w.updated_at).toLocaleTimeString() : 'Recently',
-          envVars: w.env_vars || {},
-          bindings: w.bindings || [],
-          code: w.script_code || '',
-        }));
-      }
-    } catch {}
+    if (!error && dbWorkers && dbWorkers.length > 0) {
+      workers = dbWorkers.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        route: w.route_pattern || w.route,
+        status: w.status || 'running',
+        runtime: w.runtime || 'v8_isolate',
+        memoryLimitMb: w.memory_limit_mb || 128,
+        cpuLimitMs: w.cpu_limit_ms || 50,
+        deployedAt: w.updated_at ? new Date(w.updated_at).toLocaleTimeString() : 'Recently',
+        envVars: w.env_vars || {},
+        bindings: w.bindings || [],
+        code: w.script_code || '',
+      }));
+    }
 
     if (workerId) {
       const worker = workers.find(w => w.id === workerId || w.name === workerId);
-      if (!worker) return err('NOT_FOUND', 'Worker not found', { status: 404 });
-      return ok({ worker, user: user ? { id: user.id, email: user.email } : null });
+      if (!worker) return err('NOT_FOUND', 'Worker not found or permission denied', { status: 404 });
+      return ok({ worker, user: { id: user.id, email: user.email } });
     }
 
     return ok({
       workers,
-      user: user ? { id: user.id, email: user.email } : null,
+      user: { id: user.id, email: user.email },
     });
   } catch (caughtErr: unknown) {
     const errorMsg = caughtErr instanceof Error ? caughtErr.message : 'Unknown error';
@@ -152,13 +112,17 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { action, worker, code, envVars, options, intent } = body;
-
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-    const actorId = user?.id || 'user_active_session';
-    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
+    if (!user) {
+      return err('UNAUTHORIZED', 'Authentication required for worker operations', { status: 401 });
+    }
+
+    const body = await req.json();
+    const { action, worker, code, envVars, options, intent } = body;
+    const actorId = user.id;
+    const tenantId = user.id;
 
     if (intent) {
       const result = await processActionIntent(intent as ActionIntent, options);
@@ -174,7 +138,6 @@ export async function POST(req: NextRequest) {
         return err('BAD_REQUEST', 'Worker name and route pattern are required.', { status: 400 });
       }
 
-      // Route through Action Gateway
       const actionIntent: ActionIntent = {
         intentId: crypto.randomUUID(),
         actor: {
@@ -194,9 +157,35 @@ export async function POST(req: NextRequest) {
       const gatewayResult = await processActionIntent(actionIntent, options);
 
       if (gatewayResult.status === 'executed') {
-        const existingIdx = fallbackWorkers.findIndex(w => w.name === name);
-        const updatedWorker: Worker = {
-          id: existingIdx >= 0 ? fallbackWorkers[existingIdx].id : `wrk-${Date.now()}`,
+        const workerId = crypto.randomUUID();
+
+        // 1. Dispatch to workerd runtime
+        try {
+          const workerd = new WorkerdClient();
+          await workerd.deployWorker(
+            user.id,
+            name,
+            scriptCode,
+            [route],
+            envVars || { ENVIRONMENT: 'production' }
+          );
+        } catch (workerdErr: any) {
+          console.warn('[Workers Route] workerd backend notice:', workerdErr.message);
+        }
+
+        // 2. Persist to Supabase
+        await supabase.from('cloud_workers').upsert({
+          id: workerId,
+          tenant_id: tenantId,
+          name,
+          route_pattern: route,
+          script_code: scriptCode,
+          status: 'running',
+          updated_at: new Date().toISOString(),
+        });
+
+        const deployedWorker: Worker = {
+          id: workerId,
           name,
           route,
           status: 'running',
@@ -204,30 +193,14 @@ export async function POST(req: NextRequest) {
           memoryLimitMb: 128,
           cpuLimitMs: 50,
           deployedAt: 'Just now',
-          envVars: envVars || (existingIdx >= 0 ? fallbackWorkers[existingIdx].envVars : { ENVIRONMENT: 'production' }),
-          bindings: existingIdx >= 0 ? fallbackWorkers[existingIdx].bindings : [],
+          envVars: envVars || { ENVIRONMENT: 'production' },
+          bindings: [],
           code: scriptCode,
         };
 
-        if (existingIdx >= 0) {
-          fallbackWorkers[existingIdx] = updatedWorker;
-        } else {
-          fallbackWorkers.push(updatedWorker);
-        }
-
-        try {
-          await supabase.from('cloud_workers').upsert({
-            tenant_id: tenantId,
-            name,
-            route_pattern: route,
-            script_code: scriptCode,
-            status: 'running',
-          });
-        } catch {}
-
         return ok({
           status: 'executed',
-          worker: updatedWorker,
+          worker: deployedWorker,
           gateway: gatewayResult,
         });
       }
@@ -239,6 +212,18 @@ export async function POST(req: NextRequest) {
       const id = worker?.id || body.id || worker?.name || body.name;
       if (!id) {
         return err('BAD_REQUEST', 'Worker id or name is required', { status: 400 });
+      }
+
+      // Verify ownership
+      const { data: existingWorker } = await supabase
+        .from('cloud_workers')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .or(`id.eq.${id},name.eq.${id}`)
+        .maybeSingle();
+
+      if (!existingWorker) {
+        return err('NOT_FOUND', 'Worker not found or permission denied', { status: 404 });
       }
 
       const actionVerb = action === 'resume_worker' ? 'resume_worker' : 'suspend_worker';
@@ -260,11 +245,20 @@ export async function POST(req: NextRequest) {
 
       const gatewayResult = await processActionIntent(actionIntent, options);
       if (gatewayResult.status === 'executed') {
-        const target = fallbackWorkers.find(w => w.id === id || w.name === id);
-        if (target) {
-          target.status = action === 'resume_worker' ? 'running' : (target.status === 'suspended' ? 'running' : 'suspended');
-        }
-        return ok({ status: target?.status, gateway: gatewayResult });
+        const newStatus = action === 'resume_worker' ? 'running' : 'suspended';
+
+        try {
+          const workerd = new WorkerdClient();
+          await workerd.setWorkerStatus(existingWorker.id, newStatus === 'running' ? 'running' : 'stopped');
+        } catch {}
+
+        await supabase
+          .from('cloud_workers')
+          .update({ status: newStatus, updated_at: new Date().toISOString() })
+          .eq('id', existingWorker.id)
+          .eq('tenant_id', tenantId);
+
+        return ok({ status: newStatus, gateway: gatewayResult });
       }
 
       return ok(gatewayResult, { status: 202 });
@@ -274,6 +268,18 @@ export async function POST(req: NextRequest) {
       const id = worker?.id || body.id || worker?.name || body.name;
       if (!id) {
         return err('BAD_REQUEST', 'Worker id or name is required', { status: 400 });
+      }
+
+      // Verify ownership
+      const { data: existingWorker } = await supabase
+        .from('cloud_workers')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .or(`id.eq.${id},name.eq.${id}`)
+        .maybeSingle();
+
+      if (!existingWorker) {
+        return err('NOT_FOUND', 'Worker not found or permission denied', { status: 404 });
       }
 
       const actionIntent: ActionIntent = {
@@ -294,10 +300,17 @@ export async function POST(req: NextRequest) {
 
       const gatewayResult = await processActionIntent(actionIntent, options);
       if (gatewayResult.status === 'executed') {
-        fallbackWorkers = fallbackWorkers.filter(w => w.id !== id && w.name !== id);
         try {
-          await supabase.from('cloud_workers').delete().or(`id.eq.${id},name.eq.${id}`);
+          const workerd = new WorkerdClient();
+          await workerd.deleteWorker(existingWorker.id);
         } catch {}
+
+        await supabase
+          .from('cloud_workers')
+          .delete()
+          .eq('id', existingWorker.id)
+          .eq('tenant_id', tenantId);
+
         return ok({ message: `Worker ${id} deleted.`, gateway: gatewayResult });
       }
 
@@ -321,15 +334,28 @@ export async function DELETE(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-    const actorId = user?.id || 'user_active_session';
-    const tenantId = (user?.user_metadata?.tenant_id as string) || 'ten_portal_default';
+
+    if (!user) {
+      return err('UNAUTHORIZED', 'Authentication required', { status: 401 });
+    }
+
+    const { data: existingWorker } = await supabase
+      .from('cloud_workers')
+      .select('*')
+      .eq('tenant_id', user.id)
+      .or(`id.eq.${id},name.eq.${id}`)
+      .maybeSingle();
+
+    if (!existingWorker) {
+      return err('NOT_FOUND', 'Worker not found or permission denied', { status: 404 });
+    }
 
     const actionIntent: ActionIntent = {
       intentId: crypto.randomUUID(),
       actor: {
-        id: actorId,
+        id: user.id,
         type: 'user',
-        tenantId,
+        tenantId: user.id,
         roles: ['tenant_developer'],
       },
       targetService: 'compute',
@@ -342,10 +368,12 @@ export async function DELETE(req: NextRequest) {
 
     const gatewayResult = await processActionIntent(actionIntent);
     if (gatewayResult.status === 'executed') {
-      fallbackWorkers = fallbackWorkers.filter(w => w.id !== id && w.name !== id);
       try {
-        await supabase.from('cloud_workers').delete().or(`id.eq.${id},name.eq.${id}`);
+        const workerd = new WorkerdClient();
+        await workerd.deleteWorker(existingWorker.id);
       } catch {}
+
+      await supabase.from('cloud_workers').delete().eq('id', existingWorker.id).eq('tenant_id', user.id);
       return ok({ message: `Worker ${id} deleted.`, gateway: gatewayResult });
     }
 

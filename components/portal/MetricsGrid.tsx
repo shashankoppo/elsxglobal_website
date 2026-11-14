@@ -44,18 +44,18 @@ function MetricRing({ label, value, icon: Icon, color }: MetricRingProps) {
   const c = colorMap[color];
 
   return (
-    <div className={`liquid-glass-card rounded-2xl p-5 border ${c.border}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${c.bg}`}>
-          <Icon className={`h-4.5 w-4.5 ${c.text}`} />
+    <div className={`liquid-glass-card rounded-2xl p-3.5 sm:p-5 border ${c.border}`}>
+      <div className="flex items-center justify-between mb-2 sm:mb-3">
+        <div className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl ${c.bg}`}>
+          <Icon className={`h-4 w-4 sm:h-4.5 sm:w-4.5 ${c.text}`} />
         </div>
         {color === 'red' && (
-          <button className="text-xs px-2 py-1 rounded-lg bg-primary/10 text-primary inline-flex items-center gap-1 hover:bg-primary/20 transition-colors">
+          <button className="text-[10px] sm:text-xs px-2 py-0.5 sm:py-1 rounded-lg bg-primary/10 text-primary inline-flex items-center gap-1 hover:bg-primary/20 transition-colors">
             Upgrade <ArrowUpRight className="h-3 w-3" />
           </button>
         )}
       </div>
-      <div className="relative w-[120px] h-[120px] mx-auto">
+      <div className="relative w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] mx-auto">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r={radius} fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/20" />
           <circle
@@ -65,10 +65,10 @@ function MetricRing({ label, value, icon: Icon, color }: MetricRingProps) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-2xl font-bold ${c.text}`}>{Math.round(displayValue)}%</span>
+          <span className={`text-xl sm:text-2xl font-bold ${c.text}`}>{Math.round(displayValue)}%</span>
         </div>
       </div>
-      <p className="text-sm text-center text-muted-foreground mt-2">{label}</p>
+      <p className="text-xs sm:text-sm text-center text-muted-foreground mt-2">{label}</p>
     </div>
   );
 }

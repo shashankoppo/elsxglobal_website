@@ -1,12 +1,25 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkoutSchema } from '@/lib/billing/checkoutSchema';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { planId, planName, planTier, billingCycle, amount, domain, os, panel, location, user, addons } = body;
+    const rawBody = await req.json();
+    const parseResult = checkoutSchema.safeParse(rawBody);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ 
+        error: 'Validation failed', 
+        details: parseResult.error.flatten().fieldErrors 
+      }, { status: 400 });
+    }
+
+    const { 
+      planId, planName, planTier, billingCycle, domain, os, panel, location, addons,
+      custom_vcpu, custom_ram, custom_storage
+    } = parseResult.data;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -33,9 +46,9 @@ export async function POST(req: Request) {
     
     let basePrice = 0;
     if (planId === 'custom') {
-      const vcpu = Math.max(1, Number(body.custom_vcpu || 4));
-      const ram = Math.max(1, Number(body.custom_ram || 8));
-      const storage = Math.max(10, Number(body.custom_storage || 100));
+      const vcpu = Math.max(1, Number(custom_vcpu || 4));
+      const ram = Math.max(1, Number(custom_ram || 8));
+      const storage = Math.max(10, Number(custom_storage || 100));
       basePrice = (vcpu * 150) + (ram * 100) + (storage * 10);
     } else {
       const { data: planData } = await supabase.from('hosting_plans').select('price_monthly').eq('id', planId).single();

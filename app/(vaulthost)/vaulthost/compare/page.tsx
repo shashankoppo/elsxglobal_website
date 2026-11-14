@@ -186,13 +186,18 @@ export default function ComparePage() {
             </div>
           </ScrollReveal>
 
+          {/* Mobile Swipe Hint */}
+          <div className="sm:hidden flex items-center justify-between text-xs text-text-muted-v4 px-3 py-2 mb-3 bg-ink-surface rounded-lg border border-hairline">
+            <span>← Swipe table horizontally to compare all 7 providers →</span>
+          </div>
+
           {/* Comparison Table */}
           <div className="v4-panel rounded-2xl border border-hairline overflow-hidden bg-ink-surface/50 shadow-2xl">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto terminal-scrollbar">
               <table className="w-full text-left border-collapse text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b border-hairline bg-ink-surface-2">
-                    <th className="p-4 sm:p-5 font-semibold text-text-primary-v4 min-w-[180px]">Feature / Metric</th>
+                    <th className="p-4 sm:p-5 font-semibold text-text-primary-v4 min-w-[170px] sticky left-0 bg-ink-surface-2 z-10 border-r border-hairline">Feature / Metric</th>
                     <th className="p-4 sm:p-5 font-bold text-signal bg-signal/10 border-x border-signal/30 min-w-[190px]">
                       <div className="flex items-center gap-1.5 text-signal text-sm">
                         <Trophy className="h-4 w-4" /> VaultHost
@@ -215,7 +220,7 @@ export default function ComparePage() {
                       key={row.criterion}
                       className={idx % 2 === 0 ? 'bg-ink/40 hover:bg-ink-surface/30' : 'bg-ink-surface/20 hover:bg-ink-surface/40'}
                     >
-                      <td className="p-4 sm:p-5 font-medium text-text-primary-v4 whitespace-nowrap">
+                      <td className="p-4 sm:p-5 font-medium text-text-primary-v4 whitespace-nowrap sticky left-0 bg-ink-surface z-10 border-r border-hairline">
                         {row.criterion}
                       </td>
                       <td className="p-4 sm:p-5 bg-signal/5 border-x border-signal/20">

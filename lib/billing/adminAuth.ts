@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 export interface AdminAuthResult {
   authorized: boolean;
@@ -8,6 +9,17 @@ export interface AdminAuthResult {
   status: number;
   supabaseAdmin: SupabaseClient | null;
   userId?: string | null;
+}
+
+function safeCompare(a: string, b: string): boolean {
+  try {
+    const bufA = Buffer.from(a, 'utf8');
+    const bufB = Buffer.from(b, 'utf8');
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -34,12 +46,8 @@ export async function verifyAdminRequest(request: Request): Promise<AdminAuthRes
     auth: { persistSession: false },
   });
 
-  // 1. Direct Secret Header Match
-  if (adminSecretHeader && (
-    (configuredSecret && adminSecretHeader === configuredSecret) ||
-    adminSecretHeader === 'vaulthost-admin-supersecret' ||
-    (process.env.NODE_ENV === 'development' && adminSecretHeader === 'dev-secret')
-  )) {
+  // 1. Direct Secret Header Match (Timing-Safe)
+  if (adminSecretHeader && configuredSecret && safeCompare(adminSecretHeader, configuredSecret)) {
     return {
       authorized: true,
       status: 200,
@@ -79,17 +87,6 @@ export async function verifyAdminRequest(request: Request): Promise<AdminAuthRes
     }
   } catch (err) {
     console.warn('Session admin check warning:', err);
-  }
-
-  // Fallback for internal development environment if specifically configured
-  if (process.env.NODE_ENV === 'development' && !process.env.ADMIN_SECRET) {
-    // In dev without ADMIN_SECRET, allow read/write with service client for developer convenience
-    return {
-      authorized: true,
-      status: 200,
-      supabaseAdmin,
-      userId: 'dev-admin',
-    };
   }
 
   return {

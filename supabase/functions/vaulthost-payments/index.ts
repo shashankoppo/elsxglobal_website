@@ -58,19 +58,21 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (orderError || !order) return errorResponse("Order not found", 404);
 
-      // Verify the user owns this order by checking with their JWT
-      if (userToken && userToken !== anonKey) {
-        const userClient = createClient(supabaseUrl, anonKey, {
-          global: { headers: { Authorization: `Bearer ${userToken}` } },
-          auth: { persistSession: false, autoRefreshToken: false },
-        });
-        const { data: userOrder, error: userErr } = await userClient
-          .from("hosting_orders")
-          .select("id")
-          .eq("id", orderId)
-          .maybeSingle();
-        if (userErr || !userOrder) return errorResponse("Order not found or access denied", 403);
+      // Verify the caller is authenticated and owns this order
+      if (!userToken || userToken === anonKey) {
+        return errorResponse("Authentication required to create payment order", 401);
       }
+
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: `Bearer ${userToken}` } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: userOrder, error: userErr } = await userClient
+        .from("hosting_orders")
+        .select("id")
+        .eq("id", orderId)
+        .maybeSingle();
+      if (userErr || !userOrder) return errorResponse("Order not found or access denied", 403);
 
       // Prevent duplicate Razorpay order creation
       if (order.payment_id && order.status !== "pending_payment") {

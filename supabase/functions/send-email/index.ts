@@ -31,6 +31,39 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Valid recipient email required" }, 400);
     }
 
+    const tmpl = template || action;
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace("Bearer ", "").trim();
+    const isServiceRole = token && token === serviceKey;
+    const isContactForm = tmpl === "contact-form";
+
+    let targetRecipient = to;
+
+    if (!isServiceRole) {
+      if (isContactForm) {
+        // Force contact form emails strictly to official contact address
+        targetRecipient = "contact@elsxglobal.cloud";
+      } else {
+        if (!token) {
+          return json({ error: "Authentication required" }, 401);
+        }
+        const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+        if (authErr || !user) {
+          return json({ error: "Invalid authentication token" }, 401);
+        }
+        if (targetRecipient !== user.email && !targetRecipient.endsWith("@elsxglobal.cloud")) {
+          const { data: adminRecord } = await supabase
+            .from("admin_users")
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (!adminRecord) {
+            return json({ error: "Forbidden: Recipient unauthorized" }, 403);
+          }
+        }
+      }
+    }
+
     const adminEmail = "admin@elsxglobal.cloud";
     const fromEmail = "noreply@elsxglobal.cloud";
     const resendKey = Deno.env.get("RESEND_API_KEY");
@@ -39,8 +72,10 @@ Deno.serve(async (req: Request) => {
     let emailSubject = subject || "VaultHost Notification";
     let emailBody = emailBodyRaw || "";
 
-    const tmpl = template || action;
-    if (tmpl === "order-placed") {
+    if (tmpl === "contact-form") {
+      emailSubject = `New Contact Form Lead: ${body.name || "Website Visitor"}`;
+      emailBody = `Name: ${body.name || "N/A"}\nEmail: ${body.email || "N/A"}\nCompany: ${body.company || "N/A"}\nService: ${body.service || "General Inquiry"}\nMessage:\n${body.message || ""}`;
+    } else if (tmpl === "order-placed") {
       emailSubject = `Order Received — ${planName || "VaultHost Plan"}`;
       emailBody = `Hi,\n\nYour order for ${planName || "a VaultHost plan"} has been received and is now pending payment verification.\n\nOrder ID: ${orderId || "N/A"}\nStatus: Pending\n\nOnce your payment is verified, your service will be activated within 2-4 hours.\n\nYou can track your order status in your client portal at https://elsxglobal.cloud/portal\n\n— VaultHost Team`;
     } else if (tmpl === "order-approved") {
@@ -74,7 +109,7 @@ Deno.serve(async (req: Request) => {
           },
           body: JSON.stringify({
             from: fromEmail,
-            to,
+            to: targetRecipient,
             subject: emailSubject,
             text: emailBody,
           }),
@@ -90,12 +125,12 @@ Deno.serve(async (req: Request) => {
         errorMsg = String(err);
       }
     } else {
-      console.log(`[EMAIL] To: ${to} | Subject: ${emailSubject}`);
+      console.log(`[EMAIL] To: ${targetRecipient} | Subject: ${emailSubject}`);
     }
 
     // Log to email_log table
     const { error: logError } = await supabase.from("email_log").insert({
-      recipient: to,
+      recipient: targetRecipient,
       subject: emailSubject,
       body: emailBody,
       template: tmpl || null,

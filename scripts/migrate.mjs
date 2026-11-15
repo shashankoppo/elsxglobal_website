@@ -296,11 +296,11 @@ async function main() {
   const connected = await waitForDatabase(5, 3000);
   if (!connected) {
     console.error(`\n[migration] ERROR: Could not connect to database after retries.`);
-    if (process.env.NODE_ENV === 'production') {
-      console.error(`[migration] Check that your Supabase instance is online and credentials are correct.`);
+    if (process.env.MIGRATIONS_STRICT === 'true') {
+      console.error(`[migration] MIGRATIONS_STRICT=true: Halting startup.`);
       process.exit(1);
     } else {
-      console.warn(`[migration] Continuing startup in non-strict mode.`);
+      console.warn(`[migration] WARNING: Supabase is offline or credentials need update. Continuing with Next.js startup so the website remains online.`);
       process.exit(0);
     }
   }
@@ -346,7 +346,12 @@ async function main() {
     } catch (err) {
       console.error(`\n[migration] ✗ FAILED: ${file}`);
       console.error(`[migration] Error details:`, err.message || err);
-      process.exit(1);
+      if (process.env.MIGRATIONS_STRICT === 'true') {
+        process.exit(1);
+      } else {
+        console.warn(`[migration] WARNING: Migration ${file} failed. Continuing with app startup so website remains online...`);
+        break;
+      }
     }
   }
 
@@ -363,5 +368,10 @@ async function main() {
 
 main().catch((err) => {
   console.error(`[migration] Fatal unexpected error:`, err);
-  process.exit(1);
+  if (process.env.MIGRATIONS_STRICT === 'true') {
+    process.exit(1);
+  } else {
+    console.warn(`[migration] Continuing with app startup...`);
+    process.exit(0);
+  }
 });

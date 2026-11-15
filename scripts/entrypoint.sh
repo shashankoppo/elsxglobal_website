@@ -22,5 +22,5 @@ echo "==> Step 2: Launching Next.js application server on port ${PORT:-80}..."
 if [ "$#" -gt 0 ]; then
   exec "$@"
 else
-  exec npm start
+  exec ./node_modules/.bin/next start -p ${PORT:-80} -H 0.0.0.0
 fi

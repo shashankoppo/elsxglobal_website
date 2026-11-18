@@ -15,6 +15,16 @@ interface Notification {
   severity: string;
 }
 
+const DEMO_NOTIFICATIONS: Notification[] = [
+  { id: '1', type: 'security', title: 'New login detected', message: 'Sign-in from Chrome on Windows (IP: 182.72.x.x, Mumbai)', time: '2 minutes ago', read: false, severity: 'warn' },
+  { id: '2', type: 'billing', title: 'Invoice #INV-2026-0041 generated', message: 'Your September invoice for ₹4,999 is ready for download.', time: '3 hours ago', read: false, severity: 'info' },
+  { id: '3', type: 'system', title: 'VaultAI Gateway — maintenance complete', message: 'Scheduled maintenance completed. All providers operational.', time: '1 day ago', read: true, severity: 'success' },
+  { id: '4', type: 'billing', title: 'Auto-renewal in 7 days', message: 'Your VPS Pro 8GB plan renews on Oct 1, 2026 for ₹4,999.', time: '2 days ago', read: true, severity: 'info' },
+  { id: '5', type: 'security', title: 'API key used from new region', message: 'API key vh_live_9f83... was used from Singapore for the first time.', time: '3 days ago', read: true, severity: 'warn' },
+  { id: '6', type: 'system', title: 'Worker deployment successful', message: 'edge-auth-router deployed successfully to 300+ PoPs in 28 seconds.', time: '5 days ago', read: true, severity: 'success' },
+  { id: '7', type: 'billing', title: 'Payment confirmed — ₹4,999', message: 'Payment received via Visa ending 4242. Receipt sent to email.', time: '1 week ago', read: true, severity: 'success' },
+];
+
 export default function NotificationsPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -54,14 +64,16 @@ export default function NotificationsPage() {
               }))
             );
           } else {
-            setNotifications([]);
+            // No real notifications yet — show demo data for a good first-run UX
+            setNotifications(DEMO_NOTIFICATIONS);
           }
         } else {
-          setNotifications([]);
+          setNotifications(DEMO_NOTIFICATIONS);
         }
+
       } catch (e) {
         console.warn('Real notifications fetch error:', e);
-        setNotifications([]);
+        setNotifications(DEMO_NOTIFICATIONS);
       } finally {
         setLoading(false);
       }

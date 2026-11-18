@@ -1,0 +1,83 @@
+# ================================================================
+# ELSxGlobal — All-in-One Container
+# PostgreSQL 16 + Next.js in a single container
+# No external Supabase needed — fully self-contained
+# ================================================================
+
+# ── Stage 1: Build Next.js ───────────────────────────────────────
+FROM node:20-slim AS builder
+
+WORKDIR /app
+
+ARG NEXT_PUBLIC_SUPABASE_URL=http://localhost:5432
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder
+ARG NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_placeholder
+ARG NEXT_PUBLIC_SITE_URL=https://www.elsxglobal.com
+
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_RAZORPAY_KEY_ID=$NEXT_PUBLIC_RAZORPAY_KEY_ID
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+COPY package*.json ./
+RUN npm install --include=dev --prefer-offline --no-audit
+
+COPY . .
+
+ENV NODE_ENV=production
+RUN npm run build
+
+# ── Stage 2: All-in-One Runtime ─────────────────────────────────
+FROM node:20-slim AS runner
+
+WORKDIR /app
+
+# Install PostgreSQL 16 + supervisord + tools
+RUN apt-get update && apt-get install -y \
+    postgresql-common \
+    gnupg \
+    curl \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y \
+    postgresql-16 \
+    supervisor \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy built Next.js app
+COPY --from=builder /app/next.config.js  ./
+COPY --from=builder /app/public          ./public
+COPY --from=builder /app/.next           ./.next
+COPY --from=builder /app/node_modules    ./node_modules
+COPY --from=builder /app/package.json    ./package.json
+COPY --from=builder /app/supabase        ./supabase
+COPY --from=builder /app/scripts         ./scripts
+
+# Copy config files
+COPY scripts/supervisord.conf /etc/supervisor/conf.d/elsxglobal.conf
+COPY scripts/init-db.sh       /init-db.sh
+
+RUN chmod +x /app/scripts/entrypoint-aio.sh \
+    && chmod +x /app/scripts/backup.sh \
+    && chmod +x /app/scripts/restore.sh \
+    && chmod +x /init-db.sh
+
+# PostgreSQL data directory
+RUN mkdir -p /var/lib/postgresql/data \
+    && mkdir -p /backups \
+    && chown -R postgres:postgres /var/lib/postgresql
+
+ENV NODE_ENV=production
+ENV PORT=80
+ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
+# App will connect to local PostgreSQL
+ENV DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-elsxglobal}@localhost:5432/elsxglobal
+
+EXPOSE 80 5432
+
+CMD ["/app/scripts/entrypoint-aio.sh"]

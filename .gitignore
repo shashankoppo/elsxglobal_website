@@ -28,6 +28,12 @@ yarn-error.log*
 # ─── Build outputs ────────────────────────────────────
 .netlify/
 .vercel/
+
+# ─── Backups (keep local, never commit) ───────────────
+backups/
+*.dump
+*.sql.gz
+
 *.tgz
 
 # ─── Supabase local ───────────────────────────────────

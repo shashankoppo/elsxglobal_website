@@ -1,35 +1,167 @@
-version: '3.9'
+# ================================================================
+# ELSxGlobal + VaultHost — Full Stack Docker Compose
+# ================================================================
+# HOW TO USE:
+#
+# 1. Fresh deploy on any Debian/Ubuntu server:
+#    docker compose -f docker-compose.yml up -d
+#
+# 2. Coolify: point to this file (Docker Compose mode)
+#
+# 3. Update app only:
+#    docker compose pull app && docker compose up -d app
+#
+# 4. Full backup now:
+#    docker compose exec backup /backup.sh
+#
+# 5. Restore from backup:
+#    docker compose exec backup /restore.sh 2026-11-19T03-00-00.dump
+# ================================================================
 
 services:
+
+  # ── 1. Next.js Application ────────────────────────────────────
   app:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://placeholder.supabase.co}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-placeholder}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID:-rzp_test_placeholder}
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://elsxglobal.com}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.elsxglobal.com}
     restart: unless-stopped
-    expose:
-      - 80
+    ports:
+      - "80:80"
     environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-https://placeholder.supabase.co}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-placeholder}
-      - SUPABASE_URL=${SUPABASE_URL:-${NEXT_PUBLIC_SUPABASE_URL:-http://supabase.elsxglobal.com}}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
-      - DATABASE_URL=${DATABASE_URL:-}
-      - NEXT_PUBLIC_RAZORPAY_KEY_ID=${NEXT_PUBLIC_RAZORPAY_KEY_ID:-rzp_test_placeholder}
-      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://elsxglobal.com}
-    env_file:
-      - path: .env
-        required: false
+      NODE_ENV: production
+      PORT: 80
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.elsxglobal.com}
+      SUPABASE_URL: ${SUPABASE_URL:-${NEXT_PUBLIC_SUPABASE_URL}}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      DATABASE_URL: ${DATABASE_URL}
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+      ADMIN_SECRET: ${ADMIN_SECRET}
+      ACTION_GATEWAY_SECRET: ${ACTION_GATEWAY_SECRET}
+      SKIP_MIGRATIONS: ${SKIP_MIGRATIONS:-false}
+      MIGRATIONS_STRICT: ${MIGRATIONS_STRICT:-false}
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:80/api/health').then(r => {if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
-      interval: 15s
-      timeout: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:80/api/health"]
+      interval: 30s
+      timeout: 10s
       retries: 3
-      start_period: 15s
+      start_period: 40s
     networks:
-      - default
+      - elsxglobal
+    labels:
+      - "com.elsxglobal.service=app"
+      - "com.elsxglobal.version=4.0"
+
+  # ── 2. PostgreSQL Database ─────────────────────────────────────
+  # Use this ONLY if you don't have external Supabase.
+  # If using supabase.elsxglobal.com, set DB_EMBEDDED=false
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    profiles:
+      - embedded-db   # only starts with: docker compose --profile embedded-db up
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-elsxglobal}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d/migrations:ro
+      - db_backups:/backups
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-elsxglobal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - elsxglobal
+    labels:
+      - "com.elsxglobal.service=database"
+
+  # ── 3. Automated Backup Service ───────────────────────────────
+  # Runs pg_dump every night at 2am and keeps 30 days of backups
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: ${BACKUP_DB_HOST:-db}
+      POSTGRES_PORT: ${BACKUP_DB_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-elsxglobal}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DATABASE_URL: ${DATABASE_URL}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-30}
+      # Optional: S3/R2 upload
+      S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      AWS_ACCESS_KEY_ID: ${BACKUP_S3_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET:-}
+    volumes:
+      - db_backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+      - ./scripts/restore.sh:/restore.sh:ro
+    command: >
+      sh -c "
+        apk add --no-cache dcron curl aws-cli 2>/dev/null || true;
+        echo '0 2 * * * /backup.sh >> /backups/backup.log 2>&1' | crontab -;
+        echo '==> Backup service started. Daily backup at 2:00 AM.';
+        crond -f -l 8
+      "
+    networks:
+      - elsxglobal
+    labels:
+      - "com.elsxglobal.service=backup"
+
+  # ── 4. PgAdmin (optional, enable for DB management UI) ────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    profiles:
+      - admin   # only starts with: docker compose --profile admin up
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@elsxglobal.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?PGADMIN_PASSWORD required}
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - elsxglobal
+    labels:
+      - "com.elsxglobal.service=pgadmin"
+
+# ── Volumes (persistent data) ──────────────────────────────────
+volumes:
+  db_data:
+    name: elsxglobal_db_data
+    driver: local
+  db_backups:
+    name: elsxglobal_db_backups
+    driver: local
+  pgadmin_data:
+    name: elsxglobal_pgadmin_data
+    driver: local
+
+# ── Networks ───────────────────────────────────────────────────
+networks:
+  elsxglobal:
+    name: elsxglobal
+    driver: bridge

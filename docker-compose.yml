@@ -31,8 +31,8 @@ services:
         NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID:-rzp_test_placeholder}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.elsxglobal.com}
     restart: unless-stopped
-    ports:
-      - "80:80"
+    expose:
+      - 80
     environment:
       NODE_ENV: production
       PORT: 80
@@ -41,7 +41,7 @@ services:
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.elsxglobal.com}
       SUPABASE_URL: ${SUPABASE_URL:-${NEXT_PUBLIC_SUPABASE_URL}}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${DATABASE_URL:-}
       NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
@@ -56,6 +56,8 @@ services:
       retries: 3
       start_period: 40s
     networks:
+      - default
+      - coolify
       - elsxglobal
     labels:
       - "com.elsxglobal.service=app"
@@ -164,3 +166,5 @@ networks:
   elsxglobal:
     name: elsxglobal
     driver: bridge
+  coolify:
+    external: true

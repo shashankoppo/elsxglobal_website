@@ -610,12 +610,12 @@ export default function VaultHostHomeContent() {
             </div>
 
             {/* CLI Fast-Track Command */}
-            <div className="mt-6 inline-flex items-center gap-3 px-4 py-2.5 rounded-xl bg-ink-surface-2/90 border border-hairline font-mono text-xs text-text-secondary-v4 max-w-xl mx-auto shadow-md">
+            <div className="mt-6 inline-flex items-center gap-3 px-4 py-2.5 rounded-xl bg-ink-surface-2/90 border border-hairline font-mono text-xs sm:text-sm text-text-secondary-v4 max-w-full sm:max-w-xl mx-auto shadow-md overflow-x-auto">
               <span className="text-signal select-none font-bold">$</span>
-              <code className="text-good font-semibold">curl -fsSL https://get.vaulthost.cloud | sh</code>
+              <code className="text-good font-semibold whitespace-nowrap text-xs sm:text-sm">curl -fsSL https://get.vaulthost.cloud | sh</code>
               <button
                 onClick={() => copyToClipboard('curl -fsSL https://get.vaulthost.cloud | sh')}
-                className="ml-auto flex items-center gap-1 text-[11px] text-text-muted-v4 hover:text-signal transition-colors px-2 py-0.5 rounded bg-ink border border-hairline"
+                className="ml-auto flex items-center gap-1 text-[11px] text-text-muted-v4 hover:text-signal transition-colors px-2 py-0.5 rounded bg-ink border border-hairline shrink-0"
                 title="Copy command"
               >
                 {copiedCmd ? <Check className="h-3 w-3 text-good" /> : <Copy className="h-3 w-3" />}
@@ -918,9 +918,9 @@ export default function VaultHostHomeContent() {
       {/* ═══════════════════════════════════════════════════════════════════════
           2. PLANETARY TELEMETRY STRIP (Edge Live Metrics)
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="py-8 border-b border-hairline bg-ink-surface/70 backdrop-blur-md">
+      <section className="py-6 sm:py-8 border-b border-hairline bg-ink-surface/70 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 text-center">
             {PLATFORM_STATS.map((stat) => (
               <div key={stat.label} className="p-3 rounded-2xl bg-ink-surface-2/40 border border-hairline/60">
                 <p className="text-2xl sm:text-3xl font-extrabold v4-display text-signal font-mono">{stat.value}</p>
@@ -935,16 +935,16 @@ export default function VaultHostHomeContent() {
       {/* ═══════════════════════════════════════════════════════════════════════
           3. COMPREHENSIVE PRODUCT SUITE MATRIX (32 Production Products)
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section id="products" className="v4-section bg-ink">
+      <section id="products" className="py-12 sm:py-16 lg:py-24 bg-ink">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10">
             <span className="v4-readout text-[11px] font-semibold uppercase tracking-widest text-signal px-3 py-1 rounded-full border border-signal/30 bg-signal/10 inline-block mb-3">
               Full Cloud Ecosystem
             </span>
-            <h2 className="text-3xl sm:text-5xl v4-display text-text-primary-v4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl v4-display text-text-primary-v4">
               Everything Cloudflare &amp; AWS Offer — <span className="text-signal">Unified.</span>
             </h2>
-            <p className="mt-4 text-base text-text-secondary-v4 leading-relaxed">
+            <p className="mt-4 text-base sm:text-lg text-text-secondary-v4 leading-relaxed">
               Explore 32 production-grade cloud primitives engineered for low latency, zero egress taxes, and AI-native safety.
             </p>
 
@@ -1001,7 +1001,7 @@ export default function VaultHostHomeContent() {
           </div>
 
           {/* Product Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {currentCategoryData.products.map((p) => {
               const Icon = p.icon;
               return (
@@ -1037,13 +1037,13 @@ export default function VaultHostHomeContent() {
       {/* ═══════════════════════════════════════════════════════════════════════
           4. DECOUPLED INTELLIGENCE ARCHITECTURAL BLUEPRINT
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="v4-section-sm bg-ink-surface border-y border-hairline">
+      <section className="py-12 sm:py-16 lg:py-24 bg-ink-surface border-y border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <span className="v4-readout text-[11px] font-semibold uppercase tracking-widest text-signal px-3 py-1 rounded-full border border-signal/30 bg-signal/10 inline-block mb-3">
               Core Architectural Invariant
             </span>
-            <h2 className="text-3xl sm:text-4xl v4-display text-text-primary-v4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl v4-display text-text-primary-v4">
               Decoupled Intelligence: AI Agents Never Touch Raw Infra
             </h2>
             <p className="mt-3 text-text-secondary-v4 text-sm sm:text-base leading-relaxed">
@@ -1063,7 +1063,7 @@ export default function VaultHostHomeContent() {
                 Claude, GPT-4, Gemini, or open-weight models query metrics, analyze logs, and formulate ActionIntents.
                 They operate as zero-privilege entities.
               </p>
-              <div className="p-3 rounded-xl bg-ink font-mono text-[11px] text-green-400 border border-hairline">
+              <div className="p-3 rounded-xl bg-ink font-mono text-xs sm:text-sm text-green-400 border border-hairline overflow-x-auto">
                 <code>ActionIntent: DeployWorker &#123; env: prod &#125;</code>
               </div>
             </PanelCard>
@@ -1078,7 +1078,7 @@ export default function VaultHostHomeContent() {
                 Validates tenant boundary, classifies Risk Tiers (0-3), demands TOTP step-up authentication,
                 and commits signed entries to an immutable HMAC-SHA256 chained audit ledger.
               </p>
-              <div className="p-3 rounded-xl bg-ink font-mono text-[11px] text-signal border border-hairline">
+              <div className="p-3 rounded-xl bg-ink font-mono text-xs sm:text-sm text-signal border border-hairline overflow-x-auto">
                 <code>RiskTier: Tier 2 (Require 2FA Challenge)</code>
               </div>
             </PanelCard>
@@ -1093,7 +1093,7 @@ export default function VaultHostHomeContent() {
                 Anycast edge nodes, V8 isolate runtimes, K8s GPU clusters, and NVMe storage execute strictly
                 authorized, verified, and audited changes with instant rollback capability.
               </p>
-              <div className="p-3 rounded-xl bg-ink font-mono text-[11px] text-text-muted-v4 border border-hairline">
+              <div className="p-3 rounded-xl bg-ink font-mono text-xs sm:text-sm text-text-muted-v4 border border-hairline overflow-x-auto">
                 <code>Status: Deployed (300+ PoPs in 24s)</code>
               </div>
             </PanelCard>
@@ -1113,10 +1113,10 @@ export default function VaultHostHomeContent() {
       {/* ═══════════════════════════════════════════════════════════════════════
           5. TECHNICAL COMPARISON: VAULTHOST VS. CLOUDFLARE VS. AWS
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="v4-section">
+      <section className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-3xl sm:text-4xl v4-display text-text-primary-v4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl v4-display text-text-primary-v4">
               Why Modern Teams Choose <span className="text-signal">VaultHost</span>
             </h2>
             <p className="mt-3 text-text-secondary-v4 text-sm sm:text-base">
@@ -1125,7 +1125,7 @@ export default function VaultHostHomeContent() {
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-hairline bg-ink-surface shadow-lg">
-            <table className="w-full text-left text-xs sm:text-sm">
+            <table className="w-full min-w-[560px] text-left text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-hairline bg-ink-surface-2 text-text-muted-v4 v4-readout text-[11px] uppercase tracking-wider">
                   <th className="py-4 px-6">Capability / Metric</th>
@@ -1164,11 +1164,11 @@ export default function VaultHostHomeContent() {
       {/* ═══════════════════════════════════════════════════════════════════════
           6. CONFIGURE YOUR CUSTOM INFRASTRUCTURE SLIDER
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="v4-section-sm bg-ink-surface/50 border-t border-hairline">
+      <section className="py-12 sm:py-16 lg:py-24 bg-ink-surface/50 border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10 max-w-2xl mx-auto">
-            <h2 className="text-3xl v4-display text-text-primary-v4">Real-Time Infrastructure Calculator</h2>
-            <p className="mt-3 text-text-secondary-v4 text-sm">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl v4-display text-text-primary-v4">Real-Time Infrastructure Calculator</h2>
+            <p className="mt-3 text-text-secondary-v4 text-sm sm:text-base">
               Drag the sliders to estimate custom computing power, bandwidth, and edge nodes. No hidden add-ons.
             </p>
           </div>
@@ -1179,14 +1179,14 @@ export default function VaultHostHomeContent() {
       {/* ═══════════════════════════════════════════════════════════════════════
           7. GLOBAL REGIONAL HEALTH & LOWEST-LATENCY RADAR
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="v4-section-sm">
+      <section className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
-              <h2 className="text-2xl v4-display text-text-primary-v4 flex items-center gap-2.5">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl v4-display text-text-primary-v4 flex items-center gap-2.5">
                 <Activity className="h-5 w-5 text-signal" /> Global Edge Fleet Health
               </h2>
-              <p className="text-xs text-text-muted-v4 mt-1">
+              <p className="text-xs sm:text-sm text-text-muted-v4 mt-1">
                 Real-time Anycast BGP latency pings across our tier-1 points of presence.
               </p>
             </div>
@@ -1217,7 +1217,7 @@ export default function VaultHostHomeContent() {
       {/* ═══════════════════════════════════════════════════════════════════════
           8. HIGH-CONVERSION ENTERPRISE CALL TO ACTION
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="v4-section-sm">
+      <section className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             className="p-10 sm:p-12 text-center rounded-3xl border border-signal/40 shadow-2xl relative overflow-hidden"

@@ -18,39 +18,39 @@ export default function VaultWorkersPage() {
       />
 
       {/* Stats Bar */}
-      <div className="v4-section-sm border-y border-hairline bg-ink-surface">
+      <div className="py-8 sm:py-12 border-y border-hairline bg-ink-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 text-center">
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">&lt;5ms</div>
-              <div className="text-sm text-text-muted-v4">Latency</div>
+              <div className="text-2xl sm:text-3xl font-medium text-text-primary-v4 mb-1">&lt;5ms</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Latency</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">300+</div>
-              <div className="text-sm text-text-muted-v4">Edge Locations</div>
+              <div className="text-2xl sm:text-3xl font-medium text-text-primary-v4 mb-1">300+</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Edge Locations</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">100K</div>
-              <div className="text-sm text-text-muted-v4">Free Req/Day</div>
+              <div className="text-2xl sm:text-3xl font-medium text-text-primary-v4 mb-1">100K</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Free Req/Day</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">99.999%</div>
-              <div className="text-sm text-text-muted-v4">Uptime SLA</div>
+              <div className="text-2xl sm:text-3xl font-medium text-text-primary-v4 mb-1">99.999%</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Uptime SLA</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Interactive Edge Worker Sandbox */}
-      <div className="v4-section bg-ink-surface-2 border-b border-hairline">
+      <div className="py-12 sm:py-16 lg:py-24 bg-ink-surface-2 border-b border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-10">
               <span className="v4-readout text-[11px] font-semibold uppercase tracking-widest text-signal px-3 py-1 rounded-full border border-signal/30 bg-signal/5">
                 Interactive Edge Runtime
               </span>
-              <h2 className="mt-3 text-3xl v4-display text-text-primary-v4">Write &amp; Execute Code Live at the Edge</h2>
-              <p className="mt-2 text-text-secondary-v4 max-w-xl mx-auto text-sm">
+              <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold v4-display text-text-primary-v4">Write &amp; Execute Code Live at the Edge</h2>
+              <p className="mt-2 text-text-secondary-v4 max-w-xl mx-auto text-sm sm:text-base">
                 Edit the TypeScript code below and test real-time V8 isolate execution across global Anycast PoPs.
               </p>
             </div>
@@ -60,16 +60,16 @@ export default function VaultWorkersPage() {
       </div>
 
       {/* Features Grid */}
-      <div className="v4-section">
+      <div className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-16">
-              <h2 className="v4-display text-text-primary-v4 mb-4">Everything you need to build at the edge</h2>
-              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-lg">Powerful features built for modern serverless architectures.</p>
+              <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Everything you need to build at the edge</h2>
+              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-base sm:text-lg">Powerful features built for modern serverless architectures.</p>
             </div>
           </ScrollReveal>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <ScrollReveal>
               <PanelCard className="v4-panel h-full flex flex-col p-6">
                 <Zap className="w-8 h-8 text-signal mb-4" />
@@ -118,12 +118,12 @@ export default function VaultWorkersPage() {
 
 
       {/* Use Cases */}
-      <div className="v4-section">
+      <div className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
-            <h2 className="v4-display text-text-primary-v4 text-center mb-16">Endless Use Cases</h2>
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 text-center mb-12 sm:mb-16">Endless Use Cases</h2>
           </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {['API endpoints', 'Auth middleware', 'A/B testing', 'Request transformation'].map((useCase, i) => (
               <ScrollReveal key={i} delay={i * 0.1}>
                 <div className="v4-panel p-6 rounded-2xl text-center flex flex-col items-center justify-center min-h-[120px]">
@@ -137,11 +137,11 @@ export default function VaultWorkersPage() {
       </div>
 
       {/* Pricing */}
-      <section className="v4-section border-t border-hairline">
+      <section className="py-12 sm:py-16 lg:py-24 border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-text-secondary-v4 text-base sm:text-lg">Higher than GoDaddy. Way below AWS.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {/* Free tier */}
@@ -196,37 +196,39 @@ export default function VaultWorkersPage() {
           </div>
           {/* Competitor comparison */}
           <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
-            <table className="w-full text-sm">
-              <thead className="bg-ink-surface-2 text-text-secondary-v4">
-                <tr>
-                  <th className="py-3 px-4 text-left font-medium">Provider</th>
-                  <th className="py-3 px-4 text-left font-medium">Pricing</th>
-                  <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                <tr className="bg-signal/5">
-                  <td className="py-3 px-4 font-semibold text-signal">VaultHost Workers</td>
-                  <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹699/mo Pro</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">&lt;5ms latency, zero cold starts, 300+ edge locations in India &amp; global</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">Cloudflare Workers</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹1,750/mo ($20)</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Paid plan baseline for pro apps with usage multipliers</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">AWS Lambda@Edge</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹4,500+/mo</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹35/M requests + CPU duration + outbound data egress fees</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">Vercel Edge Functions</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹1,650/mo ($20/seat)</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Per-seat license fees + limited CPU execution duration</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-sm">
+                <thead className="bg-ink-surface-2 text-text-secondary-v4">
+                  <tr>
+                    <th className="py-3 px-4 text-left font-medium">Provider</th>
+                    <th className="py-3 px-4 text-left font-medium">Pricing</th>
+                    <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  <tr className="bg-signal/5">
+                    <td className="py-3 px-4 font-semibold text-signal">VaultHost Workers</td>
+                    <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹699/mo Pro</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">&lt;5ms latency, zero cold starts, 300+ edge locations in India &amp; global</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-text-primary-v4">Cloudflare Workers</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">₹1,750/mo ($20)</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">Paid plan baseline for pro apps with usage multipliers</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-text-primary-v4">AWS Lambda@Edge</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">₹4,500+/mo</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">₹35/M requests + CPU duration + outbound data egress fees</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-text-primary-v4">Vercel Edge Functions</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">₹1,650/mo ($20/seat)</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">Per-seat license fees + limited CPU execution duration</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>

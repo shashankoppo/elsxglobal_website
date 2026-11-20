@@ -55,9 +55,9 @@ export function VaultHostFooter() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           {/* Brand + Newsletter */}
-          <div className="col-span-2 sm:col-span-3 lg:col-span-2">
+          <div className="lg:col-span-4">
             <Link href="/vaulthost" className="inline-flex items-center gap-2.5 mb-3">
               <VaultHostLogo />
             </Link>
@@ -76,7 +76,7 @@ export function VaultHostFooter() {
                   Subscribed!
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <div className="flex items-center gap-2 flex-1 px-3 py-2 rounded-btn border border-hairline bg-ink-surface-2 focus-within:border-signal/40 transition-colors">
                     <Mail className="h-3.5 w-3.5 text-text-muted-v4 shrink-0" />
                     <input
@@ -87,7 +87,8 @@ export function VaultHostFooter() {
                       className="flex-1 bg-transparent text-sm outline-none placeholder:text-text-muted-v4 text-text-primary-v4 min-w-0"
                     />
                   </div>
-                  <Button type="submit" size="sm" className="v4-btn-primary shrink-0">
+                  <Button type="submit" size="sm" className="v4-btn-primary shrink-0 w-full sm:w-auto">
+                    <span className="sm:hidden text-xs mr-1">Subscribe</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -111,7 +112,7 @@ export function VaultHostFooter() {
             </div>
 
             {/* Social */}
-            <div className="flex items-center gap-3 mt-4">
+            <div className="flex flex-wrap items-center gap-3 mt-4">
               <a href="https://twitter.com/elsxglobal" target="_blank" rel="noopener noreferrer" className="flex h-8 w-8 items-center justify-center rounded-chip border border-hairline bg-ink-surface-2 text-text-muted-v4 hover:text-signal hover:border-hairline-2 transition-colors">
                 <Twitter className="h-4 w-4" />
               </a>
@@ -124,26 +125,29 @@ export function VaultHostFooter() {
             </div>
           </div>
 
-          {VAULTHOST_MENU.columns.slice(0, 3).map((col) => (
-            <div key={col.heading}>
-              <p className="v4-readout text-[10px] uppercase tracking-widest text-text-secondary-v4 mb-3">{col.heading}</p>
-              <ul className="space-y-2">
-                {col.items.map((item) => (
-                  <li key={item.href}>
-                    <FooterLink href={item.href} label={item.label} />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Column link grid: grid-cols-2 lg:grid-cols-4 */}
+          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {VAULTHOST_MENU.columns.slice(0, 4).map((col) => (
+              <div key={col.heading}>
+                <p className="v4-readout text-[10px] uppercase tracking-widest text-text-secondary-v4 mb-3">{col.heading}</p>
+                <ul className="space-y-2">
+                  {col.items.slice(0, 6).map((item) => (
+                    <li key={item.href}>
+                      <FooterLink href={item.href} label={item.label} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Bottom */}
-        <div className="mt-10 pt-6 v4-hr flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-text-muted-v4">
+        <div className="mt-10 pt-6 v4-hr flex flex-col-reverse sm:flex-row items-center sm:items-start justify-between gap-4">
+          <p className="text-xs text-text-muted-v4 text-center sm:text-left">
             &copy; {new Date().getFullYear()} VaultHost, an ELSxGlobal product. Powered by EvolucentSphere.
           </p>
-          <div className="flex items-center gap-4 flex-wrap justify-center">
+          <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
             <div className="flex items-center gap-1.5">
               <span className="v4-live-dot" />
               <span className="v4-readout text-[10px] text-good uppercase tracking-widest">All Systems Operational</span>

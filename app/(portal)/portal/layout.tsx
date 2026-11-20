@@ -104,7 +104,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       {userMenuOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-          <div className="fixed right-4 lg:right-8 top-16 mt-2 w-56 liquid-glass-strong rounded-2xl p-2 z-50 shadow-2xl bg-ink-surface/98 border border-hairline animate-fade-in">
+          <div className="fixed right-4 sm:right-6 lg:right-8 top-16 mt-2 w-56 liquid-glass-strong rounded-2xl p-2 z-50 shadow-2xl bg-ink-surface/98 border border-hairline animate-fade-in">
             <div className="px-3 py-2 border-b border-border mb-2">
               <p className="text-sm font-medium truncate">{user?.email || 'User'}</p>
               <p className="text-xs text-muted-foreground">Customer Portal</p>
@@ -127,9 +127,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </>
       )}
 
-      <div className="flex">
+      <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Sidebar */}
-        <aside className={`fixed lg:sticky top-0 left-0 h-screen w-64 border-r border-border bg-muted/20 z-40 transition-transform flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <aside className={`fixed lg:sticky top-0 left-0 h-screen w-64 border-r border-border bg-background/95 lg:bg-muted/20 backdrop-blur lg:backdrop-blur-none z-40 transition-transform flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
           <div className="p-6 hidden lg:block">
             <Link href="/portal" className="inline-flex items-center gap-2.5">
               <Logo className="h-8 w-8" />
@@ -219,10 +219,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
         {/* Main content area */}
-        <div className="flex-1 lg:ml-0 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           {/* Topbar — Desktop only */}
           <header className="hidden lg:block sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border">
-            <div className="flex items-center justify-between px-4 lg:px-8 h-16">
+            <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
               <form onSubmit={handleSearch} className="flex-1 max-w-md">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -257,7 +257,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </header>
 
           {/* Page content */}
-          <main className="p-4 lg:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
+          <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
             {children}
           </main>
         </div>

@@ -72,7 +72,7 @@ export default function ServicesPage() {
         <section className="v4-section">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-12 inline-block relative">
-               <h2 className="v4-display text-4xl font-bold mb-2">Our Core Pillars</h2>
+               <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">Our Core Pillars</h2>
                <motion.div 
                  initial={{ width: 0 }} 
                  whileInView={{ width: 80 }} 
@@ -82,24 +82,24 @@ export default function ServicesPage() {
                />
             </div>
             
-            <div className="grid lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {services.map((service) => (
                 <motion.div key={service.id} whileHover={{ scale: 1.02, boxShadow: '0 20px 60px rgba(20,255,200,0.06)' }}>
-                  <PanelCard className="p-8 flex flex-col h-full border border-hairline hover:border-signal/50 transition-colors">
+                  <PanelCard className="p-6 sm:p-8 flex flex-col h-full border border-hairline hover:border-signal/50 transition-colors">
                     <div className="mb-6 bg-ink-surface-2 p-4 rounded-xl inline-flex self-start">
                       {service.icon}
                     </div>
-                    <h3 className="text-2xl font-bold text-text-primary-v4 mb-2">{service.title}</h3>
-                    <h4 className="text-lg text-signal font-medium mb-4">{service.subtitle}</h4>
-                    <p className="text-text-secondary-v4 mb-8 flex-grow">
+                    <h3 className="text-xl sm:text-2xl font-bold text-text-primary-v4 mb-2">{service.title}</h3>
+                    <h4 className="text-base sm:text-lg text-signal font-medium mb-4">{service.subtitle}</h4>
+                    <p className="text-text-secondary-v4 mb-8 flex-grow leading-relaxed">
                       {service.description}
                     </p>
                     
                     <div className="mb-8">
-                      <h5 className="text-sm font-bold text-text-muted-v4 uppercase tracking-wider mb-4">Key Capabilities</h5>
+                      <h5 className="text-xs sm:text-sm font-bold text-text-muted-v4 uppercase tracking-wider mb-4">Key Capabilities</h5>
                       <ul className="space-y-3">
                         {service.features.map((feature, idx) => (
-                          <li key={idx} className="flex items-start gap-3 text-text-secondary-v4">
+                          <li key={idx} className="flex items-start gap-3 text-text-secondary-v4 text-sm sm:text-base">
                             <CheckCircle2 className="w-5 h-5 text-signal shrink-0 mt-0.5" />
                             <span>{feature}</span>
                           </li>
@@ -122,10 +122,10 @@ export default function ServicesPage() {
         <section className="v4-section bg-ink-surface border-y border-hairline">
            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-16">
-                 <h2 className="v4-display text-3xl md:text-4xl font-bold mb-4">Our Engagement Process</h2>
-                 <p className="text-xl text-text-secondary-v4">A streamlined approach to transforming your business.</p>
+                 <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Our Engagement Process</h2>
+                 <p className="text-lg sm:text-xl text-text-secondary-v4 max-w-2xl mx-auto">A streamlined approach to transforming your business.</p>
               </div>
-              <motion.div variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid md:grid-cols-4 gap-8">
+              <motion.div variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
                  {[
                    { step: "01", title: "Discovery", desc: "We analyze your requirements and current architecture." },
                    { step: "02", title: "Strategy", desc: "Architecting a scalable solution and roadmap." },
@@ -133,9 +133,9 @@ export default function ServicesPage() {
                    { step: "04", title: "Evolution", desc: "Continuous optimization and proactive support." }
                  ].map((item, i) => (
                    <motion.div key={i} variants={itemVariants} className="relative">
-                      <div className="text-5xl font-bold text-ink-surface-2 mb-4 drop-shadow-sm">{item.step}</div>
-                      <h3 className="text-xl font-bold text-text-primary-v4 mb-2">{item.title}</h3>
-                      <p className="text-text-secondary-v4">{item.desc}</p>
+                      <div className="text-4xl sm:text-5xl font-bold text-ink-surface-2 mb-4 drop-shadow-sm">{item.step}</div>
+                      <h3 className="text-lg sm:text-xl font-bold text-text-primary-v4 mb-2">{item.title}</h3>
+                      <p className="text-sm sm:text-base text-text-secondary-v4 leading-relaxed">{item.desc}</p>
                    </motion.div>
                  ))}
               </motion.div>
@@ -145,12 +145,12 @@ export default function ServicesPage() {
 
       <ScrollReveal>
         <section className="v4-section text-center" style={{ background: 'linear-gradient(135deg, rgba(10,18,36,0.98), rgba(6,12,24,1))' }}>
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="v4-display text-3xl md:text-4xl font-bold mb-6 text-text-primary-v4">Not sure where to start?</h2>
-            <p className="text-xl text-text-secondary-v4 mb-10">
+          <div className="max-w-4xl mx-auto px-5 sm:px-8 lg:px-16">
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 text-text-primary-v4">Not sure where to start?</h2>
+            <p className="text-lg sm:text-xl text-text-secondary-v4 mb-10 max-w-2xl mx-auto">
               Let our experts assess your needs and design a custom solution architecture for your enterprise.
             </p>
-            <Link href="/contact" className="v4-btn-primary rounded-btn px-8 py-4 flex items-center justify-center gap-2 text-lg mx-auto w-fit">
+            <Link href="/contact" className="v4-btn-primary rounded-btn px-8 py-4 flex items-center justify-center gap-2 text-base sm:text-lg mx-auto w-full sm:w-fit">
               Schedule a Consultation <ArrowRight className="w-5 h-5" />
             </Link>
           </div>

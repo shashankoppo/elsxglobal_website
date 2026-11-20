@@ -16,36 +16,36 @@ export default function VaultKVPage() {
       />
 
       {/* Stats Bar */}
-      <div className="v4-section-sm border-y border-hairline bg-ink-surface">
+      <div className="py-8 sm:py-12 border-y border-hairline bg-ink-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 text-center">
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">&lt;10ms</div>
-              <div className="text-sm text-text-muted-v4">Global Reads</div>
+              <div className="text-2xl sm:text-3xl font-semibold text-text-primary-v4 mb-1">&lt;10ms</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Global Reads</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">25MB</div>
-              <div className="text-sm text-text-muted-v4">Max Value Size</div>
+              <div className="text-2xl sm:text-3xl font-semibold text-text-primary-v4 mb-1">25MB</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Max Value Size</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">100K</div>
-              <div className="text-sm text-text-muted-v4">Free Reads/Day</div>
+              <div className="text-2xl sm:text-3xl font-semibold text-text-primary-v4 mb-1">100K</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Free Reads/Day</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">JSON</div>
-              <div className="text-sm text-text-muted-v4">Native Support</div>
+              <div className="text-2xl sm:text-3xl font-semibold text-text-primary-v4 mb-1">JSON</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Native Support</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Features Grid */}
-      <div className="v4-section">
+      <div className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
-            <div className="text-center mb-16">
-              <h2 className="v4-display text-text-primary-v4 mb-4">Fast reads, everywhere</h2>
-              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-lg">Designed for high-read, low-latency workloads distributed globally.</p>
+            <div className="text-center mb-12 sm:mb-16">
+              <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Fast reads, everywhere</h2>
+              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-base sm:text-lg">Designed for high-read, low-latency workloads distributed globally.</p>
             </div>
           </ScrollReveal>
           
@@ -83,16 +83,16 @@ export default function VaultKVPage() {
       </div>
 
       {/* Code Sample Block */}
-      <div className="v4-section bg-ink-surface-2 border-y border-hairline">
+      <div className="py-12 sm:py-16 lg:py-24 bg-ink-surface-2 border-y border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <ScrollReveal>
               <div>
-                <h2 className="v4-display text-text-primary-v4 mb-6">Native integration with Workers</h2>
-                <p className="text-text-secondary-v4 text-lg mb-8">Access VaultKV directly from your VaultWorkers with zero overhead or external API calls required.</p>
-                <div className="flex flex-wrap gap-3 mb-8">
+                <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-6">Native integration with Workers</h2>
+                <p className="text-text-secondary-v4 text-base sm:text-lg mb-8">Access VaultKV directly from your VaultWorkers with zero overhead or external API calls required.</p>
+                <div className="flex flex-wrap gap-2.5 sm:gap-3 mb-8">
                   {['Session storage', 'Feature flags', 'Rate limiting', 'Config store', 'Leaderboards', 'A/B test variants'].map((badge, i) => (
-                    <span key={i} className="px-3 py-1 rounded-full bg-ink border border-hairline text-sm text-text-primary-v4 flex items-center">
+                    <span key={i} className="px-3 py-1 rounded-full bg-ink border border-hairline text-xs sm:text-sm text-text-primary-v4 flex items-center">
                       <Zap className="w-3 h-3 mr-2 text-signal" /> {badge}
                     </span>
                   ))}
@@ -100,8 +100,8 @@ export default function VaultKVPage() {
               </div>
             </ScrollReveal>
             <ScrollReveal delay={0.2}>
-              <div className="bg-ink-surface-2 rounded-2xl p-6 border border-hairline font-mono text-sm text-green-400 overflow-x-auto shadow-2xl">
-                <pre>
+              <div className="bg-ink-surface rounded-2xl p-4 sm:p-6 border border-hairline font-mono text-xs sm:text-sm text-green-400 overflow-x-auto shadow-2xl">
+                <pre className="overflow-x-auto font-mono text-xs sm:text-sm">
                   <code>
 {`export default {
   async fetch(req, env) {
@@ -127,15 +127,15 @@ export default function VaultKVPage() {
       </div>
 
       {/* Pricing */}
-      <section className="v4-section border-t border-hairline">
+      <section className="py-12 sm:py-16 lg:py-24 border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-text-secondary-v4 text-base sm:text-lg">Higher than GoDaddy. Way below AWS.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {/* Free tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+            <div className="v4-panel rounded-2xl p-6 sm:p-7 border border-hairline flex flex-col justify-between">
               <div>
                 <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
                 <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
@@ -151,7 +151,7 @@ export default function VaultKVPage() {
               <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
             </div>
             {/* Pro tier — highlighted */}
-            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
+            <div className="v4-panel rounded-2xl p-6 sm:p-7 border-2 border-signal relative flex flex-col justify-between">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
               <div>
                 <div className="text-signal text-sm font-medium mb-2">PRO</div>
@@ -168,7 +168,7 @@ export default function VaultKVPage() {
               <Link href="/vaulthost/checkout?plan=kv-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
             </div>
             {/* Business tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+            <div className="v4-panel rounded-2xl p-6 sm:p-7 border border-hairline flex flex-col justify-between">
               <div>
                 <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
                 <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
@@ -185,8 +185,8 @@ export default function VaultKVPage() {
             </div>
           </div>
           {/* Competitor comparison */}
-          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
-            <table className="w-full text-sm">
+          <div className="border border-hairline rounded-2xl overflow-x-auto mb-12">
+            <table className="w-full min-w-[560px] text-sm">
               <thead className="bg-ink-surface-2 text-text-secondary-v4">
                 <tr>
                   <th className="py-3 px-4 text-left font-medium">Provider</th>

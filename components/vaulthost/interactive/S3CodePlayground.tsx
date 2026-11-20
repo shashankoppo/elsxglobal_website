@@ -398,17 +398,17 @@ req, err := presignClient.PresignPutObject(context.TODO(), &s3.PutObjectInput{
 
       {/* Code Editor Preview */}
       <div className="relative rounded-2xl bg-ink-surface-2 border border-hairline overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-hairline bg-ink/40 text-xs font-mono text-text-muted-v4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2.5 border-b border-hairline bg-ink/40 text-xs font-mono text-text-muted-v4">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
             <span className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-            <span className="ml-2 text-text-secondary-v4">
+            <span className="ml-2 text-text-secondary-v4 truncate">
               vault-r2-client.{lang === 'typescript' ? 'ts' : lang === 'curl' ? 'sh' : lang === 'python' ? 'py' : 'go'}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] text-signal font-mono">Endpoint: https://r2.vaulthost.cloud</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[11px] text-signal font-mono break-all sm:break-normal">Endpoint: https://r2.vaulthost.cloud</span>
             <button
               onClick={handleCopy}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs bg-ink-surface border border-hairline text-text-secondary-v4 hover:text-signal transition-colors"
@@ -419,7 +419,7 @@ req, err := presignClient.PresignPutObject(context.TODO(), &s3.PutObjectInput{
           </div>
         </div>
 
-        <pre className="p-5 font-mono text-xs text-green-400 overflow-x-auto leading-relaxed max-h-[340px]">
+        <pre className="p-4 sm:p-5 font-mono text-xs sm:text-sm text-green-400 overflow-x-auto leading-relaxed max-h-[340px]">
           <code>{getSnippet()}</code>
         </pre>
 

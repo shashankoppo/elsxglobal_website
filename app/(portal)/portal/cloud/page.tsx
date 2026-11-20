@@ -79,16 +79,24 @@ const CLOUD_SERVICES = [
 ];
 
 export default function CloudOverviewPage() {
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const categories = ['All', 'Compute', 'Storage', 'Database', 'Network', 'AI Platform', 'Security'];
+
+  const filteredServices = selectedCategory === 'All'
+    ? CLOUD_SERVICES
+    : CLOUD_SERVICES.filter((s) => s.badge.toLowerCase() === selectedCategory.toLowerCase());
+
   return (
     <div className="space-y-8">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl v4-panel p-8 border-signal/20 bg-gradient-to-br from-ink-surface to-background/50">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl v4-panel p-5 sm:p-8 border-signal/20 bg-gradient-to-br from-ink-surface to-background/50">
         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
           <Zap className="w-64 h-64 text-signal" />
         </div>
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="v4-readout text-[11px] font-semibold uppercase tracking-widest text-signal px-2.5 py-0.5 rounded-full border border-signal/30 bg-signal/10">
                 Cloud &amp; Edge Console
               </span>
@@ -96,7 +104,7 @@ export default function CloudOverviewPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-good animate-pulse" /> 300+ PoPs Operational
               </span>
             </div>
-            <h1 className="text-3xl font-bold text-text-primary-v4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary-v4">
               VaultHost Cloud Platform
             </h1>
             <p className="mt-2 text-sm text-text-secondary-v4 max-w-2xl leading-relaxed">
@@ -104,17 +112,17 @@ export default function CloudOverviewPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 shrink-0 w-full sm:w-auto">
             <Link
               href="/portal/cloud/workers"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-btn v4-btn-primary text-xs font-semibold shadow-glow"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-btn v4-btn-primary text-xs font-semibold shadow-glow w-full sm:w-auto"
             >
               <Plus className="h-4 w-4" /> Create Service
             </Link>
             <a
               href="/vaulthost"
               target="_blank"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-btn v4-btn-secondary text-xs font-medium"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-btn v4-btn-secondary text-xs font-medium w-full sm:w-auto"
             >
               Documentation <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
@@ -123,20 +131,20 @@ export default function CloudOverviewPage() {
       </div>
 
       {/* Global Quick Telemetry Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: 'Edge Invocations (24h)', value: '1,420,840', change: '+18.4%', icon: Zap, color: 'text-signal' },
           { label: 'R2 Bandwidth Saved', value: '4.82 TB', change: '$433 saved', icon: HardDrive, color: 'text-good' },
           { label: 'AI Gateway Cache Hit', value: '48.2%', change: '<2ms avg latency', icon: Sparkles, color: 'text-signal' },
           { label: 'Anycast Threat Mitigation', value: '14,210', change: '100% blocked', icon: Shield, color: 'text-text-primary-v4' },
         ].map((stat) => (
-          <PanelCard key={stat.label} className="p-5 flex flex-col justify-between">
+          <PanelCard key={stat.label} className="p-4 sm:p-5 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-text-muted-v4 font-medium">{stat.label}</span>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              <span className="text-xs text-text-muted-v4 font-medium truncate">{stat.label}</span>
+              <stat.icon className={`h-4 w-4 shrink-0 ${stat.color}`} />
             </div>
             <div>
-              <p className="text-2xl font-bold font-mono text-text-primary-v4">{stat.value}</p>
+              <p className="text-xl sm:text-2xl font-bold font-mono text-text-primary-v4 truncate">{stat.value}</p>
               <p className="text-[11px] text-signal font-mono mt-1 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" /> {stat.change}
               </p>
@@ -145,19 +153,80 @@ export default function CloudOverviewPage() {
         ))}
       </div>
 
-      {/* Cloud Services Catalog Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-text-primary-v4">Active Cloud Facilities</h2>
-          <span className="text-xs text-text-muted-v4 font-mono">6 services enabled on your tenant</span>
+      {/* Monthly Cloud Resource Usage Quotas */}
+      <div className="v4-panel p-4 sm:p-6 rounded-2xl border-hairline space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary-v4 flex items-center gap-2">
+              <Activity className="h-4 w-4 text-signal" /> Monthly Cloud Resource Quota
+            </h3>
+            <p className="text-xs text-text-muted-v4">Aggregated across all Edge Workers, R2 Buckets, D1 Databases &amp; Anycast egress.</p>
+          </div>
+          <span className="text-xs font-mono text-signal">Billing Cycle Active</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {CLOUD_SERVICES.map((s) => {
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          {[
+            { name: 'Edge Worker Invocations', used: '1.42M', limit: '10.0M', pct: 14.2, color: 'bg-signal' },
+            { name: 'VaultR2 Stored Objects', used: '48.6 GB', limit: '100 GB', pct: 48.6, color: 'bg-good' },
+            { name: 'D1 Edge SQL Queries', used: '280k', limit: '5.0M', pct: 5.6, color: 'bg-primary' },
+          ].map((bar) => (
+            <div key={bar.name} className="w-full space-y-1.5 p-3 rounded-xl bg-ink-surface/60 border border-hairline/60">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-text-secondary-v4 truncate">{bar.name}</span>
+                <span className="font-mono text-text-primary-v4 shrink-0 font-medium">{bar.pct}%</span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-ink-surface-2 border border-hairline/40 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${bar.color}`}
+                  style={{ width: `${bar.pct}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-text-muted-v4 font-mono">
+                <span>{bar.used} used</span>
+                <span>{bar.limit} cap</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Cloud Services Catalog Grid */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-bold text-text-primary-v4">Active Cloud Facilities</h2>
+            <p className="text-xs text-text-muted-v4 font-mono">{filteredServices.length} of {CLOUD_SERVICES.length} services enabled on your tenant</p>
+          </div>
+        </div>
+
+        {/* Category Tabs: overflow-x-auto whitespace-nowrap scrollbar-none */}
+        <div className="flex overflow-x-auto scrollbar-none gap-1.5 whitespace-nowrap pb-1 border-b border-hairline">
+          {categories.map((cat) => {
+            const active = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  active
+                    ? 'bg-signal/15 text-signal border border-signal/30'
+                    : 'text-text-muted-v4 hover:text-text-primary-v4 hover:bg-ink-surface border border-transparent'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Product cards grid: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          {filteredServices.map((s) => {
             const Icon = s.icon;
             return (
               <Link key={s.id} href={s.href} className="group block">
-                <PanelCard className="p-6 h-full flex flex-col justify-between border-hairline hover:border-signal/40 transition-all duration-200 group-hover:-translate-y-0.5">
+                <PanelCard className="p-5 sm:p-6 h-full flex flex-col justify-between border-hairline hover:border-signal/40 transition-all duration-200 group-hover:-translate-y-0.5">
                   <div>
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink-surface-2 border border-hairline group-hover:border-signal/30 group-hover:bg-signal/10 group-hover:text-signal transition-all">
@@ -191,15 +260,15 @@ export default function CloudOverviewPage() {
       </div>
 
       {/* CLI Quickstart Banner */}
-      <div className="p-6 rounded-3xl bg-ink border border-hairline font-mono text-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-ink border border-hairline font-mono text-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Terminal className="h-5 w-5 text-signal shrink-0" />
-          <div>
-            <p className="text-text-primary-v4 font-semibold font-sans">VaultHost Developer CLI</p>
+          <div className="min-w-0">
+            <p className="text-text-primary-v4 font-semibold font-sans truncate">VaultHost Developer CLI</p>
             <p className="text-[11px] text-text-muted-v4 font-mono mt-0.5">Deploy workers, manage R2 buckets, and run SQL queries from your terminal.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-ink-surface-2 px-3 py-2 rounded-xl border border-hairline text-green-400 font-mono text-xs w-full md:w-auto overflow-x-auto">
+        <div className="flex items-center gap-2 bg-ink-surface-2 px-3 py-2 rounded-xl border border-hairline text-green-400 font-mono text-xs w-full md:w-auto overflow-x-auto whitespace-nowrap">
           <code>npm install -g @vaulthost/cli &amp;&amp; vh login</code>
         </div>
       </div>

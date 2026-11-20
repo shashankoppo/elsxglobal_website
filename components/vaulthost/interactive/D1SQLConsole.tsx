@@ -110,13 +110,13 @@ export function D1SQLConsole() {
           value={sqlText}
           onChange={(e) => setSqlText(e.target.value)}
           rows={3}
-          className="w-full bg-ink-surface font-mono text-xs text-green-400 p-3 rounded-xl border border-hairline outline-none resize-none leading-relaxed focus:border-signal/40"
+          className="w-full bg-ink-surface font-mono text-xs sm:text-sm text-green-400 p-3 rounded-xl border border-hairline outline-none resize-none leading-relaxed focus:border-signal/40"
         />
       </div>
 
       {/* Results Grid */}
       <div className="p-4 bg-ink-surface">
-        <div className="flex items-center justify-between pb-3 mb-3 border-b border-hairline text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-hairline text-xs gap-2">
           <span className="text-text-muted-v4 flex items-center gap-1.5">
             <Table className="h-3.5 w-3.5 text-signal" /> Query Results ({results.length} rows)
           </span>
@@ -132,7 +132,7 @@ export function D1SQLConsole() {
           </div>
         ) : (
           <div className="overflow-x-auto terminal-scrollbar rounded-xl border border-hairline bg-ink">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[500px] text-left text-xs">
               <thead>
                 <tr className="border-b border-hairline bg-ink-surface-2 text-text-muted-v4 font-mono text-[11px]">
                   {Object.keys(results[0] || {}).map((col) => (
@@ -155,7 +155,7 @@ export function D1SQLConsole() {
           </div>
         )}
 
-        <div className="mt-3 pt-3 border-t border-hairline flex items-center justify-between text-xs">
+        <div className="mt-3 pt-3 border-t border-hairline flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
           <span className="text-text-muted-v4 font-mono text-[11px]">Drizzle ORM &amp; Prisma Compatible</span>
           <a href="/portal/cloud/database" className="text-signal hover:underline flex items-center gap-1">
             Open D1 Database Console &rarr;

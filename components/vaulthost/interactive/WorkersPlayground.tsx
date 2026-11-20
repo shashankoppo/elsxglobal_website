@@ -229,24 +229,24 @@ export function WorkersPlayground() {
             onChange={(e) => setCode(e.target.value)}
             spellCheck={false}
             rows={15}
-            className="w-full flex-1 bg-transparent font-mono text-xs text-green-400 outline-none resize-none leading-relaxed terminal-scrollbar p-2"
+            className="w-full flex-1 bg-transparent font-mono text-xs sm:text-sm text-green-400 outline-none resize-none leading-relaxed terminal-scrollbar p-2"
           />
-          <div className="pt-3 border-t border-hairline flex items-center justify-between">
+          <div className="pt-3 border-t border-hairline flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <span className="text-[11px] text-text-muted-v4 flex items-center gap-1.5">
               <Cpu className="h-3.5 w-3.5 text-signal" /> V8 Isolated Environment
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleRun}
                 disabled={isRunning}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-btn v4-btn-primary text-xs font-semibold shadow-glow disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-btn v4-btn-primary text-xs font-semibold shadow-glow disabled:opacity-50"
               >
                 <Play className="h-3.5 w-3.5 fill-current" />
                 {isRunning ? 'Executing at Edge...' : 'Execute at Edge'}
               </button>
               <button
                 onClick={() => setShowDeployModal(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-btn v4-btn-secondary text-xs font-medium"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-btn v4-btn-secondary text-xs font-medium"
               >
                 Deploy Worker <ArrowUpRight className="h-3.5 w-3.5" />
               </button>
@@ -294,14 +294,14 @@ export function WorkersPlayground() {
               <div>
                 <p className="text-[11px] text-text-muted-v4 mb-1">Response Payload:</p>
                 <div className="rounded-xl border border-hairline bg-ink p-3 text-green-400 overflow-x-auto terminal-scrollbar">
-                  <pre>{JSON.stringify(output.body, null, 2)}</pre>
+                  <pre className="text-xs sm:text-sm font-mono">{JSON.stringify(output.body, null, 2)}</pre>
                 </div>
               </div>
 
               {/* Live Execution Logs */}
               <div>
                 <p className="text-[11px] text-text-muted-v4 mb-1">Execution Stream Logs:</p>
-                <div className="rounded-xl border border-hairline bg-ink/70 p-3 text-[11px] text-text-secondary-v4 space-y-1">
+                <div className="rounded-xl border border-hairline bg-ink/70 p-3 text-xs sm:text-sm font-mono text-text-secondary-v4 space-y-1 overflow-x-auto">
                   {output.logs.map((log: string, idx: number) => (
                     <div key={idx} className="leading-relaxed">
                       <span className="text-signal">&gt;</span> {log}

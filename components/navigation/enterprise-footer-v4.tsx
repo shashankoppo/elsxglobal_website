@@ -117,9 +117,9 @@ export function EnterpriseFooterV4() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           {/* Brand + Newsletter */}
-          <div className="col-span-2 sm:col-span-3 lg:col-span-2">
+          <div className="lg:col-span-4">
             <Link href="/" className="inline-flex items-center gap-2.5 mb-3">
               <Logo />
             </Link>
@@ -139,7 +139,7 @@ export function EnterpriseFooterV4() {
                   Subscribed! We&apos;ll be in touch.
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <div className="flex items-center gap-2 flex-1 px-3 py-2 rounded-btn border border-hairline bg-ink-surface-2 focus-within:border-signal/40 transition-colors">
                     <Mail className="h-3.5 w-3.5 text-text-muted-v4 shrink-0" />
                     <input
@@ -150,7 +150,8 @@ export function EnterpriseFooterV4() {
                       className="flex-1 bg-transparent text-sm outline-none placeholder:text-text-muted-v4 text-text-primary-v4 min-w-0"
                     />
                   </div>
-                  <Button type="submit" size="sm" className="v4-btn-primary shrink-0">
+                  <Button type="submit" size="sm" className="v4-btn-primary shrink-0 w-full sm:w-auto">
+                    <span className="sm:hidden text-xs mr-1">Subscribe</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -174,14 +175,17 @@ export function EnterpriseFooterV4() {
             </div>
           </div>
 
-          <FooterColumn title="Core Engines" links={engineLinks} />
-          <FooterColumn title="Development" links={serviceLinks} />
-          <FooterColumn title="Cloud & Systems" links={cloudLinks} />
-          <FooterColumn title="Industries" links={industryLinks} />
+          {/* Column link grid: grid-cols-2 lg:grid-cols-4 */}
+          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <FooterColumn title="Core Engines" links={engineLinks} />
+            <FooterColumn title="Development" links={serviceLinks} />
+            <FooterColumn title="Cloud & Systems" links={cloudLinks} />
+            <FooterColumn title="Industries" links={industryLinks} />
+          </div>
         </div>
 
         {/* Second row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 mt-8 pt-8 v4-hr">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-8 mt-8 pt-8 v4-hr">
           <FooterColumn title="VaultHost Cloud" links={vaultHostLinks} />
           <FooterColumn title="Company" links={companyLinks} />
           <FooterColumn title="Resources" links={resourceLinks} />
@@ -216,8 +220,11 @@ export function EnterpriseFooterV4() {
         </div>
 
         {/* Social + Bottom */}
-        <div className="mt-8 pt-6 v4-hr flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="mt-8 pt-6 v4-hr flex flex-col-reverse sm:flex-row items-center sm:items-start justify-between gap-4">
+          <p className="text-xs text-text-muted-v4 text-center sm:text-left">
+            &copy; {new Date().getFullYear()} ELSxGlobal, a division of EvolucentSphere Pvt. Ltd. All rights reserved.
+          </p>
+          <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
             <a href="https://twitter.com/elsxglobal" target="_blank" rel="noopener noreferrer" className="flex h-8 w-8 items-center justify-center rounded-chip border border-hairline bg-ink-surface-2 text-text-muted-v4 hover:text-signal hover:border-hairline-2 transition-colors">
               <Twitter className="h-4 w-4" />
             </a>
@@ -228,10 +235,7 @@ export function EnterpriseFooterV4() {
               <Github className="h-4 w-4" />
             </a>
           </div>
-          <p className="text-xs text-text-muted-v4">
-            &copy; {new Date().getFullYear()} ELSxGlobal, a division of EvolucentSphere Pvt. Ltd. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4 text-xs text-text-muted-v4">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-text-muted-v4 justify-center sm:justify-start">
             <Link href="/portal" className="hover:text-signal transition-colors">Client Portal</Link>
             <Link href="/privacy" className="hover:text-signal transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-signal transition-colors">Terms of Service</Link>

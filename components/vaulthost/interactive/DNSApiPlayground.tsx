@@ -454,16 +454,16 @@ req, _ := http.NewRequest("GET", "https://api.vaulthost.cloud/v1/zones/${zone}/d
 
       {/* Code Editor Preview */}
       <div className="relative rounded-2xl bg-ink-surface-2 border border-hairline overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-hairline bg-ink/40 text-xs font-mono text-text-muted-v4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2.5 border-b border-hairline bg-ink/40 text-xs font-mono text-text-muted-v4">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
             <span className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-            <span className="ml-2 text-text-secondary-v4">
+            <span className="ml-2 text-text-secondary-v4 truncate">
               vault-dns-api.{lang === 'curl' ? 'sh' : lang === 'typescript' ? 'ts' : lang === 'python' ? 'py' : 'go'}
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-[11px] text-signal font-mono">Anycast SLA: 100% Uptime</span>
             <button
               onClick={handleCopy}
@@ -475,7 +475,7 @@ req, _ := http.NewRequest("GET", "https://api.vaulthost.cloud/v1/zones/${zone}/d
           </div>
         </div>
 
-        <pre className="p-5 font-mono text-xs text-cyan-300 overflow-x-auto leading-relaxed max-h-[320px]">
+        <pre className="p-4 sm:p-5 font-mono text-xs sm:text-sm text-cyan-300 overflow-x-auto leading-relaxed max-h-[320px]">
           <code>{getSnippet()}</code>
         </pre>
 

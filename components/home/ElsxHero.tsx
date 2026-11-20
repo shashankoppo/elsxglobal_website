@@ -167,7 +167,7 @@ export function ElsxHero() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: EASE, delay: 0.06 }}
-              className="text-[clamp(2.1rem,5vw,5rem)] font-bold tracking-[-0.04em] leading-[1.08] text-text-primary-v4 mb-5"
+              className="text-[clamp(1.75rem,5vw,5rem)] font-bold tracking-[-0.04em] leading-[1.08] text-text-primary-v4 mb-5"
             >
               Enterprise transformation
               <br />
@@ -221,7 +221,7 @@ export function ElsxHero() {
               <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-text-muted-v4 mb-4">
                 Performance by sector
               </p>
-              <div className="flex flex-wrap gap-2 mb-7">
+              <div className="flex overflow-x-auto gap-2 mb-7 pb-1 -mx-4 px-4 sm:flex-wrap sm:overflow-x-visible sm:mx-0 sm:px-0 scrollbar-none">
                 {(Object.keys(SECTORS) as Sector[]).map((key) => (
                   <button
                     key={key}
@@ -249,7 +249,7 @@ export function ElsxHero() {
                   <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 sm:gap-8 items-start">
                     {/* Big stat */}
                     <div>
-                      <p className="text-4xl sm:text-5xl md:text-[3.25rem] font-bold tracking-[-0.04em] leading-none text-text-primary-v4">
+                      <p className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-[-0.04em] leading-none text-text-primary-v4">
                         {data.stat}
                       </p>
                       <p className="text-xs text-text-muted-v4 mt-1.5 max-w-[18ch] leading-snug">
@@ -268,7 +268,7 @@ export function ElsxHero() {
                           <p className="text-[11px] text-text-muted-v4">{data.kpi2l}</p>
                         </div>
                       </div>
-                      <p className="text-[11px] text-text-muted-v4 leading-relaxed border-t border-hairline pt-3">
+                      <p className="text-[11px] text-text-muted-v4 leading-relaxed border-t border-hairline pt-3 break-all sm:break-words">
                         {data.compliance}
                       </p>
                     </div>
@@ -384,10 +384,10 @@ export function ElsxHero() {
             {TRUST.map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-6 py-3.5 sm:py-4 border-r-0 sm:border-r border-hairline last:border-r-0"
+                className="flex items-center justify-center sm:justify-start gap-2 px-2 py-3 sm:px-6 sm:py-4 border-r-0 sm:border-r border-hairline last:border-r-0"
               >
                 <Icon className="w-3.5 h-3.5 shrink-0 text-text-muted-v4" />
-                <span className="text-[11px] font-semibold text-text-muted-v4 whitespace-nowrap tracking-wide">
+                <span className="text-[11px] font-semibold text-text-muted-v4 whitespace-nowrap tracking-wide truncate">
                   {label}
                 </span>
               </div>

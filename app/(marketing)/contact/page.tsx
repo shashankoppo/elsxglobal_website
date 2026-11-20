@@ -108,7 +108,7 @@ export default function ContactPage() {
 
       <section className="v4-section-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div variants={stagger} {...useScrollReveal()} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <motion.div variants={stagger} {...useScrollReveal()} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {CONTACT_INFO.map((c) => (
               <motion.div key={c.label} variants={fadeUp}>
                 <a href={c.href} className="block">
@@ -128,10 +128,10 @@ export default function ContactPage() {
 
       <section className="v4-section-sm bg-ink-surface">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-5 gap-6">
-            <motion.div initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+            <motion.div initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="order-2 lg:order-1">
               <SectionLabelV4 icon={Building2}>Our Offices</SectionLabelV4>
-              <h2 className="mt-4 text-2xl v4-display text-text-primary-v4 mb-6">Three Locations. One Team.</h2>
+              <h2 className="mt-4 text-2xl sm:text-3xl font-bold v4-display text-text-primary-v4 mb-6">Global Locations. One Team.</h2>
               <div className="space-y-3">
                 {OFFICES.map((o) => (
                   <PanelCard key={o.city} className="p-4">
@@ -150,8 +150,8 @@ export default function ContactPage() {
               </div>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="lg:col-span-3">
-              <PanelCard className="p-6 lg:p-8">
+            <motion.div initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="order-1 lg:order-2">
+              <PanelCard className="p-6 sm:p-8">
                 {submitted ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="flex h-14 w-14 items-center justify-center rounded-panel border border-good/30 bg-good/10 mb-4">
@@ -161,14 +161,14 @@ export default function ContactPage() {
                     <p className="mt-2 text-sm text-text-secondary-v4 max-w-sm">Thank you for reaching out. Our team will respond within one business day.</p>
                     <button
                       onClick={() => { setSubmitted(false); setError(null); setForm({ name: '', email: '', company: '', service: SERVICES[0], message: '' }); }}
-                      className="mt-6 px-5 py-2.5 rounded-btn v4-btn-ghost text-sm"
+                      className="mt-6 px-5 py-2.5 rounded-btn v4-btn-ghost text-sm w-full sm:w-auto"
                     >
                       Send Another
                     </button>
                   </div>
                 ) : (
                   <>
-                    <h3 className="text-lg font-semibold text-text-primary-v4 mb-1">Send us a message</h3>
+                    <h3 className="text-lg sm:text-xl font-semibold text-text-primary-v4 mb-1">Send us a message</h3>
                     <p className="text-sm text-text-muted-v4 mb-6">All fields required. We respond within 1 business day.</p>
                     
                     {error && (
@@ -178,7 +178,7 @@ export default function ContactPage() {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                      <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="v4-readout text-[10px] uppercase tracking-widest text-text-muted-v4">Name</label>
                           <input
@@ -196,7 +196,7 @@ export default function ContactPage() {
                           />
                         </div>
                       </div>
-                      <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="v4-readout text-[10px] uppercase tracking-widest text-text-muted-v4">Company</label>
                           <input

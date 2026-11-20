@@ -80,34 +80,34 @@ export function PricingPageClient() {
 
   return (
     <div className="pt-8">
-      <div className="container-wide px-4 sm:px-6 lg:px-8 py-12">
+      <div className="container-wide px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-24">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-4">
             <TrendingDown className="h-3.5 w-3.5 text-primary" />
             <span className="text-xs font-medium text-primary">Save up to 85% vs AWS/Azure</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
             Enterprise Hosting. <span className="text-primary">Human Pricing.</span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
             All plans include NVMe storage, daily backups, DDoS protection, and 24/7 human support. No hidden fees, ever.
           </p>
 
           {/* Billing Toggle */}
-          <div className="inline-flex items-center gap-1 mt-8 v4-panel p-1 rounded-full">
+          <div className="inline-flex items-center gap-1 mt-8 v4-panel p-1 rounded-full max-w-full">
             <button
               onClick={() => setBillingCycle('monthly')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${billingCycle === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${billingCycle === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Monthly
             </button>
             <button
               onClick={() => setBillingCycle('annual')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${billingCycle === 'annual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors flex items-center gap-2 ${billingCycle === 'annual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Annual
-              <span className={`text-xs px-2 py-0.5 rounded-full ${billingCycle === 'annual' ? 'bg-white/20 text-white' : 'bg-good/20 text-good'}`}>2 months free</span>
+              <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full ${billingCycle === 'annual' ? 'bg-white/20 text-white' : 'bg-good/20 text-good'}`}>2 months free</span>
             </button>
           </div>
         </div>
@@ -118,7 +118,7 @@ export function PricingPageClient() {
             <button
               key={tier}
               onClick={() => setActiveTier(tier)}
-              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTier === tier ? 'bg-white text-black' : 'v4-panel hover:border-v4-hairline-2 text-muted-foreground hover:text-foreground'}`}
+              className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${activeTier === tier ? 'bg-white text-black' : 'v4-panel hover:border-v4-hairline-2 text-muted-foreground hover:text-foreground'}`}
             >
               {getTierName(tier)}
             </button>
@@ -127,7 +127,7 @@ export function PricingPageClient() {
 
         {/* Plan Grid */}
         <div className="mb-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.filter(p => p.tier === activeTier).map((plan) => {
               const price = billingCycle === 'annual' ? Number(plan.price_annual) : Number(plan.price_monthly);
               const monthlyEquivalent = billingCycle === 'annual' ? Math.round(Number(plan.price_annual) / 12) : null;
@@ -136,7 +136,7 @@ export function PricingPageClient() {
               return (
                 <div
                   key={plan.id}
-                  className={`v4-panel p-8 relative transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 flex flex-col h-full ${plan.is_popular ? 'border-primary shadow-[0_0_30px_hsl(var(--primary)/0.1)]' : ''}`}
+                  className={`v4-panel p-6 sm:p-8 relative transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 flex flex-col h-full w-full ${plan.is_popular ? 'border-primary ring-1 ring-primary/40 shadow-[0_0_30px_hsl(var(--primary)/0.1)]' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <h3 className="text-xl font-semibold tracking-tight">{plan.name}</h3>
@@ -196,7 +196,7 @@ export function PricingPageClient() {
         {/* AWS/Azure Comparison */}
         <div className="mb-16">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-3">The Real Cost Difference</h2>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3">The Real Cost Difference</h2>
             <p className="text-muted-foreground">See exactly how much you save with VaultHost vs AWS and Azure</p>
           </div>
           <ComparisonMatrix />

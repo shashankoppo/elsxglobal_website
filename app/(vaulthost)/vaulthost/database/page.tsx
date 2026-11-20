@@ -17,40 +17,40 @@ export default function VaultD1Page() {
       />
 
       {/* Stats Bar */}
-      <div className="v4-section-sm border-y border-hairline bg-ink-surface">
+      <div className="py-8 sm:py-12 border-y border-hairline bg-ink-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 text-center">
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">SQLite</div>
-              <div className="text-sm text-text-muted-v4">Native Syntax</div>
+              <div className="text-2xl sm:text-3xl font-semibold text-text-primary-v4 mb-1">SQLite</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Native Syntax</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">Global</div>
-              <div className="text-sm text-text-muted-v4">Auto-Replication</div>
+              <div className="text-2xl sm:text-3xl font-semibold text-text-primary-v4 mb-1">Global</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Auto-Replication</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">PITR</div>
-              <div className="text-sm text-text-muted-v4">Point-in-Time Recovery</div>
+              <div className="text-2xl sm:text-3xl font-semibold text-text-primary-v4 mb-1">PITR</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Point-in-Time Recovery</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">100%</div>
-              <div className="text-sm text-text-muted-v4">ORM Compatible</div>
+              <div className="text-2xl sm:text-3xl font-semibold text-text-primary-v4 mb-1">100%</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">ORM Compatible</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Features Grid */}
-      <div className="v4-section">
+      <div className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
-            <div className="text-center mb-16">
-              <h2 className="v4-display text-text-primary-v4 mb-4">A database built for modern serverless</h2>
-              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-lg">Enjoy the power of SQL, distributed globally without the infrastructure headaches.</p>
+            <div className="text-center mb-12 sm:mb-16">
+              <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">A database built for modern serverless</h2>
+              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-base sm:text-lg">Enjoy the power of SQL, distributed globally without the infrastructure headaches.</p>
             </div>
           </ScrollReveal>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <ScrollReveal>
               <PanelCard className="v4-panel h-full flex flex-col p-6">
                 <Search className="w-8 h-8 text-signal mb-4" />
@@ -98,15 +98,15 @@ export default function VaultD1Page() {
       </div>
 
       {/* Interactive D1 SQL Query Console */}
-      <div className="v4-section-sm bg-ink-surface border-y border-hairline">
+      <div className="py-12 sm:py-16 lg:py-24 bg-ink-surface border-y border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-10">
               <span className="v4-readout text-[11px] font-semibold uppercase tracking-widest text-signal px-3 py-1 rounded-full border border-signal/30 bg-signal/5">
                 Interactive SQL Studio
               </span>
-              <h2 className="mt-3 text-3xl v4-display text-text-primary-v4">Execute Queries on Edge SQLite Live</h2>
-              <p className="mt-2 text-text-secondary-v4 max-w-xl mx-auto text-sm">
+              <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold v4-display text-text-primary-v4">Execute Queries on Edge SQLite Live</h2>
+              <p className="mt-2 text-text-secondary-v4 max-w-xl mx-auto text-sm sm:text-base">
                 Run SQL queries directly against distributed edge replicas and benchmark single-digit millisecond response times.
               </p>
             </div>
@@ -116,43 +116,43 @@ export default function VaultD1Page() {
       </div>
 
       {/* Comparison Table */}
-      <div className="v4-section">
+      <div className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
-            <h2 className="v4-display text-text-primary-v4 text-center mb-16">How we compare</h2>
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 text-center mb-12 sm:mb-16">How we compare</h2>
           </ScrollReveal>
           
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto rounded-2xl border border-hairline bg-ink-surface/30">
+            <table className="w-full min-w-[560px] text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr className="border-b border-hairline">
-                  <th className="p-4 text-text-muted-v4 font-medium">Provider</th>
-                  <th className="p-4 text-text-muted-v4 font-medium">Edge Native</th>
-                  <th className="p-4 text-text-muted-v4 font-medium">Engine</th>
-                  <th className="p-4 text-text-muted-v4 font-medium">Pricing Model</th>
+                <tr className="border-b border-hairline bg-ink-surface-2 text-text-muted-v4 text-xs">
+                  <th className="p-4 font-semibold uppercase tracking-wider">Provider</th>
+                  <th className="p-4 font-semibold uppercase tracking-wider">Edge Native</th>
+                  <th className="p-4 font-semibold uppercase tracking-wider">Engine</th>
+                  <th className="p-4 font-semibold uppercase tracking-wider">Pricing Model</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-hairline bg-ink-surface/50">
-                  <td className="p-4 text-text-primary-v4 font-medium flex items-center"><Zap className="w-5 h-5 mr-2 text-signal" /> VaultD1</td>
-                  <td className="p-4 text-signal font-medium">Yes (Global)</td>
+                <tr className="border-b border-hairline bg-signal/5">
+                  <td className="p-4 text-text-primary-v4 font-semibold flex items-center"><Zap className="w-4 h-4 mr-2 text-signal" /> VaultD1</td>
+                  <td className="p-4 text-signal font-semibold">Yes (Global)</td>
                   <td className="p-4 text-text-secondary-v4">SQLite</td>
                   <td className="p-4 text-text-secondary-v4">Usage (Reads/Writes)</td>
                 </tr>
-                <tr className="border-b border-hairline">
-                  <td className="p-4 text-text-primary-v4">PlanetScale</td>
+                <tr className="border-b border-hairline hover:bg-ink-surface-2/30 transition-colors">
+                  <td className="p-4 text-text-primary-v4 font-medium">PlanetScale</td>
                   <td className="p-4 text-text-secondary-v4">No (Single Region)</td>
                   <td className="p-4 text-text-secondary-v4">MySQL (Vitess)</td>
                   <td className="p-4 text-text-secondary-v4">Fixed Tiers + Overage</td>
                 </tr>
-                <tr className="border-b border-hairline">
-                  <td className="p-4 text-text-primary-v4">Neon</td>
+                <tr className="border-b border-hairline hover:bg-ink-surface-2/30 transition-colors">
+                  <td className="p-4 text-text-primary-v4 font-medium">Neon</td>
                   <td className="p-4 text-text-secondary-v4">No (Single Region)</td>
                   <td className="p-4 text-text-secondary-v4">PostgreSQL</td>
                   <td className="p-4 text-text-secondary-v4">Compute Time + Storage</td>
                 </tr>
-                <tr>
-                  <td className="p-4 text-text-primary-v4">Turso</td>
+                <tr className="hover:bg-ink-surface-2/30 transition-colors">
+                  <td className="p-4 text-text-primary-v4 font-medium">Turso</td>
                   <td className="p-4 text-text-secondary-v4">Yes (Global)</td>
                   <td className="p-4 text-text-secondary-v4">libSQL</td>
                   <td className="p-4 text-text-secondary-v4">Usage (Rows read)</td>
@@ -164,15 +164,15 @@ export default function VaultD1Page() {
       </div>
 
       {/* Pricing */}
-      <section className="v4-section border-t border-hairline">
+      <section className="py-12 sm:py-16 lg:py-24 border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-text-secondary-v4 text-base sm:text-lg">Higher than GoDaddy. Way below AWS.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {/* Free tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+            <div className="v4-panel rounded-2xl p-6 sm:p-7 border border-hairline flex flex-col justify-between">
               <div>
                 <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
                 <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
@@ -188,7 +188,7 @@ export default function VaultD1Page() {
               <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
             </div>
             {/* Pro tier — highlighted */}
-            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
+            <div className="v4-panel rounded-2xl p-6 sm:p-7 border-2 border-signal relative flex flex-col justify-between">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
               <div>
                 <div className="text-signal text-sm font-medium mb-2">PRO</div>
@@ -205,7 +205,7 @@ export default function VaultD1Page() {
               <Link href="/vaulthost/checkout?plan=database-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
             </div>
             {/* Business tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
+            <div className="v4-panel rounded-2xl p-6 sm:p-7 border border-hairline flex flex-col justify-between">
               <div>
                 <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
                 <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹1,499 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
@@ -222,8 +222,8 @@ export default function VaultD1Page() {
             </div>
           </div>
           {/* Competitor comparison */}
-          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
-            <table className="w-full text-sm">
+          <div className="border border-hairline rounded-2xl overflow-x-auto mb-12">
+            <table className="w-full min-w-[560px] text-sm">
               <thead className="bg-ink-surface-2 text-text-secondary-v4">
                 <tr>
                   <th className="py-3 px-4 text-left font-medium">Provider</th>

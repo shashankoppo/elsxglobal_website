@@ -68,10 +68,10 @@ function MetricItem({ target, suffix, prefix, dec, label }: {
 }) {
   const { count, ref } = useCountUp(target, 2000, dec);
   return (
-    <div className="flex flex-col py-10 px-4 lg:px-10 first:pl-0 last:pr-0">
+    <div className="flex flex-col py-6 sm:py-8 lg:py-10 px-3 sm:px-4 lg:px-10 first:pl-0 last:pr-0">
       <span
         ref={ref}
-        className="text-[2.75rem] sm:text-[3.25rem] font-bold tracking-[-0.04em] leading-none text-text-primary-v4 mb-2 tabular-nums"
+        className="text-[1.75rem] sm:text-[2.5rem] lg:text-[3.25rem] font-bold tracking-[-0.04em] leading-none text-text-primary-v4 mb-2 tabular-nums"
       >
         {prefix}{count}{suffix}
       </span>
@@ -484,10 +484,10 @@ function VaultHostSection() {
             </motion.h2>
           </div>
           <motion.div variants={fadeUp} className="flex flex-wrap gap-3 lg:shrink-0">
-            <Link href="/vaulthost" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-btn text-sm font-semibold v4-btn-primary">
+            <Link href="/vaulthost" className="inline-flex items-center justify-center text-center gap-2 px-5 py-2.5 rounded-btn text-sm font-semibold v4-btn-primary w-full sm:w-auto">
               Explore 30+ Products <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/vaulthost/compare" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-btn text-sm font-semibold v4-btn-secondary">
+            <Link href="/vaulthost/compare" className="inline-flex items-center justify-center text-center gap-2 px-5 py-2.5 rounded-btn text-sm font-semibold v4-btn-secondary w-full sm:w-auto">
               Compare vs Cloudflare & AWS
             </Link>
           </motion.div>
@@ -645,7 +645,7 @@ function SocialProof() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
-          className="grid sm:grid-cols-3 gap-4"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
         >
           {TESTIMONIALS.map((t, i) => (
             <motion.div key={i} variants={fadeUp}>
@@ -691,10 +691,10 @@ function FinalCTA() {
               className="absolute top-0 inset-x-0 h-px"
               style={{ background: 'linear-gradient(90deg, transparent 10%, hsl(var(--v4-signal)/0.35) 50%, transparent 90%)' }}
             />
-            <div className="px-10 sm:px-16 lg:px-20 py-16 sm:py-20 lg:py-24">
+            <div className="px-5 sm:px-10 md:px-16 lg:px-20 py-16 sm:py-20 lg:py-24">
               <div className="max-w-2xl">
                 <SectionLabel>Ready to begin</SectionLabel>
-                <h2 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold tracking-[-0.035em] leading-[1.05] text-text-primary-v4 mb-5">
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-[3.5rem] font-bold tracking-[-0.035em] leading-[1.05] text-text-primary-v4 mb-5">
                   Build what matters.
                   <br />
                   <span className="text-text-secondary-v4 font-semibold">Start today.</span>

@@ -18,40 +18,40 @@ export default function VaultR2Page() {
       />
 
       {/* Stats Bar */}
-      <div className="v4-section-sm border-y border-hairline bg-ink-surface">
+      <div className="py-8 sm:py-12 border-y border-hairline bg-ink-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 text-center">
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">₹1.5</div>
-              <div className="text-sm text-text-muted-v4">per GB/mo</div>
+              <div className="text-2xl sm:text-3xl font-medium text-text-primary-v4 mb-1">₹1.5</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">per GB/mo</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">11 9s</div>
-              <div className="text-sm text-text-muted-v4">Durability SLA</div>
+              <div className="text-2xl sm:text-3xl font-medium text-text-primary-v4 mb-1">11 9s</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Durability SLA</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">Zero</div>
-              <div className="text-sm text-text-muted-v4">Internal Egress</div>
+              <div className="text-2xl sm:text-3xl font-medium text-text-primary-v4 mb-1">Zero</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">Internal Egress</div>
             </div>
             <div>
-              <div className="text-3xl font-medium text-text-primary-v4 mb-1">100%</div>
-              <div className="text-sm text-text-muted-v4">S3-Compatible</div>
+              <div className="text-2xl sm:text-3xl font-medium text-text-primary-v4 mb-1">100%</div>
+              <div className="text-xs sm:text-sm text-text-muted-v4">S3-Compatible</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Features Grid */}
-      <div className="v4-section">
+      <div className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-16">
-              <h2 className="v4-display text-text-primary-v4 mb-4">Object Storage, without the lock-in</h2>
-              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-lg">Designed for developers who want simplicity, speed, and transparent pricing.</p>
+              <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Object Storage, without the lock-in</h2>
+              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-base sm:text-lg">Designed for developers who want simplicity, speed, and transparent pricing.</p>
             </div>
           </ScrollReveal>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <ScrollReveal>
               <PanelCard className="v4-panel h-full flex flex-col p-6">
                 <Database className="w-8 h-8 text-signal mb-4" />
@@ -99,15 +99,15 @@ export default function VaultR2Page() {
       </div>
 
       {/* Interactive S3 Bucket Explorer & Egress Calculator */}
-      <div className="v4-section-sm bg-ink-surface border-y border-hairline">
+      <div className="py-12 sm:py-16 lg:py-24 bg-ink-surface border-y border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-10">
               <span className="v4-readout text-[11px] font-semibold uppercase tracking-widest text-signal px-3 py-1 rounded-full border border-signal/30 bg-signal/5">
                 Interactive S3 Console
               </span>
-              <h2 className="mt-3 text-3xl v4-display text-text-primary-v4">Explore S3 Buckets &amp; Calculate Egress Savings</h2>
-              <p className="mt-2 text-text-secondary-v4 max-w-xl mx-auto text-sm">
+              <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold v4-display text-text-primary-v4">Explore S3 Buckets &amp; Calculate Egress Savings</h2>
+              <p className="mt-2 text-text-secondary-v4 max-w-xl mx-auto text-sm sm:text-base">
                 Interact with the S3-compatible bucket explorer, generate temporary presigned download links, and calculate your savings vs AWS.
               </p>
             </div>
@@ -117,43 +117,43 @@ export default function VaultR2Page() {
       </div>
 
       {/* Comparison Table */}
-      <div className="v4-section bg-ink-surface-2 border-b border-hairline">
+      <div className="py-12 sm:py-16 lg:py-24 bg-ink-surface-2 border-b border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-16">
-              <h2 className="v4-display text-text-primary-v4 mb-4">Stop overpaying for egress</h2>
-              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-lg">Compare a typical scenario: 1TB storage with 10TB of egress bandwidth.</p>
+              <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Stop overpaying for egress</h2>
+              <p className="text-text-secondary-v4 max-w-2xl mx-auto text-base sm:text-lg">Compare a typical scenario: 1TB storage with 10TB of egress bandwidth.</p>
             </div>
           </ScrollReveal>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[560px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-hairline">
                   <th className="p-4 text-text-muted-v4 font-medium">Provider</th>
                   <th className="p-4 text-text-muted-v4 font-medium">Storage (1TB)</th>
                   <th className="p-4 text-text-muted-v4 font-medium">Egress (10TB)</th>
-                  <th className="p-4 text-text-primary-v4 font-bold text-xl">Total / Month</th>
+                  <th className="p-4 text-text-primary-v4 font-bold text-lg sm:text-xl">Total / Month</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b border-hairline bg-ink-surface/50">
-                  <td className="p-4 text-text-primary-v4 font-medium flex items-center"><Cloud className="w-5 h-5 mr-2 text-signal" /> VaultR2</td>
+                  <td className="p-4 text-text-primary-v4 font-medium flex items-center"><Cloud className="w-5 h-5 mr-2 text-signal shrink-0" /> VaultR2</td>
                   <td className="p-4 text-text-secondary-v4">₹1,500</td>
                   <td className="p-4 text-signal font-bold">₹0</td>
-                  <td className="p-4 text-signal font-bold text-xl">₹1,500</td>
+                  <td className="p-4 text-signal font-bold text-lg sm:text-xl">₹1,500</td>
                 </tr>
                 <tr className="border-b border-hairline">
                   <td className="p-4 text-text-primary-v4">AWS S3</td>
                   <td className="p-4 text-text-secondary-v4">~₹1,900</td>
                   <td className="p-4 text-text-secondary-v4">~₹73,100</td>
-                  <td className="p-4 text-text-primary-v4 font-medium text-xl">₹75,000+</td>
+                  <td className="p-4 text-text-primary-v4 font-medium text-lg sm:text-xl">₹75,000+</td>
                 </tr>
                 <tr>
                   <td className="p-4 text-text-primary-v4">Google Cloud Storage</td>
                   <td className="p-4 text-text-secondary-v4">~₹1,500</td>
                   <td className="p-4 text-text-secondary-v4">~₹58,500</td>
-                  <td className="p-4 text-text-primary-v4 font-medium text-xl">₹60,000+</td>
+                  <td className="p-4 text-text-primary-v4 font-medium text-lg sm:text-xl">₹60,000+</td>
                 </tr>
               </tbody>
             </table>
@@ -162,15 +162,15 @@ export default function VaultR2Page() {
       </div>
 
       {/* Multi-Language Code Playground Block */}
-      <div className="v4-section">
+      <div className="py-12 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="mb-10 text-center">
               <span className="v4-readout text-[11px] font-semibold uppercase tracking-widest text-signal px-3 py-1 rounded-full border border-signal/30 bg-signal/5">
                 Drop-in S3 SDK Compatibility
               </span>
-              <h2 className="mt-3 text-3xl v4-display text-text-primary-v4">Code in Node.js, cURL, Python &amp; Go</h2>
-              <p className="mt-2 text-text-secondary-v4 max-w-xl mx-auto text-sm">
+              <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold v4-display text-text-primary-v4">Code in Node.js, cURL, Python &amp; Go</h2>
+              <p className="mt-2 text-text-secondary-v4 max-w-xl mx-auto text-sm sm:text-base">
                 Switch endpoint URLs, run operations without code changes, and stream assets globally with zero egress fees.
               </p>
             </div>
@@ -180,11 +180,11 @@ export default function VaultR2Page() {
       </div>
 
       {/* Pricing */}
-      <section className="v4-section border-t border-hairline">
+      <section className="py-12 sm:py-16 lg:py-24 border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-text-secondary-v4 text-base sm:text-lg">Higher than GoDaddy. Way below AWS.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {/* Free tier */}
@@ -239,37 +239,39 @@ export default function VaultR2Page() {
           </div>
           {/* Competitor comparison */}
           <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
-            <table className="w-full text-sm">
-              <thead className="bg-ink-surface-2 text-text-secondary-v4">
-                <tr>
-                  <th className="py-3 px-4 text-left font-medium">Provider</th>
-                  <th className="py-3 px-4 text-left font-medium">Pricing</th>
-                  <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                <tr className="bg-signal/5">
-                  <td className="py-3 px-4 font-semibold text-signal">VaultHost Storage</td>
-                  <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹499 Pro / ₹1,999 Business</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Zero egress charges forever, S3 drop-in compatibility, fast Pune/Mumbai storage</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">AWS S3</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹15,000+/mo (for 1TB with egress)</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹8/GB storage + ₹7/GB outbound bandwidth penalty fees</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">Google Cloud Storage</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹14,000+/mo (for 1TB)</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹8.5/GB + high egress fees to public internet</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">Cloudflare R2</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹1,250/mo ($15)</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">$0.015/GB + Class A/B operation charges</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-sm">
+                <thead className="bg-ink-surface-2 text-text-secondary-v4">
+                  <tr>
+                    <th className="py-3 px-4 text-left font-medium">Provider</th>
+                    <th className="py-3 px-4 text-left font-medium">Pricing</th>
+                    <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  <tr className="bg-signal/5">
+                    <td className="py-3 px-4 font-semibold text-signal">VaultHost Storage</td>
+                    <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹499 Pro / ₹1,999 Business</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">Zero egress charges forever, S3 drop-in compatibility, fast Pune/Mumbai storage</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-text-primary-v4">AWS S3</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">₹15,000+/mo (for 1TB with egress)</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">₹8/GB storage + ₹7/GB outbound bandwidth penalty fees</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-text-primary-v4">Google Cloud Storage</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">₹14,000+/mo (for 1TB)</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">₹8.5/GB + high egress fees to public internet</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-text-primary-v4">Cloudflare R2</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">₹1,250/mo ($15)</td>
+                    <td className="py-3 px-4 text-text-secondary-v4">$0.015/GB + Class A/B operation charges</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>

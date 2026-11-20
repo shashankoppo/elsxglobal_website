@@ -117,7 +117,7 @@ export default function AIGatewayPortalPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-hairline overflow-x-auto pb-px">
+      <div className="flex gap-2 border-b border-hairline overflow-x-auto scrollbar-none whitespace-nowrap pb-1">
         {(['overview', 'playground', 'providers', 'routes', 'cache', 'analytics'] as const).map(tab => (
           <button 
             key={tab}

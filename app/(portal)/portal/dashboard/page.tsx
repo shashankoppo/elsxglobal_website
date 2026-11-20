@@ -106,7 +106,7 @@ export default function PortalDashboardPage() {
     return (
       <div className="space-y-6">
         <div className="h-8 w-48 animate-pulse rounded-xl bg-muted/40" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[0, 1, 2, 3].map((i) => <SkeletonCard key={i} />)}
         </div>
       </div>
@@ -135,17 +135,19 @@ export default function PortalDashboardPage() {
               <span className="w-2 h-2 rounded-full bg-good animate-pulse" />
               <span className="text-xs font-semibold text-good uppercase tracking-wider">System Operational</span>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight v4-display text-text-primary-v4 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight v4-display text-text-primary-v4 mb-2">
               Welcome back, <span className="text-signal">{user?.email?.split('@')[0] || 'User'}</span>
             </h1>
             <p className="text-sm sm:text-base text-text-secondary-v4 max-w-xl">
               Your infrastructure is running smoothly. Manage your active services, view analytics, and scale resources instantly.
             </p>
           </div>
-          <Link href="/vaulthost" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-btn v4-btn-primary text-sm whitespace-nowrap group w-full sm:w-auto">
-            <Plus className="h-4 w-4" /> Deploy Server
-            <ArrowRight className="h-4 w-4 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
-          </Link>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Link href="/vaulthost" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-btn v4-btn-primary text-sm whitespace-nowrap group w-full sm:w-auto">
+              <Plus className="h-4 w-4" /> Deploy Server
+              <ArrowRight className="h-4 w-4 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
+            </Link>
+          </div>
         </div>
       </motion.div>
 
@@ -160,21 +162,21 @@ export default function PortalDashboardPage() {
         </motion.div>
       )}
 
-      {/* Premium Stat Cards */}
-      <motion.div variants={fadeUp} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Premium Stat Cards: grid-cols-2 lg:grid-cols-4 */}
+      <motion.div variants={fadeUp} className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: 'Active Services', value: activeServices, icon: Server, color: 'text-signal', glow: 'shadow-[0_0_20px_rgba(0,255,204,0.1)]' },
           { label: 'Total Invoices', value: invoices.length, icon: Activity, color: 'text-blue-400', glow: 'shadow-[0_0_20px_rgba(96,165,250,0.1)]' },
           { label: 'Open Tickets', value: openTickets, icon: Clock, color: 'text-warn', glow: 'shadow-[0_0_20px_rgba(251,191,36,0.1)]' },
           { label: 'Plan Tier', value: services[0]?.tier || 'N/A', icon: Shield, color: 'text-purple-400', glow: 'shadow-[0_0_20px_rgba(192,132,252,0.1)]' },
         ].map((stat, i) => (
-          <div key={stat.label} className={`relative overflow-hidden liquid-glass-card rounded-2xl p-6 border-hairline hover:border-hairline-2 transition-all ${stat.glow}`}>
+          <div key={stat.label} className={`relative overflow-hidden liquid-glass-card rounded-2xl p-4 sm:p-6 border-hairline hover:border-hairline-2 transition-all ${stat.glow}`}>
             <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-              <stat.icon className="h-24 w-24" />
+              <stat.icon className="h-20 w-20 sm:h-24 sm:w-24" />
             </div>
-            <stat.icon className={`h-6 w-6 ${stat.color} mb-4`} />
-            <p className="text-4xl font-bold capitalize v4-display tracking-tight text-text-primary-v4 mb-1">{stat.value}</p>
-            <p className="text-sm text-text-muted-v4 uppercase tracking-wider font-semibold">{stat.label}</p>
+            <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${stat.color} mb-3 sm:mb-4`} />
+            <p className="text-2xl sm:text-4xl font-bold capitalize v4-display tracking-tight text-text-primary-v4 mb-1 truncate">{stat.value}</p>
+            <p className="text-xs sm:text-sm text-text-muted-v4 uppercase tracking-wider font-semibold truncate">{stat.label}</p>
           </div>
         ))}
       </motion.div>
@@ -189,7 +191,7 @@ export default function PortalDashboardPage() {
         <h2 className="text-lg font-semibold text-text-primary-v4 mb-4 flex items-center gap-2">
           <Zap className="h-5 w-5 text-signal" /> Quick Actions
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
             { id: 'reboot', label: 'Reboot Server', icon: Power, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
             { id: 'ssh', label: 'Access SSH Console', icon: Terminal, color: 'text-signal', bg: 'bg-signal/10 border-signal/20' },
@@ -199,20 +201,20 @@ export default function PortalDashboardPage() {
             <Link
               key={action.id}
               href={services.length === 1 ? `/portal/service/${services[0].id}?action=${action.id}` : `/portal/service`}
-              className="group liquid-glass-card rounded-2xl p-5 text-left hover:border-signal/30 transition-all flex flex-col hover:-translate-y-1"
+              className="group liquid-glass-card rounded-2xl p-4 sm:p-5 text-left hover:border-signal/30 transition-all flex flex-col hover:-translate-y-1"
             >
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${action.bg} border mb-4 group-hover:scale-110 transition-transform`}>
-                <action.icon className={`h-6 w-6 ${action.color}`} />
+              <div className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl ${action.bg} border mb-3 sm:mb-4 group-hover:scale-110 transition-transform`}>
+                <action.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color}`} />
               </div>
-              <p className="text-sm font-semibold text-text-primary-v4 group-hover:text-signal transition-colors">{action.label}</p>
+              <p className="text-xs sm:text-sm font-semibold text-text-primary-v4 group-hover:text-signal transition-colors">{action.label}</p>
             </Link>
           ))}
         </div>
       </motion.div>
 
       {/* Services + Recent Orders */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <motion.div variants={fadeUp} className="v4-panel p-6 border-hairline">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <motion.div variants={fadeUp} className="v4-panel p-4 sm:p-6 border-hairline min-w-0">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-hairline">
             <h2 className="text-lg font-semibold text-text-primary-v4 flex items-center gap-2">
               <Server className="h-5 w-5 text-signal" /> Your Services
@@ -232,18 +234,18 @@ export default function PortalDashboardPage() {
           ) : (
             <div className="space-y-2">
               {services.slice(0, 5).map((s) => (
-                <Link key={s.id} href={`/portal/service/${s.id}`} className="group flex items-center justify-between text-sm hover:bg-ink-surface p-3 rounded-xl border border-transparent hover:border-hairline transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center border border-hairline shadow-sm">
-                      <Globe className="h-5 w-5 text-text-secondary-v4 group-hover:text-signal transition-colors" />
+                <Link key={s.id} href={`/portal/service/${s.id}`} className="group flex items-center justify-between text-sm hover:bg-ink-surface p-2.5 sm:p-3 rounded-xl border border-transparent hover:border-hairline transition-all gap-2">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-background flex items-center justify-center border border-hairline shadow-sm shrink-0">
+                      <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-text-secondary-v4 group-hover:text-signal transition-colors" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-text-primary-v4">{s.plan_name || s.name || 'Hosting Plan'}</p>
-                      <p className="text-xs text-text-muted-v4">{s.domain || 'Unconfigured Domain'}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-text-primary-v4 truncate text-xs sm:text-sm">{s.plan_name || s.name || 'Hosting Plan'}</p>
+                      <p className="text-[11px] sm:text-xs text-text-muted-v4 truncate">{s.domain || 'Unconfigured Domain'}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <span className={`text-[10px] sm:text-xs px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap ${
                       s.status === 'active' ? 'bg-good/10 text-good border border-good/20' 
                       : s.status === 'failed' ? 'bg-error/10 text-error border border-error/20'
                       : s.status === 'suspended' ? 'bg-warn/10 text-warn border border-warn/20' 
@@ -259,7 +261,7 @@ export default function PortalDashboardPage() {
           )}
         </motion.div>
 
-        <motion.div variants={fadeUp} className="v4-panel p-6 border-hairline">
+        <motion.div variants={fadeUp} className="v4-panel p-4 sm:p-6 border-hairline min-w-0">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-hairline">
             <h2 className="text-lg font-semibold text-text-primary-v4 flex items-center gap-2">
               <Activity className="h-5 w-5 text-blue-400" /> Recent Transactions
@@ -279,18 +281,18 @@ export default function PortalDashboardPage() {
           ) : (
             <div className="space-y-2">
               {invoices.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between text-sm hover:bg-ink-surface p-3 rounded-xl border border-transparent hover:border-hairline transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center border border-hairline">
-                      <CheckCircle2 className={`h-5 w-5 ${inv.status === 'paid' ? 'text-good' : 'text-warn'}`} />
+                <div key={inv.id} className="flex items-center justify-between text-sm hover:bg-ink-surface p-2.5 sm:p-3 rounded-xl border border-transparent hover:border-hairline transition-all gap-2">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-background flex items-center justify-center border border-hairline shrink-0">
+                      <CheckCircle2 className={`h-4 w-4 sm:h-5 sm:w-5 ${inv.status === 'paid' ? 'text-good' : 'text-warn'}`} />
                     </div>
-                    <div>
-                      <p className="font-semibold text-text-primary-v4">{inv.hosting_orders?.plan_name || inv.invoice_number || 'Service Order'}</p>
-                      <p className="text-xs text-text-muted-v4">{new Date(inv.created_at).toLocaleDateString()}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-text-primary-v4 truncate text-xs sm:text-sm">{inv.hosting_orders?.plan_name || inv.invoice_number || 'Service Order'}</p>
+                      <p className="text-[11px] sm:text-xs text-text-muted-v4 truncate">{new Date(inv.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className={`text-xs px-3 py-1 font-medium rounded-full ${
+                  <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                    <span className={`text-[10px] sm:text-xs px-2.5 sm:px-3 py-0.5 sm:py-1 font-medium rounded-full whitespace-nowrap ${
                       inv.status === 'paid' ? 'bg-good/10 text-good border border-good/20' 
                       : inv.status === 'pending' ? 'bg-warn/10 text-warn border border-warn/20' 
                       : 'bg-muted text-muted-foreground border border-border'

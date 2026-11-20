@@ -149,22 +149,22 @@ export default function AISolutionsPage() {
       <section className="v4-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 flex flex-col items-center">
-            <h2 className="v4-display text-3xl md:text-4xl font-semibold mb-4">Core AI Capabilities</h2>
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-semibold mb-4">Core AI Capabilities</h2>
             <motion.div className="h-0.5 mt-3 rounded-full" style={{ background: 'linear-gradient(90deg, hsl(var(--signal)), hsl(var(--primary)))' }} initial={{ width: 0 }} whileInView={{ width: 80 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} />
-            <p className="text-text-secondary-v4 max-w-2xl mx-auto text-lg mt-6">Applied artificial intelligence tailored to enterprise security and scale requirements.</p>
+            <p className="text-text-secondary-v4 max-w-2xl mx-auto text-base sm:text-lg mt-6">Applied artificial intelligence tailored to enterprise security and scale requirements.</p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
             {services.map((service, i) => (
               <ScrollReveal key={i} delay={i * 100}>
-                <PanelCard className="h-full p-8 border border-hairline hover:border-signal/30 transition-all">
+                <PanelCard className="h-full p-6 sm:p-8 border border-hairline hover:border-signal/30 transition-all">
                   <div className="flex items-center mb-4">
-                    <div className="bg-ink-surface p-3 rounded-lg mr-4 border border-hairline">
+                    <div className="bg-ink-surface p-3 rounded-lg mr-4 border border-hairline shrink-0">
                       {service.icon}
                     </div>
                     <h3 className="text-xl font-semibold">{service.title}</h3>
                   </div>
-                  <p className="text-text-secondary-v4 text-lg">{service.description}</p>
+                  <p className="text-text-secondary-v4 text-base sm:text-lg leading-relaxed">{service.description}</p>
                 </PanelCard>
               </ScrollReveal>
             ))}
@@ -175,13 +175,13 @@ export default function AISolutionsPage() {
       <section className="v4-section bg-ink-surface border-y border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 flex flex-col items-center">
-            <h2 className="v4-display text-3xl md:text-4xl font-semibold mb-4">High-Impact Use Cases</h2>
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-semibold mb-4">High-Impact Use Cases</h2>
             <motion.div className="h-0.5 mt-3 rounded-full" style={{ background: 'linear-gradient(90deg, hsl(var(--signal)), hsl(var(--primary)))' }} initial={{ width: 0 }} whileInView={{ width: 80 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} />
-            <p className="text-text-secondary-v4 max-w-2xl mx-auto text-lg mt-6">Practical applications of AI delivering measurable ROI.</p>
+            <p className="text-text-secondary-v4 max-w-2xl mx-auto text-base sm:text-lg mt-6">Practical applications of AI delivering measurable ROI.</p>
           </div>
           
           <motion.div 
-            className="grid md:grid-cols-3 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
             variants={containerVariants}
             initial="hidden"
             whileInView="show"
@@ -193,7 +193,7 @@ export default function AISolutionsPage() {
                   <PanelCard className="p-6 rounded-2xl border border-hairline h-full flex flex-col bg-ink">
                     <div className="text-signal mb-4">{uc.icon}</div>
                     <h3 className="text-lg font-semibold mb-2">{uc.title}</h3>
-                    <p className="text-text-secondary-v4 text-sm">{uc.desc}</p>
+                    <p className="text-text-secondary-v4 text-sm leading-relaxed">{uc.desc}</p>
                   </PanelCard>
                 </motion.div>
               </motion.div>
@@ -203,8 +203,47 @@ export default function AISolutionsPage() {
       </section>
 
       <section className="v4-section">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Enterprise AI API</h2>
+            <p className="text-text-secondary-v4 max-w-2xl mx-auto text-base sm:text-lg">Simple SDK integration for model inference, fine-tuning, and vector retrieval.</p>
+          </div>
+          <div className="rounded-panel border border-hairline bg-ink-surface-2 p-4 sm:p-6 overflow-hidden">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-hairline text-xs font-mono text-text-muted-v4">
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500/80 inline-block" />
+                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80 inline-block" />
+                <span className="w-2.5 h-2.5 rounded-full bg-good inline-block" />
+                <span className="ml-2 text-text-primary-v4 font-semibold">inference.py</span>
+              </span>
+              <span>Python 3.11</span>
+            </div>
+            <div className="overflow-x-auto">
+              <pre className="font-mono text-xs sm:text-sm text-text-secondary-v4 leading-relaxed">
+{`from elsx_ai import EnterpriseClient, PipelineConfig
+
+client = EnterpriseClient(api_key="sk_live_elsx_...")
+pipeline = client.pipelines.deploy(
+    model="elsx-llama-70b-instruct-v2",
+    context_window=32768,
+    guardrails=["pii_redaction", "hallucination_check", "prompt_injection_shield"],
+    latency_sla_ms=120
+)
+
+# Stream inference response with sub-100ms TTFT
+response = pipeline.generate_stream(
+    prompt="Analyze Q3 operational variance and forecast Q4 inventory risks.",
+    temperature=0.2
+)`}
+              </pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="v4-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
-          <h2 className="v4-display text-2xl md:text-3xl font-semibold mb-4">Implementation Methodology</h2>
+          <h2 className="v4-display text-2xl sm:text-3xl lg:text-4xl font-semibold mb-4">Implementation Methodology</h2>
           <motion.div className="h-0.5 mt-3 mb-12 rounded-full" style={{ background: 'linear-gradient(90deg, hsl(var(--signal)), hsl(var(--primary)))' }} initial={{ width: 0 }} whileInView={{ width: 80 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} />
           
           <div className="flex flex-col md:flex-row items-center justify-between relative w-full">
@@ -237,10 +276,10 @@ export default function AISolutionsPage() {
 
       <section className="v4-section-sm border-t border-hairline relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-signal/10 via-primary/5 to-signal/10 opacity-50 pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 flex flex-col items-center">
-          <h2 className="v4-display text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-signal to-primary">Ready to accelerate with AI?</h2>
-          <p className="text-text-secondary-v4 mb-8 text-lg max-w-2xl">Discover how custom AI solutions can optimize your operations and uncover new opportunities.</p>
-          <Link href="/contact" className="v4-btn-primary rounded-btn inline-flex items-center px-8 py-4 text-lg shadow-[0_0_30px_rgba(var(--color-signal),0.4)] hover:shadow-[0_0_40px_rgba(var(--color-signal),0.6)] transition-shadow">
+        <div className="max-w-4xl mx-auto px-5 sm:px-8 lg:px-16 text-center relative z-10 flex flex-col items-center">
+          <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-signal to-primary">Ready to accelerate with AI?</h2>
+          <p className="text-text-secondary-v4 mb-8 text-base sm:text-lg max-w-2xl mx-auto">Discover how custom AI solutions can optimize your operations and uncover new opportunities.</p>
+          <Link href="/contact" className="v4-btn-primary rounded-btn inline-flex items-center justify-center px-8 py-4 text-base sm:text-lg w-full sm:w-auto shadow-[0_0_30px_rgba(var(--color-signal),0.4)] hover:shadow-[0_0_40px_rgba(var(--color-signal),0.6)] transition-shadow">
             Book an AI assessment <ArrowRight className="w-5 h-5 ml-2" />
           </Link>
         </div>

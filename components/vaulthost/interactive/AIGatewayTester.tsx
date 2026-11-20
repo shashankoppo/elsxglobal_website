@@ -212,7 +212,7 @@ export function AIGatewayTester() {
                 {/* Response View */}
                 <div>
                   <label className="text-[11px] text-text-muted-v4 block mb-1">Synthesized Response:</label>
-                  <pre className="p-3 rounded-xl bg-ink border border-hairline text-xs font-mono text-green-400 overflow-x-auto leading-relaxed">
+                  <pre className="p-3 rounded-xl bg-ink border border-hairline text-xs sm:text-sm font-mono text-green-400 overflow-x-auto leading-relaxed">
                     {result.response}
                   </pre>
                 </div>
@@ -228,9 +228,9 @@ export function AIGatewayTester() {
             )}
           </div>
 
-          <div className="pt-4 border-t border-hairline flex items-center justify-between text-xs">
-            <span className="text-text-muted-v4">Universal Endpoint: <code className="text-signal">https://ai.vaulthost.cloud/v1</code></span>
-            <a href="/portal/cloud/ai" className="text-signal hover:underline flex items-center gap-1">
+          <div className="pt-4 border-t border-hairline flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+            <span className="text-text-muted-v4">Universal Endpoint: <code className="text-signal break-all">https://ai.vaulthost.cloud/v1</code></span>
+            <a href="/portal/cloud/ai" className="text-signal hover:underline flex items-center gap-1 shrink-0">
               Open AI Gateway Console <ArrowRight className="h-3 w-3" />
             </a>
           </div>

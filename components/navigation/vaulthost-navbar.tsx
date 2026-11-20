@@ -205,65 +205,103 @@ export function VaultHostNavbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-x-0 top-16 h-[calc(100dvh-4rem)] bg-ink-surface/98 backdrop-blur-xl border-t border-hairline overflow-y-auto z-[9999] shadow-2xl">
-          <div className="px-4 py-4 space-y-4">
-            {/* Domain search */}
-            <form onSubmit={handleDomainSearch}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted-v4" />
-                <input
-                  type="text"
-                  value={domainQuery}
-                  onChange={(e) => setDomainQuery(e.target.value)}
-                  placeholder="Find your domain..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-btn border border-hairline bg-ink-surface-2 text-sm text-text-primary-v4 focus:border-signal focus:outline-none"
-                />
-              </div>
-            </form>
+        <>
+          {/* Solid scrim — prevents bleed-through */}
+          <div
+            className="lg:hidden fixed inset-0 top-16 z-[9998]"
+            style={{ background: 'hsl(215,35%,5%)' }}
+            onClick={() => setMobileOpen(false)}
+            aria-hidden
+          />
+          <div
+            className="lg:hidden fixed inset-x-0 top-16 h-[calc(100dvh-4rem)] overflow-y-auto z-[9999] shadow-2xl"
+            style={{ background: 'hsl(215,30%,8%)', borderTop: '1px solid hsl(215,18%,20%)' }}
+          >
+            {/* Top signal accent line */}
+            <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--v4-signal)/0.4), transparent)' }} />
 
-            {/* Quick links */}
-            <div className="flex gap-2">
-              <Link href="/vaulthost/pricing" className="flex-1 text-center px-3 py-2.5 rounded-btn v4-btn-primary text-sm font-medium">
-                View Plans
-              </Link>
-              <Link href="/vaulthost/status" className="flex-1 text-center px-3 py-2.5 rounded-btn v4-btn-secondary text-sm font-medium">
-                Status
-              </Link>
-            </div>
+            <div className="px-4 py-5 space-y-4">
+              {/* Domain search */}
+              <form onSubmit={handleDomainSearch}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'hsl(215,14%,50%)' }} />
+                  <input
+                    type="text"
+                    value={domainQuery}
+                    onChange={(e) => setDomainQuery(e.target.value)}
+                    placeholder="Find your domain..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors"
+                    style={{
+                      background: 'hsl(215,25%,13%)',
+                      border: '1px solid hsl(215,18%,22%)',
+                      color: 'hsl(210,20%,92%)',
+                    }}
+                  />
+                </div>
+              </form>
 
-            {/* Collapsible category sections */}
-            {VAULTHOST_MENU.columns.map((col) => (
-              <div key={col.heading}>
-                <button
-                  onClick={() => setMobileExpanded(mobileExpanded === col.heading ? null : col.heading)}
-                  className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-medium text-text-secondary-v4 hover:text-text-primary-v4 rounded-btn hover:bg-ink-surface-2 transition-colors"
+              {/* Quick links */}
+              <div className="flex gap-2">
+                <Link
+                  href="/vaulthost/pricing"
+                  className="flex-1 text-center px-3 py-2.5 rounded-xl text-sm font-bold"
+                  style={{ background: 'hsl(var(--v4-signal))', color: 'hsl(215,35%,6%)' }}
                 >
-                  {col.heading}
-                  <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', mobileExpanded === col.heading && 'rotate-180')} />
-                </button>
-                {mobileExpanded === col.heading && (
-                  <div className="ml-3 pl-3 border-l border-hairline space-y-0.5 mt-1 mb-2">
-                    {col.items.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-text-secondary-v4 hover:text-signal rounded-btn transition-colors"
-                      >
-                        <item.icon className="h-4 w-4 text-signal shrink-0" />
-                        <div>
-                          <p>{item.label}</p>
-                          <p className="text-xs text-text-muted-v4">{item.desc}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                  View Plans
+                </Link>
+                <Link
+                  href="/vaulthost/status"
+                  className="flex-1 text-center px-3 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{ background: 'hsl(215,25%,13%)', border: '1px solid hsl(215,18%,22%)', color: 'hsl(210,20%,88%)' }}
+                >
+                  Status
+                </Link>
               </div>
-            ))}
 
-            <Link href="/" className="block p-2 text-sm text-text-muted-v4">← Back to ELSxGlobal</Link>
+              {/* Divider */}
+              <div className="h-px" style={{ background: 'hsl(215,18%,18%)' }} />
+
+              {/* Collapsible category sections */}
+              {VAULTHOST_MENU.columns.map((col) => (
+                <div key={col.heading}>
+                  <button
+                    type="button"
+                    onClick={() => setMobileExpanded(mobileExpanded === col.heading ? null : col.heading)}
+                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-semibold rounded-xl transition-colors"
+                    style={{
+                      color: mobileExpanded === col.heading ? 'hsl(var(--v4-signal))' : 'hsl(215,14%,78%)',
+                      background: mobileExpanded === col.heading ? 'hsl(215,25%,13%)' : 'transparent',
+                    }}
+                  >
+                    {col.heading}
+                    <ChevronDown className={cn('h-4 w-4 transition-transform duration-200 shrink-0', mobileExpanded === col.heading && 'rotate-180')} />
+                  </button>
+                  {mobileExpanded === col.heading && (
+                    <div className="ml-2 mt-1 mb-2 rounded-xl overflow-hidden" style={{ background: 'hsl(215,25%,11%)' }}>
+                      {col.items.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="flex items-center gap-3 px-4 py-2.5 transition-colors"
+                          style={{ color: 'hsl(215,14%,72%)' }}
+                        >
+                          <item.icon className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(var(--v4-signal)/0.7)' }} />
+                          <div>
+                            <p className="text-sm">{item.label}</p>
+                            <p className="text-xs" style={{ color: 'hsl(215,14%,52%)' }}>{item.desc}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <div className="h-px" style={{ background: 'hsl(215,18%,18%)' }} />
+              <Link href="/" className="block px-4 py-2 text-sm" style={{ color: 'hsl(215,14%,52%)' }}>← Back to ELSxGlobal</Link>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </header>
   );

@@ -183,61 +183,97 @@ export function EnterpriseNavbarV4() {
 
       {/* Mobile menu — shows below xl */}
       {mobileOpen && (
-        <div className="xl:hidden fixed inset-x-0 top-16 h-[calc(100dvh-4rem)] bg-ink-surface/98 backdrop-blur-xl border-t border-hairline overflow-y-auto z-[9999] shadow-2xl">
-          <div className="px-4 py-4 space-y-1">
-            {NAV_PILLARS.map((pillar) => (
-              <div key={pillar.label}>
-                {pillar.menu ? (
-                  <>
-                    <button
-                      onClick={() => setMobileExpanded(mobileExpanded === pillar.label ? null : pillar.label)}
-                      className="flex items-center justify-between w-full px-3 py-3 text-sm font-medium text-text-secondary-v4 hover:text-text-primary-v4 rounded-btn hover:bg-ink-surface-2 transition-colors"
+        <>
+          {/* Solid dark scrim behind menu — prevents ANY bleed-through */}
+          <div
+            className="xl:hidden fixed inset-0 top-16 z-[9998]"
+            style={{ background: 'hsl(215,35%,5%)' }}
+            onClick={() => setMobileOpen(false)}
+            aria-hidden
+          />
+          {/* Actual drawer */}
+          <div
+            className="xl:hidden fixed inset-x-0 top-16 h-[calc(100dvh-4rem)] overflow-y-auto z-[9999] shadow-2xl"
+            style={{ background: 'hsl(215,30%,8%)', borderTop: '1px solid hsl(215,18%,20%)' }}
+          >
+            {/* Top accent line */}
+            <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--v4-signal)/0.4), transparent)' }} />
+
+            <div className="px-4 py-5 space-y-1">
+              {NAV_PILLARS.map((pillar) => (
+                <div key={pillar.label}>
+                  {pillar.menu ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setMobileExpanded(mobileExpanded === pillar.label ? null : pillar.label)}
+                        className="flex items-center justify-between w-full px-4 py-3.5 text-sm font-semibold rounded-xl transition-colors"
+                        style={{
+                          color: mobileExpanded === pillar.label ? 'hsl(var(--v4-signal))' : 'hsl(215,14%,78%)',
+                          background: mobileExpanded === pillar.label ? 'hsl(215,25%,13%)' : 'transparent',
+                        }}
+                      >
+                        {pillar.label}
+                        <ChevronDown className={cn('h-4 w-4 transition-transform duration-200 shrink-0', mobileExpanded === pillar.label && 'rotate-180')} />
+                      </button>
+                      {mobileExpanded === pillar.label && (
+                        <div className="ml-2 mt-1 mb-3 rounded-xl overflow-hidden" style={{ background: 'hsl(215,25%,11%)' }}>
+                          {pillar.menu.columns.map((col) => (
+                            <div key={col.heading}>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.16em] px-4 pt-3 pb-1" style={{ color: 'hsl(var(--v4-signal))' }}>
+                                {col.heading}
+                              </p>
+                              {col.items.map((item) => (
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  className="flex items-center gap-3 px-4 py-2.5 transition-colors"
+                                  style={{ color: 'hsl(215,14%,72%)' }}
+                                  onMouseEnter={e => (e.currentTarget.style.color = 'hsl(var(--v4-signal))')}
+                                  onMouseLeave={e => (e.currentTarget.style.color = 'hsl(215,14%,72%)')}
+                                >
+                                  <item.icon className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(var(--v4-signal)/0.7)' }} />
+                                  <span className="text-sm">{item.label}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <Link
+                      href={pillar.href}
+                      className="block px-4 py-3.5 text-sm font-semibold rounded-xl transition-colors"
+                      style={{ color: 'hsl(215,14%,78%)' }}
                     >
                       {pillar.label}
-                      <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', mobileExpanded === pillar.label && 'rotate-180')} />
-                    </button>
-                    {mobileExpanded === pillar.label && (
-                      <div className="ml-3 pl-3 border-l border-hairline space-y-0.5 mt-1 mb-2">
-                        {pillar.menu.columns.map((col) => (
-                          <div key={col.heading}>
-                            <p className="v4-readout text-[10px] uppercase tracking-widest text-signal mt-2 mb-1 px-2">
-                              {col.heading}
-                            </p>
-                            {col.items.map((item) => (
-                              <Link
-                                key={item.href}
-                                href={item.href}
-                                className="flex items-center gap-2 px-3 py-2.5 text-sm text-text-secondary-v4 hover:text-signal rounded-btn transition-colors"
-                              >
-                                <item.icon className="h-4 w-4 text-signal shrink-0" />
-                                {item.label}
-                              </Link>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <Link
-                    href={pillar.href}
-                    className="block px-3 py-3 text-sm font-medium text-text-secondary-v4 hover:text-text-primary-v4 rounded-btn hover:bg-ink-surface-2 transition-colors"
-                  >
-                    {pillar.label}
-                  </Link>
-                )}
-              </div>
-            ))}
-            <div className="pt-4 mt-4 v4-hr space-y-2">
-              <Link href="/portal" className="block px-3 py-3 text-sm font-medium text-text-secondary-v4 hover:text-text-primary-v4 rounded-btn hover:bg-ink-surface-2 transition-colors">
+                    </Link>
+                  )}
+                </div>
+              ))}
+
+              {/* Divider */}
+              <div className="my-4 h-px" style={{ background: 'hsl(215,18%,18%)' }} />
+
+              {/* Auth CTAs */}
+              <Link
+                href="/portal"
+                className="block px-4 py-3.5 text-sm font-semibold rounded-xl transition-colors"
+                style={{ color: 'hsl(215,14%,78%)' }}
+              >
                 Sign In
               </Link>
-              <Link href="/vaulthost" className="flex items-center justify-center gap-2 px-4 py-3 rounded-btn v4-btn-primary text-sm font-medium">
+              <Link
+                href="/vaulthost"
+                className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-bold mt-2"
+                style={{ background: 'hsl(var(--v4-signal))', color: 'hsl(215,35%,6%)' }}
+              >
                 Start Free <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
-        </div>
+        </>
       )}
     </header>
   );

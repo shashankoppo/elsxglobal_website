@@ -181,12 +181,13 @@ export function ElsxHero() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65, ease: EASE, delay: 0.14 }}
-              className="text-base sm:text-[1.05rem] text-text-secondary-v4 leading-[1.75] mb-8 max-w-[55ch]"
+              className="text-base sm:text-[1.05rem] text-text-secondary-v4 leading-[1.75] mb-8 w-full max-w-[55ch] overflow-hidden"
             >
               ELSxGlobal delivers integrated technology, intelligence, and infrastructure
               through four world-class divisions — built for institutions that cannot
               afford to compromise on precision or scale.
             </motion.p>
+
 
             {/* CTAs */}
             <motion.div

@@ -68,19 +68,21 @@ function MetricItem({ target, suffix, prefix, dec, label }: {
 }) {
   const { count, ref } = useCountUp(target, 2000, dec);
   return (
-    <div className="flex flex-col py-6 sm:py-8 lg:py-10 px-3 sm:px-4 lg:px-10 first:pl-0 last:pr-0">
+    <div className="flex flex-col py-5 sm:py-7 lg:py-10 px-4 sm:px-5 lg:px-10">
       <span
         ref={ref}
-        className="text-[1.75rem] sm:text-[2.5rem] lg:text-[3.25rem] font-bold tracking-[-0.04em] leading-none text-text-primary-v4 mb-2 tabular-nums"
+        className="font-bold tracking-[-0.04em] leading-none text-text-primary-v4 mb-2 tabular-nums"
+        style={{ fontSize: 'clamp(1.4rem, 4vw, 3.25rem)' }}
       >
         {prefix}{count}{suffix}
       </span>
-      <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-text-muted-v4">
+      <span className="text-[10px] sm:text-[11px] font-semibold tracking-[0.12em] uppercase text-text-muted-v4">
         {label}
       </span>
     </div>
   );
 }
+
 
 function MetricBar() {
   const items = [
@@ -90,9 +92,9 @@ function MetricBar() {
     { target: 40,    suffix: '+',  prefix: '',  dec: 0, label: 'Countries Served' },
   ];
   return (
-    <section className="border-y border-hairline">
+    <section className="border-y border-hairline overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-hairline">
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-hairline">
           {items.map((item) => (
             <MetricItem key={item.label} {...item} />
           ))}
@@ -101,6 +103,7 @@ function MetricBar() {
     </section>
   );
 }
+
 
 /* ═══════════════════════════════════════════════
    CLIENT MARQUEE
@@ -190,19 +193,20 @@ const DIVISIONS = [
 
 function EcosystemSection() {
   return (
-    <section className="py-24 sm:py-32 border-b border-hairline">
+    <section className="py-16 sm:py-24 lg:py-32 border-b border-hairline overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           variants={stagger()}
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, amount: 0.08 }}
-          className="mb-14"
+          className="mb-10 sm:mb-14"
         >
           <motion.div variants={fadeUp}><SectionLabel>The Platform</SectionLabel></motion.div>
           <motion.h2
             variants={fadeUp}
-            className="text-4xl sm:text-5xl font-bold tracking-[-0.032em] leading-[1.06] text-text-primary-v4 max-w-xl"
+            className="font-bold tracking-[-0.032em] leading-[1.06] text-text-primary-v4 max-w-xl"
+            style={{ fontSize: 'clamp(1.7rem, 5vw, 3rem)' }}
           >
             Four divisions.
             <br />
@@ -212,7 +216,7 @@ function EcosystemSection() {
           </motion.h2>
         </motion.div>
 
-        {/* Bento grid — same visual language as Stripe's product grid */}
+        {/* Bento grid */}
         <motion.div
           variants={stagger(0.06)}
           initial="hidden"
@@ -227,30 +231,26 @@ function EcosystemSection() {
               className={d.wide ? 'lg:col-span-2' : ''}
             >
               <Link href={d.href} className="group block h-full">
-                <div className="relative h-full rounded-2xl border border-hairline bg-ink-surface overflow-hidden transition-colors hover:bg-ink-surface-2 p-7 flex flex-col">
-                  {/* Hover top accent line */}
+                <div className="relative h-full rounded-2xl border border-hairline bg-ink-surface overflow-hidden transition-colors hover:bg-ink-surface-2 p-5 sm:p-7 flex flex-col">
                   <div
                     className="absolute top-0 inset-x-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                     style={{ background: `linear-gradient(90deg, transparent, ${d.accent}60, transparent)` }}
                   />
 
-                  {/* Icon */}
                   <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-hairline mb-6"
+                    className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-hairline mb-5 sm:mb-6"
                     style={{ background: `${d.accent}10`, borderColor: `${d.accent}25` }}
                   >
-                    <d.icon className="h-4.5 w-4.5" style={{ color: d.accent }} />
+                    <d.icon className="h-4 w-4" style={{ color: d.accent }} />
                   </div>
 
-                  {/* Name + tag */}
                   <h3 className="text-base font-bold text-text-primary-v4 mb-1">{d.name}</h3>
-                  <p className="text-[11px] font-semibold tracking-[0.1em] uppercase mb-4" style={{ color: `${d.accent}99` }}>
+                  <p className="text-[11px] font-semibold tracking-[0.1em] uppercase mb-3 sm:mb-4" style={{ color: `${d.accent}99` }}>
                     {d.sub}
                   </p>
-                  <p className="text-sm text-text-secondary-v4 leading-relaxed mb-6">{d.desc}</p>
+                  <p className="text-sm text-text-secondary-v4 leading-relaxed mb-4 sm:mb-6">{d.desc}</p>
 
-                  {/* Capability chips */}
-                  <div className="flex flex-wrap gap-1.5 mb-6">
+                  <div className="flex flex-wrap gap-1.5 mb-4 sm:mb-6">
                     {d.chips.map((c) => (
                       <span
                         key={c}
@@ -261,12 +261,11 @@ function EcosystemSection() {
                     ))}
                   </div>
 
-                  {/* Metrics */}
-                  <div className="mt-auto pt-5 border-t border-hairline flex items-center justify-between">
-                    <div className="flex gap-7">
+                  <div className="mt-auto pt-4 sm:pt-5 border-t border-hairline flex items-center justify-between">
+                    <div className="flex gap-5 sm:gap-7">
                       {d.metrics.map((m) => (
                         <div key={m.l}>
-                          <p className="text-lg font-bold text-text-primary-v4">{m.v}</p>
+                          <p className="text-base sm:text-lg font-bold text-text-primary-v4">{m.v}</p>
                           <p className="text-[11px] text-text-muted-v4">{m.l}</p>
                         </div>
                       ))}
@@ -284,6 +283,7 @@ function EcosystemSection() {
     </section>
   );
 }
+
 
 /* ═══════════════════════════════════════════════
    AI SECTION
@@ -323,9 +323,9 @@ function AISection() {
   }, []);
 
   return (
-    <section className="py-24 sm:py-32 border-b border-hairline bg-ink-surface/40 dark:bg-transparent">
+    <section className="py-16 sm:py-24 lg:py-32 border-b border-hairline bg-ink-surface/40 dark:bg-transparent overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-14 xl:gap-24 items-start">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 xl:gap-24 items-start">
 
           {/* Left */}
           <motion.div
@@ -337,28 +337,29 @@ function AISection() {
             <motion.div variants={fadeUp}><SectionLabel>Intelligence Layer</SectionLabel></motion.div>
             <motion.h2
               variants={fadeUp}
-              className="text-4xl sm:text-5xl font-bold tracking-[-0.032em] leading-[1.06] mb-6 text-text-primary-v4"
+              className="font-bold tracking-[-0.032em] leading-[1.06] mb-5 sm:mb-6 text-text-primary-v4"
+              style={{ fontSize: 'clamp(1.7rem, 5vw, 3rem)' }}
             >
               AI that doesn&apos;t just
               <br />
               <span className="text-text-secondary-v4 font-semibold">analyze — it acts.</span>
             </motion.h2>
-            <motion.p variants={fadeUp} className="text-base text-text-secondary-v4 leading-relaxed mb-10">
+            <motion.p variants={fadeUp} className="text-sm sm:text-base text-text-secondary-v4 leading-relaxed mb-8 sm:mb-10">
               Every ELSxGlobal division runs on a shared intelligence core that learns,
               predicts, and executes — with the Action Gateway ensuring every decision
               is safe, auditable, and reversible.
             </motion.p>
-            <motion.ul variants={stagger(0.05)} className="space-y-0 mb-10">
+            <motion.ul variants={stagger(0.05)} className="space-y-0 mb-8 sm:mb-10">
               {AI_FEATURES.map((f) => (
                 <motion.li
                   key={f.label}
                   variants={fadeUp}
-                  className="flex items-start gap-4 py-4 border-b border-hairline last:border-0"
+                  className="flex items-start gap-3 sm:gap-4 py-3.5 sm:py-4 border-b border-hairline last:border-0"
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-hairline bg-ink-surface mt-0.5">
-                    <f.icon className="h-4 w-4 text-text-secondary-v4" />
+                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg border border-hairline bg-ink-surface mt-0.5">
+                    <f.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-text-secondary-v4" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-semibold text-text-primary-v4 mb-0.5">{f.label}</p>
                     <p className="text-xs text-text-muted-v4 leading-relaxed">{f.desc}</p>
                   </div>
@@ -382,23 +383,23 @@ function AISection() {
           >
             <div className="rounded-xl border border-slate-800/80 overflow-hidden" style={{ background: '#0d1117' }}>
               {/* Titlebar */}
-              <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-800/60" style={{ background: '#161b22' }}>
+              <div className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 border-b border-slate-800/60" style={{ background: '#161b22' }}>
                 <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/60" />
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/60" />
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500/60" />
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500/60" />
                 </div>
-                <span className="ml-3 text-[11px] text-slate-500 font-mono tracking-wide">
+                <span className="ml-2 text-[10px] sm:text-[11px] text-slate-500 font-mono tracking-wide truncate">
                   elsx-intelligence · engine v2.5.0
                 </span>
-                <div className="ml-auto flex items-center gap-1.5">
+                <div className="ml-auto flex items-center gap-1.5 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] text-emerald-400 font-mono font-semibold tracking-widest uppercase">Live</span>
+                  <span className="text-[9px] sm:text-[10px] text-emerald-400 font-mono font-semibold tracking-widest uppercase">Live</span>
                 </div>
               </div>
 
-              {/* Log body */}
-              <div className="p-5 h-[240px] overflow-hidden flex flex-col justify-end gap-1.5 font-mono text-[12px]">
+              {/* Log body — overflow-x-auto prevents line breaks from overflowing */}
+              <div className="p-4 sm:p-5 h-[200px] sm:h-[240px] overflow-hidden flex flex-col justify-end gap-1 sm:gap-1.5 font-mono text-[10px] sm:text-[12px]">
                 <AnimatePresence initial={false}>
                   {logs.map((line, i) => (
                     <motion.div
@@ -407,7 +408,7 @@ function AISection() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.2 }}
-                      className={line.t === 'ok' ? 'text-emerald-400' : 'text-slate-400'}
+                      className={`truncate ${line.t === 'ok' ? 'text-emerald-400' : 'text-slate-400'}`}
                     >
                       {line.v}
                     </motion.div>
@@ -416,16 +417,16 @@ function AISection() {
                 <motion.div
                   animate={{ opacity: [1, 0, 1] }}
                   transition={{ repeat: Infinity, duration: 1.1 }}
-                  className="w-2 h-3.5 bg-slate-600 inline-block"
+                  className="w-2 h-3 bg-slate-600 inline-block"
                 />
               </div>
 
               {/* Footer */}
-              <div className="px-5 py-2.5 border-t border-slate-800/60 flex items-center gap-6 text-[11px] font-mono text-slate-500" style={{ background: '#161b22' }}>
-                <span>340 streams</span>
-                <span>4ms latency</span>
-                <span>Tier-1 gateway</span>
-                <span className="ml-auto">engine.v2.5.0</span>
+              <div className="px-4 sm:px-5 py-2 sm:py-2.5 border-t border-slate-800/60 flex items-center gap-3 sm:gap-6 text-[9px] sm:text-[11px] font-mono text-slate-500 overflow-x-auto" style={{ background: '#161b22' }}>
+                <span className="shrink-0">340 streams</span>
+                <span className="shrink-0">4ms latency</span>
+                <span className="shrink-0">Tier-1 gateway</span>
+                <span className="ml-auto shrink-0">engine.v2.5.0</span>
               </div>
             </div>
 
@@ -434,11 +435,11 @@ function AISection() {
               {[
                 { v: '14–90d', l: 'Forecast Horizon' },
                 { v: '94.2%', l: 'Model Accuracy' },
-                { v: '<200ms', l: 'Anomaly Response' },
+                { v: '<200ms', l: 'Response' },
               ].map((s) => (
-                <div key={s.l} className="bg-ink-surface px-5 py-4">
-                  <p className="text-base font-bold text-text-primary-v4 tracking-tight">{s.v}</p>
-                  <p className="text-[11px] text-text-muted-v4 mt-0.5">{s.l}</p>
+                <div key={s.l} className="bg-ink-surface px-3 sm:px-5 py-3 sm:py-4">
+                  <p className="text-sm sm:text-base font-bold text-text-primary-v4 tracking-tight">{s.v}</p>
+                  <p className="text-[10px] sm:text-[11px] text-text-muted-v4 mt-0.5">{s.l}</p>
                 </div>
               ))}
             </div>
@@ -448,6 +449,7 @@ function AISection() {
     </section>
   );
 }
+
 
 /* ═══════════════════════════════════════════════
    VAULTHOST

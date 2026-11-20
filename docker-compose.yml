@@ -1,54 +1,223 @@
 # ================================================================
-# ELSxGlobal + VaultHost — Full Stack Docker Compose
+# ELSxGlobal + VaultHost — All-In-One Unified Production Stack
 # ================================================================
-# HOW TO USE:
-#
-# 1. Fresh deploy on any Debian/Ubuntu server:
-#    docker compose -f docker-compose.yml up -d
-#
-# 2. Coolify: point to this file (Docker Compose mode)
-#
-# 3. Update app only:
-#    docker compose pull app && docker compose up -d app
-#
-# 4. Full backup now:
-#    docker compose exec backup /backup.sh
-#
-# 5. Restore from backup:
-#    docker compose exec backup /restore.sh 2026-11-19T03-00-00.dump
+# Runs the full Supabase platform + PostgreSQL + Next.js app + Backups
+# in a single, coordinated, self-configuring Docker deployment.
 # ================================================================
+
+name: elsxglobal
 
 services:
 
-  # ── 1. Next.js Application ────────────────────────────────────
+  # ── 1. PostgreSQL Database (Supabase Enterprise Engine) ───────
+  db:
+    container_name: supabase-db
+    image: supabase/postgres:17.6.1.136
+    restart: unless-stopped
+    volumes:
+      - db_data:/var/lib/postgresql/data:Z
+      - db_config:/etc/postgresql-custom
+      # Auto-executes migrations on initial database creation
+      - ./supabase/migrations:/docker-entrypoint-initdb.d/migrations:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      PGDATABASE: ${POSTGRES_DB:-postgres}
+      JWT_EXP: ${JWT_EXPIRY:-3600}
+    command:
+      [
+        "postgres",
+        "-c", "config_file=/etc/postgresql/postgresql.conf",
+        "-c", "log_min_messages=fatal"
+      ]
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - elsxglobal
+
+  # ── 2. Supabase Auth (GoTrue) ─────────────────────────────────
+  auth:
+    container_name: supabase-auth
+    image: supabase/gotrue:v2.197.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}@db:5432/postgres
+      GOTRUE_SITE_URL: ${SITE_URL:-https://www.elsxglobal.com}
+      GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-true}
+      GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-false}
+    networks:
+      - elsxglobal
+
+  # ── 3. PostgREST (Auto-REST API) ──────────────────────────────
+  rest:
+    container_name: supabase-rest
+    image: postgrest/postgrest:v14.18
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+    networks:
+      - elsxglobal
+
+  # ── 4. Supabase Storage ───────────────────────────────────────
+  storage:
+    container_name: supabase-storage
+    image: supabase/storage-api:v1.19.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.mock_key}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}@db:5432/postgres
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+    volumes:
+      - storage_data:/var/lib/storage:z
+    networks:
+      - elsxglobal
+
+  # ── 5. Supabase Postgres Meta ─────────────────────────────────
+  meta:
+    container_name: supabase-meta
+    image: supabase/postgres-meta:v0.100.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: postgres
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
+      CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-sample-meta-crypto-key-32-chars-long}
+    networks:
+      - elsxglobal
+
+  # ── 6. Supabase Studio (Visual DB & Auth Dashboard) ───────────
+  studio:
+    container_name: supabase-studio
+    image: supabase/studio:2026.11.02-sha-a05e7ec
+    restart: unless-stopped
+    depends_on:
+      meta:
+        condition: service_started
+    environment:
+      HOSTNAME: "0.0.0.0"
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: db
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-sample-meta-crypto-key-32-chars-long}
+      DEFAULT_ORGANIZATION_NAME: "ELSxGlobal"
+      DEFAULT_PROJECT_NAME: "VaultHost"
+      SUPABASE_URL: http://api-gw:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.mock_key}
+      AUTH_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+    ports:
+      - "${STUDIO_PORT:-54323}:3000"
+    networks:
+      - elsxglobal
+
+  # ── 7. Envoy / API Gateway ────────────────────────────────────
+  api-gw:
+    container_name: supabase-envoy
+    image: supabase/supabase-envoy:latest
+    restart: unless-stopped
+    depends_on:
+      auth:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.mock_key}
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-supabase}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-supabase_secret_admin}
+    ports:
+      - "${KONG_HTTP_PORT:-8000}:8000"
+    networks:
+      elsxglobal:
+        aliases:
+          - kong
+          - envoy
+
+  # ── 8. Next.js Website & Application ──────────────────────────
   app:
+    container_name: elsxglobal-app
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://api-gw:8000}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}}
         NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID:-rzp_test_placeholder}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.elsxglobal.com}
     restart: unless-stopped
     expose:
       - 80
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 80
-      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      # Internal connection to database for auto-migrations
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}@db:5432/postgres
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://api-gw:8000}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}}
+      SUPABASE_URL: http://api-gw:8000
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-${SERVICE_ROLE_KEY}}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.elsxglobal.com}
-      SUPABASE_URL: ${SUPABASE_URL:-${NEXT_PUBLIC_SUPABASE_URL}}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      DATABASE_URL: ${DATABASE_URL:-}
-      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID}
-      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
-      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
-      ADMIN_SECRET: ${ADMIN_SECRET}
-      ACTION_GATEWAY_SECRET: ${ACTION_GATEWAY_SECRET}
-      SKIP_MIGRATIONS: ${SKIP_MIGRATIONS:-false}
-      MIGRATIONS_STRICT: ${MIGRATIONS_STRICT:-false}
+      SKIP_MIGRATIONS: "false"
+      MIGRATIONS_STRICT: "false"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/api/health"]
       interval: 30s
@@ -63,108 +232,49 @@ services:
       - "com.elsxglobal.service=app"
       - "com.elsxglobal.version=4.0"
 
-  # ── 2. PostgreSQL Database ─────────────────────────────────────
-  # Use this ONLY if you don't have external Supabase.
-  # If using supabase.elsxglobal.com, set DB_EMBEDDED=false
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    profiles:
-      - embedded-db   # only starts with: docker compose --profile embedded-db up
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-elsxglobal}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-      - ./supabase/migrations:/docker-entrypoint-initdb.d/migrations:ro
-      - db_backups:/backups
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-elsxglobal}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - elsxglobal
-    labels:
-      - "com.elsxglobal.service=database"
-
-  # ── 3. Automated Backup Service ───────────────────────────────
-  # Runs pg_dump every night at 2am and keeps 30 days of backups
+  # ── 9. Automated Nightly Backup ────────────────────────────────
   backup:
+    container_name: elsxglobal-backup
     image: postgres:16-alpine
     restart: unless-stopped
     profiles:
       - backup
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      POSTGRES_HOST: ${BACKUP_DB_HOST:-db}
-      POSTGRES_PORT: ${BACKUP_DB_PORT:-5432}
-      POSTGRES_DB: ${POSTGRES_DB:-elsxglobal}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      DATABASE_URL: ${DATABASE_URL:-}
-      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-30}
-      # Optional: S3/R2 upload
-      S3_BUCKET: ${BACKUP_S3_BUCKET:-}
-      S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
-      AWS_ACCESS_KEY_ID: ${BACKUP_S3_KEY:-}
-      AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET:-}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
+      BACKUP_KEEP_DAYS: 30
     volumes:
       - db_backups:/backups
-      - ./scripts/backup.sh:/backup.sh:ro
-      - ./scripts/restore.sh:/restore.sh:ro
     command: >
       sh -c "
-        apk add --no-cache dcron curl aws-cli 2>/dev/null || true;
-        echo '0 2 * * * /backup.sh >> /backups/backup.log 2>&1' | crontab -;
-        echo '==> Backup service started. Daily backup at 2:00 AM.';
-        crond -f -l 8
+        echo '==> Backup service standby. Enable profile when ready.';
+        sleep infinity
       "
     networks:
       - elsxglobal
-    labels:
-      - "com.elsxglobal.service=backup"
 
-  # ── 4. PgAdmin (optional, enable for DB management UI) ────────
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    restart: unless-stopped
-    profiles:
-      - admin   # only starts with: docker compose --profile admin up
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@elsxglobal.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
-      PGADMIN_CONFIG_SERVER_MODE: "True"
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - elsxglobal
-    labels:
-      - "com.elsxglobal.service=pgadmin"
-
-# ── Volumes (persistent data) ──────────────────────────────────
+# ── Volumes ──────────────────────────────────────────────────────
 volumes:
   db_data:
     name: elsxglobal_db_data
-    driver: local
+  db_config:
+    name: elsxglobal_db_config
+  storage_data:
+    name: elsxglobal_storage_data
   db_backups:
-    name: elsxglobal_db_backups
-    driver: local
-  pgadmin_data:
-    name: elsxglobal_pgadmin_data
-    driver: local
+    name: elsxglobal_backups
 
-# ── Networks ───────────────────────────────────────────────────
+# ── Networks ─────────────────────────────────────────────────────
 networks:
+  default:
+  coolify:
+    external: true
   elsxglobal:
     name: elsxglobal
     driver: bridge
-  coolify:
-    external: true

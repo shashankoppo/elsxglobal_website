@@ -190,8 +190,14 @@ export function VaultHostNavbar() {
               <ShoppingCart className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Plans</span>
             </Link>
-            <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 text-text-primary-v4" aria-label="Menu">
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <button
+              type="button"
+              onClick={() => setMobileOpen(prev => !prev)}
+              className="lg:hidden p-2 text-text-primary-v4 hover:text-signal transition-colors rounded-chip z-50 cursor-pointer"
+              aria-label="Menu"
+              aria-expanded={mobileOpen}
+            >
+              {mobileOpen ? <X className="h-6 w-6 text-signal" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </div>
@@ -199,7 +205,7 @@ export function VaultHostNavbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 bg-ink-surface border-t border-hairline overflow-y-auto z-40 animate-fade-in">
+        <div className="lg:hidden fixed inset-x-0 top-16 h-[calc(100dvh-4rem)] bg-ink-surface/98 backdrop-blur-xl border-t border-hairline overflow-y-auto z-[9999] shadow-2xl">
           <div className="px-4 py-4 space-y-4">
             {/* Domain search */}
             <form onSubmit={handleDomainSearch}>

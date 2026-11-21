@@ -165,22 +165,18 @@ services:
     networks:
       - elsxglobal
 
-  # ── 7. Envoy / API Gateway ────────────────────────────────────
+  # ── 7. Universal API Gateway (Nginx Proxy) ───────────────────
   api-gw:
-    container_name: supabase-envoy
-    image: supabase/supabase-envoy:latest
+    container_name: supabase-gateway
+    image: nginx:alpine
     restart: unless-stopped
     depends_on:
       auth:
         condition: service_healthy
       rest:
         condition: service_started
-    environment:
-      ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY}
-      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI}
-      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}
-      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-supabase}
-      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-supabase_standalone_admin_2026}
+    volumes:
+      - ./supabase/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "${KONG_HTTP_PORT:-8000}:8000"
     networks:
@@ -188,6 +184,8 @@ services:
         aliases:
           - kong
           - envoy
+          - api-gw
+
 
   # ── 8. Next.js Website & Application ──────────────────────────
   app:

@@ -1,8 +1,8 @@
 # ================================================================
 # ELSxGlobal + VaultHost — Independent Standalone Production Stack
 # ================================================================
-# Runs its own standalone Supabase + PostgreSQL + Next.js App
-# 100% self-contained on its own internal Docker network.
+# Self-contained Supabase + PostgreSQL + Next.js on Docker.
+# All role passwords set during DB init via 99-role-passwords.sh.
 # ================================================================
 
 name: elsxglobal
@@ -25,13 +25,16 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data:Z
       - db_config:/etc/postgresql-custom
-      # Auto-executes migrations on initial database creation
+      # Role password init — runs DURING first-boot DB initialization
+      # Must be a .sh file in /docker-entrypoint-initdb.d/ (not subdir)
+      - ./supabase/init/99-role-passwords.sh:/docker-entrypoint-initdb.d/99-role-passwords.sh:ro
+      # App migrations — mounted for reference by app entrypoint only
       - ./supabase/migrations:/docker-entrypoint-initdb.d/migrations:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -h localhost -d postgres"]
       interval: 5s
       timeout: 5s
-      retries: 20
+      retries: 30
       start_period: 30s
     environment:
       POSTGRES_HOST: /var/run/postgresql
@@ -71,13 +74,17 @@ services:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
       timeout: 10s
       interval: 10s
-      retries: 20
-      start_period: 60s
+      retries: 30
+      start_period: 90s
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
       GOTRUE_DB_DRIVER: postgres
+      # Connect as postgres superuser — GoTrue needs to CREATE/ALTER
+      # tables in the auth schema during its own initialization.
+      # supabase_auth_admin would also work (password set by init script)
+      # but postgres is the most reliable for self-hosted setups.
       GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       GOTRUE_SITE_URL: ${SITE_URL:-https://www.elsxglobal.com}
       GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
@@ -100,6 +107,8 @@ services:
       db:
         condition: service_healthy
     environment:
+      # authenticator role: PostgREST connects as this, then switches
+      # to anon/authenticated per JWT. Password set by DB init script.
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage,graphql_public
       PGRST_DB_ANON_ROLE: anon
@@ -123,6 +132,7 @@ services:
       SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI}
       POSTGREST_URL: http://rest:3000
       PGRST_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
+      # Password set by DB init script for supabase_storage_admin
       DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       FILE_SIZE_LIMIT: 52428800
       STORAGE_BACKEND: file
@@ -202,7 +212,6 @@ services:
           - envoy
           - api-gw
 
-
   # ── 8. Next.js Website & Application ──────────────────────────
   app:
     container_name: elsxglobal-app
@@ -223,7 +232,6 @@ services:
     environment:
       NODE_ENV: production
       PORT: 80
-      # Internal connection to database for auto-migrations
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://api-gw:8000}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY}

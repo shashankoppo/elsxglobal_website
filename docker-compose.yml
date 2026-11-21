@@ -1,8 +1,8 @@
 # ================================================================
-# ELSxGlobal + VaultHost — All-In-One Unified Production Stack
+# ELSxGlobal + VaultHost — Independent Standalone Production Stack
 # ================================================================
-# Runs the full Supabase platform + PostgreSQL + Next.js app + Backups
-# in a single, coordinated, self-configuring Docker deployment.
+# Runs its own standalone Supabase + PostgreSQL + Next.js App
+# 100% self-contained on its own internal Docker network.
 # ================================================================
 
 name: elsxglobal
@@ -28,8 +28,8 @@ services:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: ${POSTGRES_PORT:-5432}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       PGDATABASE: ${POSTGRES_DB:-postgres}
       JWT_EXP: ${JWT_EXPIRY:-3600}
@@ -62,14 +62,14 @@ services:
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}@db:5432/postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       GOTRUE_SITE_URL: ${SITE_URL:-https://www.elsxglobal.com}
       GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
       GOTRUE_JWT_ADMIN_ROLES: service_role
       GOTRUE_JWT_AUD: authenticated
       GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
       GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
-      GOTRUE_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
       GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-true}
       GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-false}
     networks:
@@ -84,10 +84,10 @@ services:
       db:
         condition: service_healthy
     environment:
-      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}@db:5432/postgres
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage,graphql_public
       PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
       PGRST_DB_USE_LEGACY_GUCS: "false"
     networks:
       - elsxglobal
@@ -103,11 +103,11 @@ services:
       rest:
         condition: service_started
     environment:
-      ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}
-      SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.mock_key}
+      ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI}
       POSTGREST_URL: http://rest:3000
-      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
-      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}@db:5432/postgres
+      PGRST_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       FILE_SIZE_LIMIT: 52428800
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
@@ -133,7 +133,7 @@ services:
       PG_META_DB_PORT: 5432
       PG_META_DB_NAME: postgres
       PG_META_DB_USER: postgres
-      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
       CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-sample-meta-crypto-key-32-chars-long}
     networks:
       - elsxglobal
@@ -152,14 +152,14 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_HOST: db
       POSTGRES_DB: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
       PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-sample-meta-crypto-key-32-chars-long}
       DEFAULT_ORGANIZATION_NAME: "ELSxGlobal"
       DEFAULT_PROJECT_NAME: "VaultHost"
       SUPABASE_URL: http://api-gw:8000
-      SUPABASE_ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}
-      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.mock_key}
-      AUTH_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      SUPABASE_ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI}
+      AUTH_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
     ports:
       - "${STUDIO_PORT:-54323}:3000"
     networks:
@@ -176,11 +176,11 @@ services:
       rest:
         condition: service_started
     environment:
-      ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}
-      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.mock_key}
+      ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI}
       SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}
       DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-supabase}
-      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-supabase_secret_admin}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-supabase_standalone_admin_2026}
     ports:
       - "${KONG_HTTP_PORT:-8000}:8000"
     networks:
@@ -197,7 +197,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://api-gw:8000}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY}
         NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID:-rzp_test_placeholder}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.elsxglobal.com}
     restart: unless-stopped
@@ -210,11 +210,11 @@ services:
       NODE_ENV: production
       PORT: 80
       # Internal connection to database for auto-migrations
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}@db:5432/postgres
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://api-gw:8000}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIn0.mock_key}}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY}
       SUPABASE_URL: http://api-gw:8000
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-${SERVICE_ROLE_KEY}}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.elsxglobal.com}
       SKIP_MIGRATIONS: "false"
       MIGRATIONS_STRICT: "false"
@@ -247,7 +247,7 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
-      PGPASSWORD: ${POSTGRES_PASSWORD:-jv4b32dB2KGGlNXDpd8VHvIsHQLpbEdG}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
       BACKUP_KEEP_DAYS: 30
     volumes:
       - db_backups:/backups

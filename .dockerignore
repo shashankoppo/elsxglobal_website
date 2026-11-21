@@ -1,50 +1,85 @@
-# ─── Node / Next.js build artefacts ───────────────────────────────────────────
-node_modules
-.next
-.next-prod
-out
-dist
-build
+# =================================================================
+# ELSxGlobal Docker Build Context Exclusions
+# Keep the build context lean — only ship what the app needs
+# =================================================================
 
-# ─── Environment & secrets ────────────────────────────────────────────────────
-.env
-.env.*
-!.env.example
-
-# ─── Dev tooling ──────────────────────────────────────────────────────────────
+# Version control
 .git
 .gitignore
-.vscode
-.idea
-.editorconfig
-*.log
-npm-debug.log*
-coverage
-.nyc_output
+.gitattributes
+.github
 
-# ─── OS cruft ─────────────────────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-
-# ─── Local Supabase (not needed to build the Next.js app) ─────────────────────
-supabase-docker
-supabase-production
-supabase/.branches
-supabase/.temp
-
-# ─── Deploy / infra configs (not needed in Next.js image) ─────────────────────
-deploy
-docker
-
-# ─── Docs & scratch ───────────────────────────────────────────────────────────
-docs
-scratch
+# Documentation & ops (not in Docker image)
+docs/
+CHANGELOG.md
+OPERATIONS.md
+Makefile
+README.md
 *.md
-!README.md
 
-# ─── Test artefacts ───────────────────────────────────────────────────────────
-__tests__
+# Environment files — secrets NEVER go in image
+.env
+.env.local
+.env.production
+.env.development
+!.env.example
+
+# Local development
+node_modules
+.next/cache
+
+# Supabase local dev artifacts
+supabase/.temp
+supabase/.branches
+supabase-docker/
+supabase-production/
+
+# Docker compose extras (not needed in app image)
+docker-compose.dev.yml
+docker-compose.monitoring.yml
+docker-compose.supabase.yml
+docker-compose.kong.yml
+
+# Scripts NOT needed inside the app container
+# (entrypoint.sh and migrate.mjs ARE needed)
+scripts/*.sh
+!scripts/entrypoint.sh
+scripts/health-monitor.sh
+scripts/backup.sh
+scripts/restore.sh
+scripts/setup-wizard.sh
+scripts/cron-setup.sh
+
+# Tests & lint
 *.test.ts
 *.test.tsx
 *.spec.ts
 *.spec.tsx
+jest.config.*
+vitest.config.*
+.eslintcache
+coverage/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+._*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*.suo
+.vs/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+scratch/
+.cache/

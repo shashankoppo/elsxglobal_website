@@ -1,104 +1,98 @@
-#!/bin/sh
-# ================================================================
-# ELSxGlobal — Full Database Backup Script
-# ================================================================
-# Backs up:
-#   1. Full pg_dump (schema + data + sequences + everything)
-#   2. Keeps last N days locally
-#   3. Optionally uploads to S3/R2
-#
-# Usage:
-#   ./scripts/backup.sh                    # auto (uses env vars)
-#   ./scripts/backup.sh mybackup           # custom name
-#   docker compose exec backup /backup.sh  # from container
-# ================================================================
+#!/usr/bin/env bash
+# =================================================================
+# ELSxGlobal + VaultHost — Automated Backup System
+# =================================================================
+# Usage: ./scripts/backup.sh [--name NAME] [--keep N] [--s3 BUCKET]
+# Called by: manage.sh backup, cron
+# Exit codes: 0=success, 1=dump_failed, 2=checksum_failed, 3=s3_failed
+# =================================================================
+set -uo pipefail
 
-set -e
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+ENV_FILE="$PROJECT_DIR/.env"
+LOG_DIR="${LOG_DIR:-/var/log/elsxglobal}"
+BACKUP_DIR="${BACKUP_DIR:-/opt/elsxglobal/backups}"
+BACKUP_LOG="$LOG_DIR/backup.log"
 
-TIMESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
-BACKUP_NAME="${1:-backup_${TIMESTAMP}}"
-BACKUP_DIR="/backups"
-BACKUP_FILE="${BACKUP_DIR}/${BACKUP_NAME}.dump"
-KEEP_DAYS="${BACKUP_KEEP_DAYS:-30}"
+# Load env
+source "$ENV_FILE" 2>/dev/null || true
 
-echo "============================================================"
-echo " ELSxGlobal Database Backup"
-echo " Started: $(date)"
-echo " Output:  ${BACKUP_FILE}"
-echo "============================================================"
+PG_PASS="${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}"
+KEEP="${BACKUP_KEEP_COUNT:-30}"
+NAME="${1:-nightly}"
+TIMESTAMP=$(date -u '+%Y-%m-%d_%H-%M-%S')
+FILENAME="${TIMESTAMP}_${NAME}.dump"
+FILEPATH="$BACKUP_DIR/$FILENAME"
 
-# ── Determine connection ──────────────────────────────────────────
-if [ -n "$DATABASE_URL" ] && [ "$DATABASE_URL" != "placeholder" ]; then
-  PG_CONN="$DATABASE_URL"
-  echo "[backup] Using DATABASE_URL for connection"
-else
-  PG_HOST="${POSTGRES_HOST:-db}"
-  PG_PORT="${POSTGRES_PORT:-5432}"
-  PG_DB="${POSTGRES_DB:-elsxglobal}"
-  PG_USER="${POSTGRES_USER:-postgres}"
-  PG_CONN="postgresql://${PG_USER}:${PGPASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DB}"
-  echo "[backup] Using host: ${PG_HOST}:${PG_PORT}/${PG_DB}"
+_log() { echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] $*" | tee -a "$BACKUP_LOG"; }
+
+mkdir -p "$BACKUP_DIR" "$LOG_DIR"
+_log "=== Backup started: $FILENAME ==="
+
+# Dump
+_log "Running pg_dump..."
+if ! docker exec supabase-db bash -c "PGPASSWORD='$PG_PASS' pg_dump -U postgres -d postgres -Fc" > "$FILEPATH" 2>>"$BACKUP_LOG"; then
+  _log "ERROR: pg_dump failed"
+  rm -f "$FILEPATH"
+  exit 1
 fi
 
-mkdir -p "$BACKUP_DIR"
+if [[ ! -s "$FILEPATH" ]]; then
+  _log "ERROR: Backup file is empty"
+  rm -f "$FILEPATH"
+  exit 1
+fi
 
-# ── Full backup (custom format = compressed + parallel restore) ───
-echo "[backup] Running pg_dump..."
-pg_dump \
-  --format=custom \
-  --compress=9 \
-  --verbose \
-  --no-password \
-  "$PG_CONN" \
-  --file="$BACKUP_FILE"
+# Verify checksum
+CHECKSUM=$(sha256sum "$FILEPATH" | awk '{print $1}')
+SIZE_BYTES=$(stat -c%s "$FILEPATH" 2>/dev/null || stat -f%z "$FILEPATH" 2>/dev/null || echo "0")
+SIZE_HUMAN=$(du -sh "$FILEPATH" | awk '{print $1}')
 
-BACKUP_SIZE=$(du -sh "$BACKUP_FILE" | cut -f1)
-echo "[backup] ✅ Backup complete: ${BACKUP_FILE} (${BACKUP_SIZE})"
+# Write manifest
+MANIFEST_FILE="${FILEPATH%.dump}.json"
+PG_VERSION=$(docker exec supabase-db psql -U postgres -tAc 'SELECT version()' 2>/dev/null | head -1 || echo 'unknown')
+MIGRATION_COUNT=$(docker exec supabase-db psql -U postgres -d postgres -tAc \
+  "SELECT COUNT(*) FROM public.schema_migrations;" 2>/dev/null | tr -d ' ' || echo "0")
 
-# ── Also create a plain SQL backup (human-readable) ──────────────
-SQL_FILE="${BACKUP_DIR}/${BACKUP_NAME}.sql.gz"
-echo "[backup] Creating plain SQL backup (gzipped)..."
-pg_dump \
-  --format=plain \
-  --no-password \
-  "$PG_CONN" \
-  | gzip -9 > "$SQL_FILE"
+cat > "$MANIFEST_FILE" <<EOF
+{
+  "timestamp": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')",
+  "filename": "$FILENAME",
+  "size_bytes": $SIZE_BYTES,
+  "size_human": "$SIZE_HUMAN",
+  "checksum_sha256": "$CHECKSUM",
+  "migration_count": "$MIGRATION_COUNT",
+  "postgres_version": "$(echo "$PG_VERSION" | head -c 80)",
+  "name": "$NAME",
+  "host": "$(hostname -f 2>/dev/null || hostname)"
+}
+EOF
 
-SQL_SIZE=$(du -sh "$SQL_FILE" | cut -f1)
-echo "[backup] ✅ SQL backup: ${SQL_FILE} (${SQL_SIZE})"
+_log "Backup complete: $FILENAME ($SIZE_HUMAN) SHA256: $CHECKSUM"
 
-# ── Write backup manifest ─────────────────────────────────────────
-MANIFEST="${BACKUP_DIR}/latest.txt"
-echo "${BACKUP_NAME}" > "$MANIFEST"
-echo "[backup] Latest backup recorded in ${MANIFEST}"
-
-# ── Upload to S3/R2 (optional) ───────────────────────────────────
-if [ -n "$S3_BUCKET" ] && [ -n "$AWS_ACCESS_KEY_ID" ]; then
-  echo "[backup] Uploading to S3/R2: s3://${S3_BUCKET}/db-backups/"
-
-  S3_ARGS=""
-  if [ -n "$S3_ENDPOINT" ]; then
-    S3_ARGS="--endpoint-url ${S3_ENDPOINT}"
+# S3 upload (optional)
+S3_BUCKET="${BACKUP_S3_BUCKET:-}"
+if [[ -n "$S3_BUCKET" ]]; then
+  _log "Uploading to S3: $S3_BUCKET/$FILENAME..."
+  if aws s3 cp "$FILEPATH" "$S3_BUCKET/$FILENAME" && aws s3 cp "$MANIFEST_FILE" "$S3_BUCKET/${FILENAME%.dump}.json"; then
+    _log "S3 upload successful"
+  else
+    _log "ERROR: S3 upload failed"
+    exit 3
   fi
-
-  aws s3 cp "$BACKUP_FILE" "s3://${S3_BUCKET}/db-backups/${BACKUP_NAME}.dump" $S3_ARGS
-  aws s3 cp "$SQL_FILE"    "s3://${S3_BUCKET}/db-backups/${BACKUP_NAME}.sql.gz" $S3_ARGS
-  echo "[backup] ✅ Uploaded to S3/R2"
-else
-  echo "[backup] S3 not configured — keeping local only"
 fi
 
-# ── Prune old backups ─────────────────────────────────────────────
-echo "[backup] Removing backups older than ${KEEP_DAYS} days..."
-find "$BACKUP_DIR" -name "backup_*.dump"   -mtime +${KEEP_DAYS} -delete
-find "$BACKUP_DIR" -name "backup_*.sql.gz" -mtime +${KEEP_DAYS} -delete
-REMAINING=$(ls "$BACKUP_DIR"/*.dump 2>/dev/null | wc -l)
-echo "[backup] ${REMAINING} backup(s) retained"
+# Retention
+COUNT=$(find "$BACKUP_DIR" -name '*.dump' | wc -l)
+if [[ $COUNT -gt $KEEP ]]; then
+  _log "Rotating old backups (keeping $KEEP, found $COUNT)..."
+  find "$BACKUP_DIR" -name '*.dump' -printf '%T@ %p\n' | sort -n | \
+    head -n $((COUNT - KEEP)) | awk '{print $2}' | while read -r old; do
+      rm -f "$old" "${old%.dump}.json"
+      _log "Deleted: $(basename "$old")"
+    done
+fi
 
-# ── List all backups ──────────────────────────────────────────────
-echo ""
-echo "[backup] Current backups in ${BACKUP_DIR}:"
-ls -lh "$BACKUP_DIR"/*.dump 2>/dev/null | awk '{print "  " $5 "  " $9}' || echo "  (none)"
-
-echo ""
-echo "[backup] ✅ Done. $(date)"
+_log "=== Backup complete ==="
+exit 0

@@ -1,140 +1,133 @@
-#!/bin/sh
-# ================================================================
-# ELSxGlobal — One-Command Database Restore Script
-# ================================================================
-# Restores from any .dump or .sql.gz backup file
-#
-# Usage:
-#   ./scripts/restore.sh                                    # restore latest
-#   ./scripts/restore.sh backup_2026-11-19T02-00-00.dump   # specific backup
-#   ./scripts/restore.sh /backups/backup_2026-11-19.dump   # full path
-#   docker compose exec backup /restore.sh                  # from container
-#
-# ⚠️  WARNING: This DROPS and recreates the database.
-#     All current data will be replaced.
-#     Always backup first!
-# ================================================================
+#!/usr/bin/env bash
+# =================================================================
+# ELSxGlobal + VaultHost — Disaster Recovery / Restore
+# =================================================================
+# Usage: ./scripts/restore.sh [backup-file]
+# If no file given, shows interactive picker of available backups
+# =================================================================
+set -uo pipefail
 
-set -e
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+ENV_FILE="$PROJECT_DIR/.env"
+BACKUP_DIR="${BACKUP_DIR:-/opt/elsxglobal/backups}"
+LOG_DIR="${LOG_DIR:-/var/log/elsxglobal}"
 
-BACKUP_DIR="/backups"
-RESTORE_FILE="$1"
+GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 
-echo "============================================================"
-echo " ELSxGlobal Database Restore"
-echo " Started: $(date)"
-echo "============================================================"
+log()  { echo -e "$@"; }
+info() { echo -e "${CYAN}  ➜${NC}  $*"; }
+ok()   { echo -e "${GREEN}  ✓${NC}  $*"; }
+warn() { echo -e "${YELLOW}  ⚠${NC}  $*"; }
+fail() { echo -e "${RED}  ✗${NC}  $*" >&2; exit 1; }
 
-# ── Safety confirmation ───────────────────────────────────────────
-echo ""
-echo "  ⚠️  WARNING: This will REPLACE ALL current data!"
-echo ""
+source "$ENV_FILE" 2>/dev/null || true
+PG_PASS="${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}"
 
-# ── Determine connection ──────────────────────────────────────────
-if [ -n "$DATABASE_URL" ] && [ "$DATABASE_URL" != "placeholder" ]; then
-  PG_CONN="$DATABASE_URL"
-  echo "[restore] Using DATABASE_URL for connection"
-else
-  PG_HOST="${POSTGRES_HOST:-db}"
-  PG_PORT="${POSTGRES_PORT:-5432}"
-  PG_DB="${POSTGRES_DB:-elsxglobal}"
-  PG_USER="${POSTGRES_USER:-postgres}"
-  PG_CONN="postgresql://${PG_USER}:${PGPASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DB}"
-  echo "[restore] Using host: ${PG_HOST}:${PG_PORT}/${PG_DB}"
-fi
+BACKUP_FILE="${1:-}"
 
-# ── Find backup file ──────────────────────────────────────────────
-if [ -z "$RESTORE_FILE" ]; then
-  # Restore from latest
-  if [ -f "${BACKUP_DIR}/latest.txt" ]; then
-    LATEST_NAME=$(cat "${BACKUP_DIR}/latest.txt")
-    RESTORE_FILE="${BACKUP_DIR}/${LATEST_NAME}.dump"
-    echo "[restore] Auto-selected latest: ${RESTORE_FILE}"
-  else
-    # Find the most recent .dump
-    RESTORE_FILE=$(ls -t "${BACKUP_DIR}"/*.dump 2>/dev/null | head -1)
-    if [ -z "$RESTORE_FILE" ]; then
-      echo "[restore] ❌ No backup files found in ${BACKUP_DIR}"
-      echo "[restore]    Run ./backup.sh first to create a backup."
-      exit 1
-    fi
-    echo "[restore] Auto-selected most recent: ${RESTORE_FILE}"
+# Interactive backup picker
+if [[ -z "$BACKUP_FILE" ]]; then
+  echo ""
+  log "${BOLD}${CYAN}=== Available Backups ===${NC}"
+  if [[ ! -d "$BACKUP_DIR" ]]; then
+    fail "No backups directory found at $BACKUP_DIR. Run ./scripts/manage.sh backup first."
   fi
-elif [ ! -f "$RESTORE_FILE" ]; then
-  # Try prepending BACKUP_DIR
-  if [ -f "${BACKUP_DIR}/${RESTORE_FILE}" ]; then
-    RESTORE_FILE="${BACKUP_DIR}/${RESTORE_FILE}"
+
+  local_backups=()
+  while IFS= read -r line; do
+    local_backups+=("$line")
+  done < <(find "$BACKUP_DIR" -name '*.dump' -printf '%T@ %p\n' | sort -rn | awk '{print $2}')
+
+  if [[ ${#local_backups[@]} -eq 0 ]]; then
+    fail "No backup files found in $BACKUP_DIR"
+  fi
+
+  for i in "${!local_backups[@]}"; do
+    local f="${local_backups[$i]}"
+    local sz
+    sz=$(du -sh "$f" | awk '{print $1}')
+    local ts
+    ts=$(stat -c '%y' "$f" 2>/dev/null | cut -c1-19 || echo "")
+    log "  $(( i + 1 )). $(basename "$f") ($sz) — $ts"
+  done
+
+  echo ""
+  echo -n "Enter number (or full path): "
+  read -r selection
+
+  if [[ "$selection" =~ ^[0-9]+$ ]] && [[ $selection -ge 1 ]] && [[ $selection -le ${#local_backups[@]} ]]; then
+    BACKUP_FILE="${local_backups[$((selection - 1))]}"
   else
-    echo "[restore] ❌ File not found: ${RESTORE_FILE}"
-    echo "[restore]    Available backups:"
-    ls "${BACKUP_DIR}"/*.dump 2>/dev/null | while read -r f; do echo "      $(basename "$f")"; done
-    exit 1
+    BACKUP_FILE="$selection"
   fi
 fi
 
-echo "[restore] Restoring from: ${RESTORE_FILE}"
-FILE_SIZE=$(du -sh "$RESTORE_FILE" | cut -f1)
-echo "[restore] File size: ${FILE_SIZE}"
+[[ -f "$BACKUP_FILE" ]] || fail "Backup file not found: $BACKUP_FILE"
 
-# ── Determine format ──────────────────────────────────────────────
-case "$RESTORE_FILE" in
-  *.dump)
-    FORMAT="custom"
-    ;;
-  *.sql.gz)
-    FORMAT="sql_gz"
-    ;;
-  *.sql)
-    FORMAT="sql"
-    ;;
-  *)
-    echo "[restore] ❌ Unknown file format. Expected .dump, .sql.gz, or .sql"
-    exit 1
-    ;;
-esac
-
-# ── Perform restore ───────────────────────────────────────────────
+# Show manifest
+MANIFEST="${BACKUP_FILE%.dump}.json"
 echo ""
-echo "[restore] Starting restore (format: ${FORMAT})..."
-
-case "$FORMAT" in
-  custom)
-    # Custom pg_dump format — fastest, supports parallel restore
-    pg_restore \
-      --clean \
-      --if-exists \
-      --no-owner \
-      --no-privileges \
-      --verbose \
-      --dbname="$PG_CONN" \
-      "$RESTORE_FILE" && echo "[restore] ✅ pg_restore complete"
-    ;;
-
-  sql_gz)
-    # Gzipped SQL — decompress and pipe to psql
-    echo "[restore] Decompressing and piping to psql..."
-    gunzip -c "$RESTORE_FILE" | psql "$PG_CONN" && echo "[restore] ✅ SQL restore complete"
-    ;;
-
-  sql)
-    # Plain SQL
-    psql "$PG_CONN" < "$RESTORE_FILE" && echo "[restore] ✅ SQL restore complete"
-    ;;
-esac
-
-# ── Notify PostgREST to reload schema ────────────────────────────
-echo "[restore] Notifying PostgREST to reload schema..."
-psql "$PG_CONN" -c "NOTIFY pgrst, 'reload schema';" 2>/dev/null || true
-
-# ── Re-run migrations to ensure latest schema ────────────────────
-echo ""
-echo "[restore] Running migrations to ensure latest schema..."
-if [ -f "/app/scripts/migrate.mjs" ]; then
-  node /app/scripts/migrate.mjs && echo "[restore] ✅ Migrations applied"
+log "${BOLD}${CYAN}=== Backup Details ===${NC}"
+if [[ -f "$MANIFEST" ]]; then
+  cat "$MANIFEST"
+  echo ""
 else
-  echo "[restore] ℹ️  migrate.mjs not found — skipping migration step"
+  local sz
+  sz=$(du -sh "$BACKUP_FILE" | awk '{print $1}')
+  log "  File: $(basename "$BACKUP_FILE")"
+  log "  Size: $sz"
 fi
 
+# Double confirmation
 echo ""
-echo "[restore] ✅ Restore complete! $(date)"
-echo "[restore]    Your database has been restored from: $(basename "$RESTORE_FILE")"
+warn "⚠  WARNING: THIS IS A DESTRUCTIVE OPERATION  ⚠"
+warn "All current data in the database will be replaced."
+warn "File: $(basename "$BACKUP_FILE")"
+echo ""
+echo -n "Type 'RESTORE' (all caps) to confirm: "
+read -r confirm1
+[[ "$confirm1" == "RESTORE" ]] || { log "${YELLOW}Restore cancelled.${NC}"; exit 0; }
+
+echo -n "Type the backup filename to confirm ($(basename "$BACKUP_FILE")): "
+read -r confirm2
+[[ "$confirm2" == "$(basename "$BACKUP_FILE")" ]] || { log "${YELLOW}Restore cancelled.${NC}"; exit 0; }
+
+echo ""
+info "Creating safety backup before restore..."
+"$SCRIPT_DIR/backup.sh" "pre-restore-$(date +%Y%m%d%H%M%S)" 2>/dev/null \
+  && ok "Safety backup created" \
+  || warn "Safety backup failed (continuing)"
+
+echo ""
+log "${BOLD}${CYAN}=== Starting Restore ===${NC}"
+
+info "Stopping app services (keeping database running)..."
+cd "$PROJECT_DIR"
+docker compose -f "$PROJECT_DIR/docker-compose.yml" stop app auth rest storage meta studio api-gw 2>/dev/null || true
+
+info "Restoring database from: $(basename "$BACKUP_FILE")"
+if cat "$BACKUP_FILE" | docker exec -i supabase-db bash -c \
+  "PGPASSWORD='$PG_PASS' pg_restore -U postgres -d postgres --clean --if-exists -v" 2>&1 | \
+  grep -v "^pg_restore:" | tail -20; then
+  ok "Database restored successfully"
+else
+  warn "Some pg_restore warnings (may be normal for --clean)"
+fi
+
+info "Restarting all services..."
+docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d
+
+info "Waiting for app to be healthy..."
+MAX=120; E=0
+while [[ $E -lt $MAX ]]; do
+  RUNNING=$(docker inspect --format='{{.State.Running}}' elsxglobal-app 2>/dev/null || echo false)
+  [[ "$RUNNING" == "true" ]] && break
+  echo -ne "  Waiting... ${E}s\r"; sleep 3; E=$((E+3))
+done
+
+echo ""
+ok "✓ Restore complete!"
+log "  Run ${CYAN}./scripts/manage.sh health${NC} to verify system state."
+log "  Run ${CYAN}./scripts/manage.sh status${NC} to see all containers."

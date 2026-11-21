@@ -1,0 +1,30 @@
+# =================================================================
+# ELSxGlobal + VaultHost — Development Overrides
+# =================================================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Adds: exposed DB port for local GUI tools, debug logging
+# Does NOT require the 'coolify' external network (uses local bridge)
+# =================================================================
+name: elsxglobal
+
+services:
+  db:
+    # Expose PostgreSQL for local DB GUI tools (DBeaver, TablePlus, pgAdmin)
+    ports:
+      - "5432:5432"
+
+  rest:
+    environment:
+      PGRST_LOG_LEVEL: info
+
+  auth:
+    environment:
+      GOTRUE_LOG_LEVEL: debug
+      GOTRUE_MAILER_AUTOCONFIRM: "true"   # Auto-confirm emails in dev
+
+networks:
+  # In dev, don't require the external 'coolify' network
+  coolify:
+    external: false
+    name: elsxglobal_dev_coolify
+    driver: bridge

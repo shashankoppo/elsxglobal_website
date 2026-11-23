@@ -71,34 +71,6 @@ services:
     networks:
       - elsxglobal
 
-  # ── 1b. Supabase DB Credential & Role Bootstrap ──────────────
-  db-init:
-    container_name: supabase-db-init
-    image: postgres:17-alpine
-    restart: "no"
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
-    volumes:
-      - ./supabase/db/roles.sql:/init/roles.sql:ro
-      - ./supabase/db/jwt.sql:/init/jwt.sql:ro
-    command: >
-      sh -c "
-        echo '==> [db-init] Waiting for database to be ready...';
-        until pg_isready -h db -p 5432 -U postgres; do
-          sleep 1;
-        done;
-        echo '==> [db-init] Applying Supabase roles and credentials...';
-        psql -h db -p 5432 -U postgres -d postgres -f /init/roles.sql;
-        psql -h db -p 5432 -U postgres -d postgres -f /init/jwt.sql;
-        echo '==> [db-init] Database credentials and roles verified successfully!';
-      "
-    networks:
-      - elsxglobal
-
   # ── 2. Supabase Auth (GoTrue) ─────────────────────────────────
   auth:
     container_name: supabase-auth
@@ -113,8 +85,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      db-init:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
       timeout: 10s
@@ -147,8 +117,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      db-init:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "postgrest", "--ready"]
       interval: 5s
@@ -172,8 +140,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      db-init:
-        condition: service_completed_successfully
       rest:
         condition: service_started
     environment:
@@ -201,8 +167,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      db-init:
-        condition: service_completed_successfully
     environment:
       PG_META_PORT: 8080
       PG_META_DB_HOST: db

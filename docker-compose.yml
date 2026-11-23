@@ -1,8 +1,8 @@
 # ================================================================
 # ELSxGlobal + VaultHost — Independent Standalone Production Stack
 # ================================================================
-# Self-contained Supabase + PostgreSQL + Next.js on Docker.
-# All role passwords set during DB init via 99-role-passwords.sh.
+# Complete, production-grade self-hosted Supabase + Next.js stack.
+# Follows official Supabase initialization architecture.
 # ================================================================
 
 name: elsxglobal
@@ -23,18 +23,31 @@ services:
         reservations:
           memory: 512M
     volumes:
+      # Official Supabase initialization scripts (run during initdb)
+      - ./supabase/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
+      - ./supabase/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
+      - ./supabase/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
+      - ./supabase/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+      - ./supabase/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
+      - ./supabase/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
+      - ./supabase/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
+      # Persistent PostgreSQL data directory
       - db_data:/var/lib/postgresql/data:Z
+      # Custom configuration volume
       - db_config:/etc/postgresql-custom
-      # Role password init — runs DURING first-boot DB initialization
-      # Must be a .sh file in /docker-entrypoint-initdb.d/ (not subdir)
-      - ./supabase/init/99-role-passwords.sh:/docker-entrypoint-initdb.d/99-role-passwords.sh:ro
-      # App migrations — mounted for reference by app entrypoint only
-      - ./supabase/migrations:/docker-entrypoint-initdb.d/migrations:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost -d postgres"]
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "postgres",
+          "-h",
+          "localhost"
+        ]
       interval: 5s
       timeout: 5s
-      retries: 30
+      retries: 25
       start_period: 30s
     environment:
       POSTGRES_HOST: /var/run/postgresql
@@ -48,8 +61,8 @@ services:
     command:
       [
         "postgres",
-        "-c", "config_file=/etc/postgresql/postgresql.conf",
-        "-c", "log_min_messages=fatal"
+        "-c",
+        "config_file=/etc/postgresql/postgresql.conf"
       ]
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -74,17 +87,13 @@ services:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
       timeout: 10s
       interval: 10s
-      retries: 30
-      start_period: 90s
+      retries: 25
+      start_period: 60s
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
       GOTRUE_DB_DRIVER: postgres
-      # Connect as postgres superuser — GoTrue needs to CREATE/ALTER
-      # tables in the auth schema during its own initialization.
-      # supabase_auth_admin would also work (password set by init script)
-      # but postgres is the most reliable for self-hosted setups.
       GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       GOTRUE_SITE_URL: ${SITE_URL:-https://www.elsxglobal.com}
       GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
@@ -106,9 +115,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "postgrest", "--ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
     environment:
-      # authenticator role: PostgREST connects as this, then switches
-      # to anon/authenticated per JWT. Password set by DB init script.
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage,graphql_public
       PGRST_DB_ANON_ROLE: anon
@@ -132,7 +145,6 @@ services:
       SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI}
       POSTGREST_URL: http://rest:3000
       PGRST_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
-      # Password set by DB init script for supabase_storage_admin
       DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       FILE_SIZE_LIMIT: 52428800
       STORAGE_BACKEND: file
@@ -191,18 +203,18 @@ services:
     networks:
       - elsxglobal
 
-  # ── 7. Universal API Gateway (Nginx Proxy) ───────────────────
+  # ── 7. Universal API Gateway (Hardened Nginx) ─────────────────
   api-gw:
     container_name: supabase-gateway
-    image: nginx:alpine
+    build:
+      context: ./supabase/gateway
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       auth:
         condition: service_started
       rest:
         condition: service_started
-    volumes:
-      - ./supabase/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "${KONG_HTTP_PORT:-8000}:8000"
     networks:
@@ -229,9 +241,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      api-gw:
+        condition: service_started
     environment:
       NODE_ENV: production
       PORT: 80
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://api-gw:8000}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY}

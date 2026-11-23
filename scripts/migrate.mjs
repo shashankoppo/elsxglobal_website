@@ -236,6 +236,45 @@ async function getAppliedMigrations() {
 }
 
 /**
+ * Ensure Supabase service role passwords match POSTGRES_PASSWORD
+ * This guarantees that even if the database was booted on an existing volume
+ * where initdb didn't run, GoTrue (auth), PostgREST, and Storage will authenticate.
+ */
+async function ensureServiceRoles() {
+  const password = process.env.POSTGRES_PASSWORD;
+  if (!password) return;
+
+  const sanitizedPassword = password.replace(/'/g, "''");
+  const roleSql = `
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
+        ALTER ROLE authenticator WITH LOGIN PASSWORD '${sanitizedPassword}';
+      END IF;
+      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
+        ALTER ROLE supabase_auth_admin WITH LOGIN PASSWORD '${sanitizedPassword}';
+      END IF;
+      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
+        ALTER ROLE supabase_storage_admin WITH LOGIN PASSWORD '${sanitizedPassword}';
+      END IF;
+      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_functions_admin') THEN
+        ALTER ROLE supabase_functions_admin WITH LOGIN PASSWORD '${sanitizedPassword}';
+      END IF;
+      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'pgbouncer') THEN
+        ALTER ROLE pgbouncer WITH LOGIN PASSWORD '${sanitizedPassword}';
+      END IF;
+    END
+    $$;
+  `;
+  try {
+    await runQuery(roleSql);
+    console.log(`[migration] Supabase service role credentials synchronized.`);
+  } catch (err) {
+    console.warn(`[migration] Notice: Could not sync service roles (${err.message}).`);
+  }
+}
+
+/**
  * Notify PostgREST to reload its schema cache
  */
 async function reloadPostgrestSchema() {
@@ -304,6 +343,9 @@ async function main() {
       process.exit(0);
     }
   }
+
+  // Synchronize service role credentials (safety net for existing volumes)
+  await ensureServiceRoles();
 
   // Setup tracking table
   await ensureMigrationsTable();

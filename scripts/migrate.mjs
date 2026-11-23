@@ -248,23 +248,57 @@ async function ensureServiceRoles() {
   const roleSql = `
     DO $$
     BEGIN
-      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
+      -- Create persona roles
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+        CREATE ROLE anon NOLOGIN NOINHERIT;
+      END IF;
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+        CREATE ROLE authenticated NOLOGIN NOINHERIT;
+      END IF;
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN
+        CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;
+      END IF;
+
+      -- Authenticator
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
+        CREATE ROLE authenticator WITH LOGIN NOINHERIT PASSWORD '${sanitizedPassword}';
+      ELSE
         ALTER ROLE authenticator WITH LOGIN PASSWORD '${sanitizedPassword}';
       END IF;
-      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
+
+      -- GoTrue auth admin
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
+        CREATE ROLE supabase_auth_admin WITH LOGIN NOINHERIT CREATEROLE PASSWORD '${sanitizedPassword}';
+      ELSE
         ALTER ROLE supabase_auth_admin WITH LOGIN PASSWORD '${sanitizedPassword}';
       END IF;
-      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
+
+      -- Storage admin
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
+        CREATE ROLE supabase_storage_admin WITH LOGIN NOINHERIT PASSWORD '${sanitizedPassword}';
+      ELSE
         ALTER ROLE supabase_storage_admin WITH LOGIN PASSWORD '${sanitizedPassword}';
       END IF;
-      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_functions_admin') THEN
+
+      -- Functions admin
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_functions_admin') THEN
+        CREATE ROLE supabase_functions_admin WITH LOGIN NOINHERIT CREATEROLE PASSWORD '${sanitizedPassword}';
+      ELSE
         ALTER ROLE supabase_functions_admin WITH LOGIN PASSWORD '${sanitizedPassword}';
       END IF;
-      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'pgbouncer') THEN
+
+      -- PgBouncer
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'pgbouncer') THEN
+        CREATE ROLE pgbouncer WITH LOGIN PASSWORD '${sanitizedPassword}';
+      ELSE
         ALTER ROLE pgbouncer WITH LOGIN PASSWORD '${sanitizedPassword}';
       END IF;
     END
     $$;
+
+    GRANT anon TO authenticator;
+    GRANT authenticated TO authenticator;
+    GRANT service_role TO authenticator;
   `;
   try {
     await runQuery(roleSql);

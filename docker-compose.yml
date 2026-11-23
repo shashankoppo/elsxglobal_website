@@ -51,6 +51,8 @@ services:
       start_period: 30s
     environment:
       POSTGRES_HOST: /var/run/postgresql
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      PGUSER: ${POSTGRES_USER:-postgres}
       PGPORT: ${POSTGRES_PORT:-5432}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
@@ -216,7 +218,7 @@ services:
       rest:
         condition: service_started
     ports:
-      - "${KONG_HTTP_PORT:-8000}:8000"
+      - "${KONG_HTTP_PORT:-8008}:8000"
     networks:
       elsxglobal:
         aliases:
@@ -299,13 +301,13 @@ services:
 # ── Volumes ──────────────────────────────────────────────────────
 volumes:
   db_data:
-    name: elsxglobal_db_data
+    name: elsxglobal_db_data_v2
   db_config:
-    name: elsxglobal_db_config
+    name: elsxglobal_db_config_v2
   storage_data:
-    name: elsxglobal_storage_data
+    name: elsxglobal_storage_data_v2
   db_backups:
-    name: elsxglobal_backups
+    name: elsxglobal_backups_v2
 
 # ── Networks ─────────────────────────────────────────────────────
 networks:

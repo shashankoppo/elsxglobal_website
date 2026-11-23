@@ -1,6 +1,6 @@
 -- Official Supabase roles initialization
 -- Ensures all roles exist (creates if missing) and sets passwords using POSTGRES_PASSWORD
-\set pgpass `echo "$POSTGRES_PASSWORD"`
+\set pgpass `echo "${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}"`
 
 -- Create all roles if they don't exist yet
 DO $$
@@ -38,7 +38,7 @@ BEGIN
 
   -- Storage admin
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
-    CREATE ROLE supabase_storage_admin LOGIN NOINHERIT;
+    CREATE ROLE supabase_storage_admin LOGIN NOINHERIT CREATEROLE;
   END IF;
 
   -- Edge functions admin
@@ -52,7 +52,7 @@ BEGIN
   END IF;
 END $$;
 
--- Set passwords for all login roles using psql variable
+-- Set passwords for all login roles using psql variable with fallback
 ALTER USER authenticator WITH LOGIN PASSWORD :'pgpass';
 ALTER USER pgbouncer WITH LOGIN PASSWORD :'pgpass';
 ALTER USER supabase_auth_admin WITH LOGIN PASSWORD :'pgpass';
@@ -66,6 +66,9 @@ GRANT anon TO authenticator;
 GRANT authenticated TO authenticator;
 GRANT service_role TO authenticator;
 GRANT supabase_admin TO authenticator;
+
+-- Storage admin membership to authenticator
+GRANT authenticator TO supabase_storage_admin;
 
 -- Schema permissions
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;

@@ -153,26 +153,27 @@ async function executeViaPg(connectionString, sql) {
 
 /**
  * High-level SQL query runner with automatic strategy selection
+ * Direct PostgreSQL connection is prioritized when available for reliability.
  */
 async function runQuery(sql) {
-  if (SUPABASE_URL && SERVICE_ROLE_KEY && !SERVICE_ROLE_KEY.includes('placeholder')) {
+  if (DATABASE_URL && !DATABASE_URL.includes('placeholder')) {
     try {
-      return await executeViaHttp(SUPABASE_URL, SERVICE_ROLE_KEY, sql);
+      return await executeViaPg(DATABASE_URL, sql);
     } catch (err) {
-      if (DATABASE_URL && !DATABASE_URL.includes('placeholder')) {
-        console.warn(`[migration] HTTP query failed (${err.message}). Falling back to direct PostgreSQL connection...`);
-        return await executeViaPg(DATABASE_URL, sql);
+      if (SUPABASE_URL && SERVICE_ROLE_KEY && !SERVICE_ROLE_KEY.includes('placeholder')) {
+        console.warn(`[migration] Direct PG query failed (${err.message}). Falling back to HTTP endpoint...`);
+        return await executeViaHttp(SUPABASE_URL, SERVICE_ROLE_KEY, sql);
       }
       throw err;
     }
   }
 
-  if (DATABASE_URL && !DATABASE_URL.includes('placeholder')) {
-    return await executeViaPg(DATABASE_URL, sql);
+  if (SUPABASE_URL && SERVICE_ROLE_KEY && !SERVICE_ROLE_KEY.includes('placeholder')) {
+    return await executeViaHttp(SUPABASE_URL, SERVICE_ROLE_KEY, sql);
   }
 
   throw new Error(
-    'No valid Supabase credentials found. Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY or DATABASE_URL.'
+    'No valid Supabase credentials found. Set DATABASE_URL or SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.'
   );
 }
 
@@ -275,9 +276,9 @@ async function ensureServiceRoles() {
 
       -- Storage admin
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
-        CREATE ROLE supabase_storage_admin WITH LOGIN NOINHERIT PASSWORD '${sanitizedPassword}';
+        CREATE ROLE supabase_storage_admin WITH LOGIN NOINHERIT CREATEROLE PASSWORD '${sanitizedPassword}';
       ELSE
-        ALTER ROLE supabase_storage_admin WITH LOGIN PASSWORD '${sanitizedPassword}';
+        ALTER ROLE supabase_storage_admin WITH LOGIN CREATEROLE PASSWORD '${sanitizedPassword}';
       END IF;
 
       -- Functions admin
@@ -299,6 +300,7 @@ async function ensureServiceRoles() {
     GRANT anon TO authenticator;
     GRANT authenticated TO authenticator;
     GRANT service_role TO authenticator;
+    GRANT authenticator TO supabase_storage_admin;
   `;
   try {
     await runQuery(roleSql);

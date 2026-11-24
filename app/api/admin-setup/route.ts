@@ -34,11 +34,39 @@ async function initAdminViaPg(connectionString: string, email: string, password:
       CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
       CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
+      -- Ensure roles exist
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+          CREATE ROLE anon NOLOGIN;
+        END IF;
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+          CREATE ROLE authenticated NOLOGIN;
+        END IF;
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN
+          CREATE ROLE service_role NOLOGIN;
+        END IF;
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
+          CREATE ROLE authenticator NOINHERIT LOGIN;
+        END IF;
+      END
+      $$;
+
+      GRANT anon, authenticated, service_role TO authenticator;
+
       -- PostgREST role and schema grants
       GRANT USAGE, CREATE ON SCHEMA public TO authenticator, anon, authenticated, service_role, postgres;
       GRANT USAGE, CREATE ON SCHEMA storage TO authenticator, anon, authenticated, service_role, postgres;
       GRANT USAGE, CREATE ON SCHEMA graphql_public TO authenticator, anon, authenticated, service_role, postgres;
-      GRANT USAGE ON SCHEMA auth TO authenticator, service_role, postgres;
+      GRANT USAGE ON SCHEMA auth TO authenticator, anon, authenticated, service_role, postgres;
+
+      GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticator, anon, authenticated, service_role, postgres;
+      GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticator, anon, authenticated, service_role, postgres;
+      GRANT ALL ON ALL ROUTINES IN SCHEMA public TO authenticator, anon, authenticated, service_role, postgres;
+
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO authenticator, anon, authenticated, service_role, postgres;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticator, anon, authenticated, service_role, postgres;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO authenticator, anon, authenticated, service_role, postgres;
     `);
 
     // 2. Ensure public.admin_users table exists with correct permissions

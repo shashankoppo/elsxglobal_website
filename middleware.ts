@@ -242,7 +242,7 @@ export async function middleware(request: NextRequest) {
       user.user_metadata?.role === 'superadmin'
 
     if (isMasterAdmin) {
-      return NextResponse.redirect(new URL('/admin/overview', request.url))
+      return NextResponse.redirect(new URL('/admin/overview/', request.url))
     }
   }
 

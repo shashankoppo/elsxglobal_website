@@ -15,6 +15,6 @@ export default function AdminPage() {
     refundOrder, togglePlanActive, deletePlan, toggleAddonActive, deleteAddon,
     updateTicketStatus, filteredOrders, statusColors
   } = context;
-  return <OverviewTab stats={stats} orders={orders} tickets={tickets} onRefresh={refreshAll} statusColors={statusColors} onTab={(t) => router.push('/admin/' + t)} />;
+  return <OverviewTab stats={stats} orders={orders} tickets={tickets} onRefresh={refreshAll} statusColors={statusColors} onTab={(t) => router.push('/admin/' + t + '/')} />;
 }
 

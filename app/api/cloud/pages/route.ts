@@ -29,46 +29,7 @@ export interface PagesProject {
   createdAt: string;
 }
 
-let fallbackProjects: PagesProject[] = [
-  {
-    id: 'proj-001',
-    name: 'vaulthost-docs',
-    gitRepo: 'https://github.com/vaulthost/docs',
-    branch: 'main',
-    framework: 'nextjs',
-    buildCommand: 'npm run build',
-    outputDir: '.next',
-    domain: 'docs.vaulthost.cloud',
-    status: 'active',
-    latestDeployment: {
-      id: 'dep-901',
-      commitHash: '7c81d2a',
-      commitMessage: 'feat(api): update OpenAPI spec for MCP tools',
-      status: 'success',
-      createdAt: '2026-03-12T09:15:00Z',
-    },
-    createdAt: '2026-01-10T12:00:00Z',
-  },
-  {
-    id: 'proj-002',
-    name: 'apexdigital-landing',
-    gitRepo: 'https://github.com/apexdigital/landing',
-    branch: 'production',
-    framework: 'astro',
-    buildCommand: 'npm run build',
-    outputDir: 'dist',
-    domain: 'apexdigital.io',
-    status: 'active',
-    latestDeployment: {
-      id: 'dep-902',
-      commitHash: '3a49f1b',
-      commitMessage: 'chore(deps): bump tailwind and react',
-      status: 'success',
-      createdAt: '2026-03-14T18:42:00Z',
-    },
-    createdAt: '2026-02-01T15:20:00Z',
-  },
-];
+let fallbackProjects: PagesProject[] = [];
 
 export async function GET(req: NextRequest) {
   try {
@@ -105,12 +66,18 @@ export async function GET(req: NextRequest) {
     const supabase = createServerClient();
     const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
 
-    let projects = fallbackProjects;
+    let projects: PagesProject[] = [];
     try {
-      const { data: dbProjects, error } = await supabase
+      let query = supabase
         .from('cloud_pages_projects')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (user?.id) {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data: dbProjects, error } = await query;
 
       if (!error && dbProjects && dbProjects.length > 0) {
         projects = dbProjects.map((p: any) => ({

@@ -233,7 +233,7 @@ export default function AdminApprovalQueuePage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-signal text-black font-semibold hover:opacity-95 transition-opacity"
           >
             <Sparkles className="w-4 h-4" />
-            Generate Sample AI Intent to Test
+            Simulate Action Gateway Intent (Verification)
           </button>
         </div>
       ) : (
@@ -365,7 +365,7 @@ export default function AdminApprovalQueuePage() {
                       <Lock className="w-4 h-4 text-signal" />
                       Staff 2FA Dual-Authorization Challenge
                     </div>
-                    <span className="text-xs text-text-muted-v4 font-mono">Demo token: Admin@2026!</span>
+                    <span className="text-xs text-text-muted-v4 font-mono">Passcode authorization active</span>
                   </div>
 
                   <input

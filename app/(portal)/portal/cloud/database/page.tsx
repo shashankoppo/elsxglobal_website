@@ -8,44 +8,17 @@ import {
 } from 'lucide-react';
 import { PanelCard } from '@/components/ui/panel-card';
 
-const INITIAL_DATABASES = [
-  {
-    id: 'db-01',
-    name: 'production-app-db',
-    tables: 14,
-    size: '184 MB',
-    reads24h: '3.4M',
-    writes24h: '180K',
-    replicas: '300+ Edge Nodes',
-    created: '2026-05-10',
-    status: 'Active'
-  },
-  {
-    id: 'db-02',
-    name: 'telemetry-metrics-db',
-    tables: 6,
-    size: '420 MB',
-    reads24h: '8.2M',
-    writes24h: '940K',
-    replicas: '300+ Edge Nodes',
-    created: '2026-07-02',
-    status: 'Active'
-  },
-];
+const INITIAL_DATABASES: any[] = [];
 
 export default function DatabaseManagementPage() {
   const [databases, setDatabases] = useState(INITIAL_DATABASES);
-  const [selectedDb, setSelectedDb] = useState<any>(INITIAL_DATABASES[0]);
+  const [selectedDb, setSelectedDb] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newDbName, setNewDbName] = useState('');
-  const [querySql, setQuerySql] = useState('SELECT id, name, email, created_at FROM users LIMIT 3;');
+  const [querySql, setQuerySql] = useState('SELECT 1 as ping, datetime(\'now\') as server_time;');
   const [isExecuting, setIsExecuting] = useState(false);
-  const [queryResult, setQueryResult] = useState<any[]>([
-    { id: 1, name: 'Ananya Sharma', email: 'ananya@fintech.io', created_at: '2026-09-01' },
-    { id: 2, name: 'Vikram Mehta', email: 'vikram@enterprise.in', created_at: '2026-09-10' },
-    { id: 3, name: 'Marcus Vance', email: 'marcus@cloudops.com', created_at: '2026-09-18' },
-  ]);
+  const [queryResult, setQueryResult] = useState<any[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleCreate = (e: React.FormEvent) => {
@@ -75,8 +48,7 @@ export default function DatabaseManagementPage() {
     setTimeout(() => {
       setIsExecuting(false);
       setQueryResult([
-        { id: 101, name: 'Sample Record 1', email: 'rec1@test.com', created_at: new Date().toISOString().split('T')[0] },
-        { id: 102, name: 'Sample Record 2', email: 'rec2@test.com', created_at: new Date().toISOString().split('T')[0] },
+        { ping: 1, server_time: new Date().toISOString(), status: 'connected', region: 'bom-01 (Mumbai Anycast)' },
       ]);
     }, 250);
   };
@@ -171,6 +143,20 @@ export default function DatabaseManagementPage() {
                 </div>
               );
             })}
+
+            {databases.length === 0 && (
+              <div className="p-6 rounded-2xl border border-hairline bg-ink-surface text-center">
+                <Database className="h-8 w-8 text-signal/40 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-text-primary-v4">No D1 databases yet</p>
+                <p className="text-[11px] text-text-muted-v4 mt-1 mb-3">Create your first serverless SQLite database for edge applications.</p>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="px-3.5 py-1.5 rounded-btn v4-btn-primary text-xs font-semibold"
+                >
+                  <Plus className="h-3.5 w-3.5 inline mr-1" /> Create Database
+                </button>
+              </div>
+            )}
           </div>
 
           {/* D1 Connection Info Box */}

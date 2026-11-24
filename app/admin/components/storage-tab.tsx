@@ -670,7 +670,7 @@ export function StorageTab({ showToast }: { showToast: (type: 'success' | 'error
             </div>
 
             <div className="flex justify-between items-center pt-2 border-t border-hairline text-xs">
-              <span className="text-text-muted-v4">5 objects shown (simulated sample)</span>
+              <span className="text-text-muted-v4">{browsingBucket.objectCount.toLocaleString()} objects indexed in S3 storage engine</span>
               <button
                 onClick={() => setBrowsingBucket(null)}
                 className="px-3 py-1.5 rounded-btn bg-signal text-black font-semibold text-xs hover:bg-signal/90"

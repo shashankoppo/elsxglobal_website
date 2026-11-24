@@ -14,52 +14,6 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { fadeUp, stagger, useScrollReveal } from '@/lib/animations';
 
-const DEMO_DASHBOARD_SERVICES = [
-  {
-    id: 'svc-001',
-    plan_name: 'VPS Pro EPYC (8GB)',
-    domain: 'api.production.internal',
-    status: 'active',
-    tier: 'VPS Pro',
-    ip: '103.21.244.12',
-    region: 'BOM1 (Mumbai)',
-    specs: { cpu: '4 vCPU EPYC', ram: '8 GB', storage: '160 GB NVMe' },
-    created_at: '2026-06-01'
-  },
-  {
-    id: 'svc-002',
-    plan_name: 'VaultWorkers Edge Router',
-    domain: 'gateway.vaulthost.cloud',
-    status: 'active',
-    tier: 'Edge Compute',
-    ip: 'Anycast (300+ PoPs)',
-    region: 'Global Edge',
-    specs: { cpu: '30ms CPU limit', ram: '128 MB V8', storage: 'VaultKV Replicated' },
-    created_at: '2026-07-15'
-  },
-  {
-    id: 'svc-003',
-    plan_name: 'VaultR2 Object Bucket',
-    domain: 'assets.vaulthost.cloud',
-    status: 'active',
-    tier: 'Storage',
-    ip: 'S3-Compatible',
-    region: 'Multi-Region (APAC/EU)',
-    specs: { cpu: 'Unlimited IOPS', ram: 'Zero Egress', storage: '48.6 GB / 100 GB' },
-    created_at: '2026-08-01'
-  }
-];
-
-const DEMO_DASHBOARD_INVOICES = [
-  { id: 'INV-2026-0041', amount: 4999, status: 'paid', created_at: '2026-09-01', invoice_number: 'INV-2026-0041', hosting_orders: { plan_name: 'VPS Pro EPYC (8GB)' } },
-  { id: 'INV-2026-0028', amount: 4999, status: 'paid', created_at: '2026-08-01', invoice_number: 'INV-2026-0028', hosting_orders: { plan_name: 'VPS Pro EPYC (8GB)' } },
-  { id: 'INV-2026-0014', amount: 4999, status: 'paid', created_at: '2026-07-01', invoice_number: 'INV-2026-0014', hosting_orders: { plan_name: 'VPS Pro EPYC (8GB)' } },
-];
-
-const DEMO_DASHBOARD_TICKETS = [
-  { id: 'TCK-1092', subject: 'Custom BGP Anycast Route setup', status: 'resolved', priority: 'medium', created_at: '2026-09-18' },
-];
-
 export default function PortalDashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);

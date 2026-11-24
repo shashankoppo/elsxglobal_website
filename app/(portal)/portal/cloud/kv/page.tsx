@@ -26,20 +26,12 @@ interface KvEntryItem {
   ttlSeconds?: number;
 }
 
-const INITIAL_NAMESPACES: NamespaceItem[] = [
-  { id: 'kv-ns-01', name: 'session-store', description: 'User session data', entryCount: 14820, createdAt: '2026-08-10' },
-  { id: 'kv-ns-02', name: 'feature-flags', description: 'Feature flag configuration', entryCount: 42, createdAt: '2026-09-20' },
-];
-
-const SAMPLE_ENTRIES: KvEntryItem[] = [
-  { key: 'user:12345:session', value: '{"userId":"12345","role":"admin"}', expiresAt: '2026-11-13T12:00:00Z' },
-  { key: 'flag:dark_mode', value: 'true', expiresAt: null },
-  { key: 'rate_limit:api:192.168.1.1', value: '45', expiresAt: '2026-11-12T03:00:00Z' },
-];
+const INITIAL_NAMESPACES: NamespaceItem[] = [];
+const SAMPLE_ENTRIES: KvEntryItem[] = [];
 
 export default function KvManagementPage() {
   const [namespaces, setNamespaces] = useState<NamespaceItem[]>(INITIAL_NAMESPACES);
-  const [selectedNamespace, setSelectedNamespace] = useState<NamespaceItem>(INITIAL_NAMESPACES[0]);
+  const [selectedNamespace, setSelectedNamespace] = useState<NamespaceItem | null>(null);
   const [entries, setEntries] = useState<KvEntryItem[]>(SAMPLE_ENTRIES);
   const [keyPrefixSearch, setKeyPrefixSearch] = useState('');
   const [loadingEntries, setLoadingEntries] = useState(false);
@@ -82,16 +74,19 @@ export default function KvManagementPage() {
       const res = await fetch('/api/cloud/kv');
       if (res.ok) {
         const data = await res.json();
-        if (data.namespaces && Array.isArray(data.namespaces) && data.namespaces.length > 0) {
-          const mapped: NamespaceItem[] = data.namespaces.map((ns: any, idx: number) => ({
+        const rawList = data.data?.namespaces || data.namespaces || [];
+        if (Array.isArray(rawList)) {
+          const mapped: NamespaceItem[] = rawList.map((ns: any, idx: number) => ({
             id: ns.id || `kv-ns-0${idx + 1}`,
             name: ns.name,
-            description: ns.description || (ns.name === 'session-store' ? 'User session data' : 'Configuration & state'),
-            entryCount: ns.entryCount || (idx === 0 ? 14820 : 42),
-            createdAt: ns.createdAt ? ns.createdAt.split('T')[0] : '2026-08-10',
+            description: ns.description || 'Distributed key-value store',
+            entryCount: ns.entryCount || 0,
+            createdAt: ns.createdAt ? ns.createdAt.split('T')[0] : (ns.created_at ? ns.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
           }));
           setNamespaces(mapped);
-          if (!selectedNamespace) setSelectedNamespace(mapped[0]);
+          if (mapped.length > 0) {
+            setSelectedNamespace(prev => prev || mapped[0]);
+          }
         }
       }
     } catch {}
@@ -104,8 +99,9 @@ export default function KvManagementPage() {
       const res = await fetch(`/api/cloud/kv?namespace=${encodeURIComponent(nsId)}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.entries && Array.isArray(data.entries) && data.entries.length > 0) {
-          const mapped: KvEntryItem[] = data.entries.map((e: any) => ({
+        const rawEntries = data.data?.entries || data.entries || [];
+        if (Array.isArray(rawEntries)) {
+          const mapped: KvEntryItem[] = rawEntries.map((e: any) => ({
             key: e.key,
             value: typeof e.value === 'object' ? JSON.stringify(e.value) : String(e.value),
             expiresAt: e.expiresAt || null,
@@ -118,26 +114,19 @@ export default function KvManagementPage() {
       }
     } catch {}
 
-    // In-memory fallback
-    if (nsId === 'kv-ns-01' || nsId === 'session-store') {
-      setEntries(SAMPLE_ENTRIES);
-    } else {
-      setEntries([
-        { key: 'feature:ai_gateway_v2', value: 'true', expiresAt: null },
-        { key: 'feature:quantum_crypto', value: 'false', expiresAt: null },
-        { key: 'banner:global_alert', value: 'Scheduled edge upgrades at 04:00 UTC', expiresAt: '2026-11-20T00:00:00Z' },
-      ]);
-    }
+    setEntries([]);
     setLoadingEntries(false);
   };
 
   useEffect(() => {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadNamespaces();
   }, []);
 
   useEffect(() => {
     if (selectedNamespace) {
       loadEntries(selectedNamespace.id);
+    } else {
+      setEntries([]);
     }
   }, [selectedNamespace]);
 
@@ -428,11 +417,42 @@ export default function KvManagementPage() {
                 </div>
               );
             })}
+
+            {namespaces.length === 0 && (
+              <div className="p-6 rounded-2xl border border-hairline bg-ink-surface text-center">
+                <Database className="h-8 w-8 text-signal/40 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-text-primary-v4">No namespaces yet</p>
+                <p className="text-[11px] text-text-muted-v4 mt-1 mb-3">Create your first KV namespace to store distributed data.</p>
+                <button
+                  onClick={() => setShowCreateNsModal(true)}
+                  className="px-3.5 py-1.5 rounded-btn v4-btn-primary text-xs font-semibold"
+                >
+                  <Plus className="h-3.5 w-3.5 inline mr-1" /> Create Namespace
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right Panel: Key-Value Explorer (8 cols) */}
         <div className="lg:col-span-8 space-y-4">
+          {!selectedNamespace ? (
+            <div className="v4-panel p-12 text-center rounded-2xl border border-hairline bg-ink-surface/50">
+              <div className="w-14 h-14 rounded-2xl bg-signal/10 border border-signal/20 flex items-center justify-center mx-auto mb-4 text-signal">
+                <Key className="h-7 w-7" />
+              </div>
+              <h3 className="text-lg font-bold text-text-primary-v4 mb-2">No KV namespace selected</h3>
+              <p className="text-sm text-text-secondary-v4 max-w-md mx-auto mb-6">
+                Create or select a namespace to manage key-value pairs with low-latency replication across 300+ edge locations.
+              </p>
+              <button
+                onClick={() => setShowCreateNsModal(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-btn v4-btn-primary text-sm font-semibold shadow-glow"
+              >
+                <Plus className="h-4 w-4" /> Create Namespace
+              </button>
+            </div>
+          ) : (
           <div className="v4-panel rounded-2xl border border-hairline bg-ink-surface overflow-hidden">
             {/* Explorer Toolbar */}
             <div className="p-4 border-b border-hairline flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-ink-surface-2/40">
@@ -529,6 +549,7 @@ export default function KvManagementPage() {
               </table>
             </div>
           </div>
+          )}
         </div>
       </div>
 

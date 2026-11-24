@@ -491,7 +491,7 @@ export default function AdminBillingPage() {
   };
 
   useEffect(() => {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    refreshBillingData();
   }, []);
 
   // --- OVERVIEW AGGREGATES ---

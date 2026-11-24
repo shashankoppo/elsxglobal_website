@@ -39,15 +39,7 @@ export default function InvoiceListPage() {
           console.error('Error fetching invoices:', error)
           setInvoices([])
         } else {
-          // Fallback demo data if empty
-          if (data && data.length > 0) {
-            setInvoices(data)
-          } else {
-            setInvoices([
-              { id: 'inv-1', invoice_number: 'INV-2026-001', status: 'paid', amount: 4999, created_at: '2026-09-01T10:00:00Z', hosting_orders: { plan_name: 'VPS Pro 8GB' }, line_items: [{ desc: 'VPS Pro 8GB (Sep)', amount: 4999 }] },
-              { id: 'inv-2', invoice_number: 'INV-2026-002', status: 'pending', amount: 799, created_at: '2026-09-25T14:30:00Z', hosting_orders: { plan_name: 'Shared Business' }, line_items: [{ desc: 'Shared Business (Sep)', amount: 799 }] }
-            ])
-          }
+          setInvoices(data || [])
         }
       } catch (err) {
         console.error('Error in loadInvoices:', err)

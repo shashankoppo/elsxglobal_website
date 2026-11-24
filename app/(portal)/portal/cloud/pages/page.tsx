@@ -25,34 +25,7 @@ interface ProjectItem {
   outputDir?: string;
 }
 
-const INITIAL_PROJECTS: ProjectItem[] = [
-  {
-    id: 'prj-01',
-    name: 'my-nextjs-app',
-    gitRepo: 'github.com/user/my-app',
-    branch: 'main',
-    status: 'live',
-    domain: 'my-app.vaultpages.cloud',
-    lastDeployAt: '2 hours ago',
-    buildTime: '45s',
-    commitSha: 'a3f2b1c',
-    buildCommand: 'npm run build',
-    outputDir: '.next',
-  },
-  {
-    id: 'prj-02',
-    name: 'api-service',
-    gitRepo: 'github.com/user/api',
-    branch: 'main',
-    status: 'building',
-    domain: 'api.vaultpages.cloud',
-    lastDeployAt: '12 min ago',
-    buildTime: '1m 12s',
-    commitSha: 'd9e8f7a',
-    buildCommand: 'npm run build',
-    outputDir: 'dist',
-  },
-];
+const INITIAL_PROJECTS: ProjectItem[] = [];
 
 export default function PagesManagementPage() {
   const [projects, setProjects] = useState<ProjectItem[]>(INITIAL_PROJECTS);
@@ -361,23 +334,17 @@ export default function PagesManagementPage() {
       }
     } catch {}
 
-    // Fallback simulated logs
-    const mockLogs = [
-      `[00:00:01] [Coolify Build Engine] Booting isolated container runner for ${project.name}...`,
-      `[00:00:02] [Git] Cloned ${project.gitRepo}#${project.branch} (commit ${project.commitSha})`,
-      `[00:00:04] [Runtime] Detected Node.js 20.x runtime environment`,
-      `[00:00:06] [Install] Running 'npm ci --prefer-offline'`,
-      `[00:00:18] [Install] 342 packages installed in 11.2s`,
-      `[00:00:19] [Build] Executing '${project.buildCommand || 'npm run build'}'`,
-      `[00:00:23] [Next.js] Creating an optimized production build...`,
-      `[00:00:31] [Next.js] Compiled successfully in 8.4s`,
-      `[00:00:33] [Next.js] Finalized static page generation (12 routes)`,
-      `[00:00:35] [Assets] Emitted client bundle to ${project.outputDir || '.next'}`,
-      `[00:00:38] [Anycast] Pushing distribution payload to 300+ Edge POPs worldwide`,
-      `[00:00:41] [SSL] Validated Wildcard TLS certificate for ${project.domain}`,
-      `[00:00:45] [Done] Deployment complete. Live at https://${project.domain}`,
+    // Default deployment state logs
+    const deploymentLogs = [
+      `[Build Engine] Initializing build environment for ${project.name}...`,
+      `[Git] Source: ${project.gitRepo || 'local'} (${project.branch})`,
+      `[Status] Current deployment state: ${project.status.toUpperCase()}`,
+      `[Routing] Assigned edge domain: https://${project.domain}`,
+      project.status === 'live'
+        ? `[Edge] Application active across global Anycast points of presence.`
+        : `[Build] Ready for execution. Trigger a deployment to view real-time compilation output.`,
     ];
-    setLogs(mockLogs);
+    setLogs(deploymentLogs);
     setLoadingLogs(false);
   };
 
@@ -596,9 +563,27 @@ export default function PagesManagementPage() {
         })}
 
         {filteredProjects.length === 0 && (
-          <div className="v4-panel p-10 text-center rounded-2xl border border-hairline text-text-muted-v4">
-            No projects found matching &quot;{search}&quot;.
-          </div>
+          projects.length === 0 ? (
+            <div className="v4-panel p-12 text-center rounded-2xl border border-hairline bg-ink-surface/50">
+              <div className="w-14 h-14 rounded-2xl bg-signal/10 border border-signal/20 flex items-center justify-center mx-auto mb-4 text-signal">
+                <Layers className="h-7 w-7" />
+              </div>
+              <h3 className="text-lg font-bold text-text-primary-v4 mb-2">No web applications deployed yet</h3>
+              <p className="text-sm text-text-secondary-v4 max-w-md mx-auto mb-6">
+                Connect your Git repository to automatically build and deploy fast, global web applications to our Anycast edge network.
+              </p>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-btn v4-btn-primary text-sm font-semibold shadow-glow"
+              >
+                <Plus className="h-4 w-4" /> Deploy Your First App
+              </button>
+            </div>
+          ) : (
+            <div className="v4-panel p-10 text-center rounded-2xl border border-hairline text-text-muted-v4">
+              No projects found matching &quot;{search}&quot;.
+            </div>
+          )
         )}
       </div>
 

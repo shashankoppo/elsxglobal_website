@@ -105,8 +105,8 @@ const INITIAL_SUBSCRIPTIONS: SubscriptionItem[] = [
   {
     id: 'sub_01HGB8A9C2',
     userId: 'usr_88a9c2',
-    customerEmail: 'devops@bharatpay.co',
-    customerName: 'BharatPay Infra Team',
+    customerEmail: 'devops@enterprise.vaulthost.cloud',
+    customerName: 'VaultHost Enterprise Fleet',
     planId: 'k3s-cluster-ha',
     planName: 'VaultContainers Enterprise K3s',
     status: 'active',

@@ -114,13 +114,7 @@ const INITIAL_PROVIDERS: AIProvider[] = [
   },
 ];
 
-const INITIAL_TENANTS: TenantAIUsage[] = [
-  { id: 'ten-ai-01', tenantName: 'Apex Digital Systems', plan: 'Enterprise', tokens24h: 42.8, spend24h: 624.50, monthlyQuota: 5000, cacheHitRate: 52.4, status: 'normal' },
-  { id: 'ten-ai-02', tenantName: 'Fintech Payments Bharat', plan: 'Enterprise', tokens24h: 38.4, spend24h: 512.00, monthlyQuota: 4500, cacheHitRate: 48.9, status: 'normal' },
-  { id: 'ten-ai-03', tenantName: 'HyperScale AI Labs', plan: 'Pro', tokens24h: 28.6, spend24h: 380.20, monthlyQuota: 1200, cacheHitRate: 61.2, status: 'grace_period' },
-  { id: 'ten-ai-04', tenantName: 'Cognitive Health Cloud', plan: 'Pro', tokens24h: 18.2, spend24h: 215.40, monthlyQuota: 1000, cacheHitRate: 44.1, status: 'normal' },
-  { id: 'ten-ai-05', tenantName: 'CloudNative Devs Studio', plan: 'Growth', tokens24h: 14.8, spend24h: 110.00, monthlyQuota: 250, cacheHitRate: 35.8, status: 'throttled' },
-];
+const INITIAL_TENANTS: TenantAIUsage[] = [];
 
 export function AiGovernanceTab({ showToast }: { showToast: (type: 'success' | 'error', msg: string) => void }) {
   const [providers, setProviders] = useState<AIProvider[]>(INITIAL_PROVIDERS);
@@ -367,10 +361,10 @@ export function AiGovernanceTab({ showToast }: { showToast: (type: 'success' | '
             <Zap className="h-4 w-4 text-signal" />
           </div>
           <div className="text-2xl font-semibold tracking-tight text-text-primary-v4">
-            142.8M <span className="text-xs font-normal text-text-muted-v4">tokens</span>
+            {tenants.reduce((acc, t) => acc + t.tokens24h, 0).toFixed(1)}M <span className="text-xs font-normal text-text-muted-v4">tokens</span>
           </div>
           <div className="text-[11px] text-text-muted-v4 mt-1">
-            Peak: 14,200 tokens/sec
+            {tenants.length > 0 ? `Across ${tenants.length} active tenants` : 'Standby / Real-time metering'}
           </div>
         </div>
 
@@ -380,10 +374,10 @@ export function AiGovernanceTab({ showToast }: { showToast: (type: 'success' | '
             <Sparkles className="h-4 w-4 text-signal" />
           </div>
           <div className="text-2xl font-semibold tracking-tight text-text-primary-v4">
-            $1,842.10
+            ${tenants.reduce((acc, t) => acc + t.spend24h, 0).toFixed(2)}
           </div>
           <div className="text-[11px] text-good mt-1 flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" /> $2,540 saved via semantic cache
+            <CheckCircle2 className="h-3 w-3" /> Semantic cache active
           </div>
         </div>
       </div>
@@ -657,7 +651,16 @@ export function AiGovernanceTab({ showToast }: { showToast: (type: 'success' | '
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {filteredTenants.map((t) => {
+              {filteredTenants.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-10 text-center text-text-muted-v4">
+                    <Bot className="h-8 w-8 mx-auto mb-2 opacity-40 text-text-muted-v4" />
+                    <p className="font-medium text-xs text-text-primary-v4">No tenant AI activity recorded</p>
+                    <p className="text-[11px] text-text-muted-v4 mt-0.5">Active tenant LLM consumption and cache metrics will stream here automatically.</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredTenants.map((t) => {
                 const burnPct = Math.min(100, Math.round((t.spend24h * 30 / t.monthlyQuota) * 100));
                 return (
                   <tr key={t.id} className="hover:bg-ink-surface-2/60 transition-colors">
@@ -721,7 +724,7 @@ export function AiGovernanceTab({ showToast }: { showToast: (type: 'success' | '
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

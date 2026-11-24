@@ -37,98 +37,9 @@ interface WorkerLogEntry {
   cpuTimeMs: number;
 }
 
-const INITIAL_WORKERS: WorkerDeployment[] = [
-  {
-    id: 'wrk-01',
-    name: 'payment-router-edge',
-    tenantId: 'ten-02',
-    tenantName: 'Fintech Payments Bharat',
-    routePattern: 'api.bharatpay.co/v1/checkout/*',
-    activeVersion: 'v3.8.2',
-    replicas: 'Global Anycast',
-    cpuTimeMs: 1.8,
-    memoryCapMb: 128,
-    requestsPerSec: 64200,
-    status: 'running',
-    bindings: [{ type: 'D1 Database', name: 'DB_FINTECH_PROD' }, { type: 'VaultR2 Bucket', name: 'RECEIPTS_BUCKET' }],
-    envVarsCount: 8,
-    deployedAt: '2 hours ago',
-  },
-  {
-    id: 'wrk-02',
-    name: 'auth-jwt-verifier',
-    tenantId: 'ten-01',
-    tenantName: 'Apex Digital Systems',
-    routePattern: 'auth.apexdigital.io/*',
-    activeVersion: 'v2.1.0',
-    replicas: 'Global Anycast',
-    cpuTimeMs: 0.9,
-    memoryCapMb: 64,
-    requestsPerSec: 48900,
-    status: 'running',
-    bindings: [{ type: 'KV Store', name: 'SESSIONS_KV' }],
-    envVarsCount: 4,
-    deployedAt: '1 day ago',
-  },
-  {
-    id: 'wrk-03',
-    name: 'ai-prompt-evaluator',
-    tenantId: 'ten-03',
-    tenantName: 'HyperScale AI Labs',
-    routePattern: 'api.hyperscaleai.dev/v2/evaluate',
-    activeVersion: 'v1.4.9',
-    replicas: 'Global Anycast',
-    cpuTimeMs: 14.2,
-    memoryCapMb: 256,
-    requestsPerSec: 12400,
-    status: 'running',
-    bindings: [{ type: 'AI Gateway', name: 'AI_ROUTER' }, { type: 'Vector DB', name: 'EMBEDDINGS_IDX' }],
-    envVarsCount: 12,
-    deployedAt: '3 hours ago',
-  },
-  {
-    id: 'wrk-04',
-    name: 'telemetry-ingest-pipeline',
-    tenantId: 'ten-04',
-    tenantName: 'Global Logistics Hub',
-    routePattern: 'iot.globallogistics.com/stream',
-    activeVersion: 'v2.0.4',
-    replicas: 'Regional',
-    cpuTimeMs: 3.4,
-    memoryCapMb: 128,
-    requestsPerSec: 88500,
-    status: 'running',
-    bindings: [{ type: 'Queue', name: 'IOT_INGEST_QUEUE' }],
-    envVarsCount: 6,
-    deployedAt: '5 days ago',
-  },
-  {
-    id: 'wrk-05',
-    name: 'ssr-html-edge-renderer',
-    tenantId: 'ten-05',
-    tenantName: 'CloudNative Devs Studio',
-    routePattern: 'app.cloudnative.tech/*',
-    activeVersion: 'v1.0.1',
-    replicas: 'Global Anycast',
-    cpuTimeMs: 8.6,
-    memoryCapMb: 128,
-    requestsPerSec: 1200,
-    status: 'running',
-    bindings: [{ type: 'VaultR2 Bucket', name: 'STATIC_CHUNKS' }],
-    envVarsCount: 3,
-    deployedAt: '1 week ago',
-  },
-];
+const INITIAL_WORKERS: WorkerDeployment[] = [];
 
-const INITIAL_LOGS: WorkerLogEntry[] = [
-  { id: 'log-1', timestamp: '10:42:15.842', workerName: 'payment-router-edge', method: 'POST', path: '/v1/checkout/intent', statusCode: 200, colo: 'BOM', durationMs: 4.2, cpuTimeMs: 1.8 },
-  { id: 'log-2', timestamp: '10:42:15.890', workerName: 'auth-jwt-verifier', method: 'GET', path: '/auth/verify', statusCode: 200, colo: 'SIN', durationMs: 2.1, cpuTimeMs: 0.8 },
-  { id: 'log-3', timestamp: '10:42:16.012', workerName: 'telemetry-ingest-pipeline', method: 'POST', path: '/stream/gps', statusCode: 204, colo: 'FRA', durationMs: 5.6, cpuTimeMs: 3.1 },
-  { id: 'log-4', timestamp: '10:42:16.140', workerName: 'ai-prompt-evaluator', method: 'POST', path: '/v2/evaluate', statusCode: 200, colo: 'ORD', durationMs: 28.4, cpuTimeMs: 12.8 },
-  { id: 'log-5', timestamp: '10:42:16.295', workerName: 'payment-router-edge', method: 'POST', path: '/v1/checkout/capture', statusCode: 200, colo: 'BOM', durationMs: 6.8, cpuTimeMs: 2.2 },
-  { id: 'log-6', timestamp: '10:42:16.410', workerName: 'ssr-html-edge-renderer', method: 'GET', path: '/dashboard', statusCode: 200, colo: 'LHR', durationMs: 14.1, cpuTimeMs: 7.9 },
-  { id: 'log-7', timestamp: '10:42:16.520', workerName: 'auth-jwt-verifier', method: 'POST', path: '/auth/token', statusCode: 401, colo: 'SJC', durationMs: 3.4, cpuTimeMs: 1.1 },
-];
+const INITIAL_LOGS: WorkerLogEntry[] = [];
 
 export function WorkersTab({ showToast }: { showToast: (type: 'success' | 'error', msg: string) => void }) {
   const [workers, setWorkers] = useState<WorkerDeployment[]>(INITIAL_WORKERS);
@@ -304,10 +215,10 @@ export function WorkersTab({ showToast }: { showToast: (type: 'success' | 'error
             <Zap className="h-4 w-4 text-signal" />
           </div>
           <div className="text-2xl font-semibold tracking-tight text-text-primary-v4">
-            412 <span className="text-xs font-normal text-text-muted-v4">scripts</span>
+            {workers.length} <span className="text-xs font-normal text-text-muted-v4">scripts</span>
           </div>
           <div className="text-[11px] text-good mt-1 flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" /> 100% deployed to Anycast edge
+            <CheckCircle2 className="h-3 w-3" /> Deployed to Anycast edge
           </div>
         </div>
 
@@ -317,10 +228,10 @@ export function WorkersTab({ showToast }: { showToast: (type: 'success' | 'error
             <Activity className="h-4 w-4 text-signal" />
           </div>
           <div className="text-2xl font-semibold tracking-tight text-text-primary-v4">
-            284,000 <span className="text-xs font-normal text-text-muted-v4">req/s</span>
+            {workers.reduce((sum, w) => sum + w.requestsPerSec, 0).toLocaleString()} <span className="text-xs font-normal text-text-muted-v4">req/s</span>
           </div>
           <div className="text-[11px] text-text-muted-v4 mt-1">
-            Peak: 340k req/s
+            {workers.length > 0 ? `Across ${workers.length} edge workers` : 'Fleet standby'}
           </div>
         </div>
 
@@ -541,65 +452,75 @@ export function WorkersTab({ showToast }: { showToast: (type: 'success' | 'error
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {filteredWorkers.map(w => (
-                <tr key={w.id} className="hover:bg-ink-surface-2/60 transition-colors">
-                  <td className="py-3 font-semibold text-text-primary-v4 flex items-center gap-2">
-                    <FileCode className="h-4 w-4 text-signal shrink-0" />
-                    <span>{w.name}</span>
-                  </td>
-                  <td className="py-3">
-                    <div className="text-text-primary-v4">{w.tenantName}</div>
-                    <div className="text-[10px] text-text-muted-v4 font-mono">{w.tenantId}</div>
-                  </td>
-                  <td className="py-3 font-mono text-[11px] text-text-secondary-v4 max-w-xs truncate">
-                    {w.routePattern}
-                  </td>
-                  <td className="py-3">
-                    <span className="px-2 py-0.5 rounded-chip text-[10px] font-mono bg-ink-surface border border-hairline text-text-secondary-v4">
-                      {w.activeVersion}
-                    </span>
-                  </td>
-                  <td className="py-3 text-[11px] text-text-muted-v4">{w.replicas}</td>
-                  <td className="py-3 v4-readout-primary font-bold text-text-primary-v4">
-                    {w.cpuTimeMs} ms
-                  </td>
-                  <td className="py-3">
-                    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
-                      w.status === 'running'
-                        ? 'bg-good/10 text-good border-good/20'
-                        : w.status === 'throttled'
-                        ? 'bg-warn/10 text-warn border-warn/20'
-                        : 'bg-bad/10 text-bad border-bad/20'
-                    }`}>
-                      {w.status === 'running' && <CheckCircle2 className="h-3 w-3" />}
-                      {w.status === 'throttled' && <AlertTriangle className="h-3 w-3" />}
-                      {w.status === 'suspended' && <Power className="h-3 w-3" />}
-                      {w.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="py-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => setInspectingWorker(w)}
-                        className="px-2 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors flex items-center gap-1"
-                      >
-                        <Eye className="h-3 w-3" /> Inspect
-                      </button>
-                      <button
-                        onClick={() => handleToggleKillSwitch(w.id, w.status)}
-                        className={`px-2 py-1 rounded-btn text-[11px] transition-colors border ${
-                          w.status === 'suspended'
-                            ? 'bg-good/10 text-good border-good/20 hover:bg-good/20'
-                            : 'bg-bad/10 text-bad border-bad/20 hover:bg-bad/20'
-                        }`}
-                        title={w.status === 'suspended' ? 'Resume worker' : 'Emergency kill-switch'}
-                      >
-                        {w.status === 'suspended' ? 'Resume' : 'Kill-switch'}
-                      </button>
-                    </div>
+              {filteredWorkers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-text-muted-v4">
+                    <FileCode className="h-8 w-8 mx-auto mb-2 opacity-40 text-text-muted-v4" />
+                    <p className="font-medium text-xs text-text-primary-v4">No worker scripts deployed</p>
+                    <p className="text-[11px] text-text-muted-v4 mt-0.5">V8 isolate workers deployed via CLI, API, or Portal will appear here.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredWorkers.map(w => (
+                  <tr key={w.id} className="hover:bg-ink-surface-2/60 transition-colors">
+                    <td className="py-3 font-semibold text-text-primary-v4 flex items-center gap-2">
+                      <FileCode className="h-4 w-4 text-signal shrink-0" />
+                      <span>{w.name}</span>
+                    </td>
+                    <td className="py-3">
+                      <div className="text-text-primary-v4">{w.tenantName}</div>
+                      <div className="text-[10px] text-text-muted-v4 font-mono">{w.tenantId}</div>
+                    </td>
+                    <td className="py-3 font-mono text-[11px] text-text-secondary-v4 max-w-xs truncate">
+                      {w.routePattern}
+                    </td>
+                    <td className="py-3">
+                      <span className="px-2 py-0.5 rounded-chip text-[10px] font-mono bg-ink-surface border border-hairline text-text-secondary-v4">
+                        {w.activeVersion}
+                      </span>
+                    </td>
+                    <td className="py-3 text-[11px] text-text-muted-v4">{w.replicas}</td>
+                    <td className="py-3 v4-readout-primary font-bold text-text-primary-v4">
+                      {w.cpuTimeMs} ms
+                    </td>
+                    <td className="py-3">
+                      <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
+                        w.status === 'running'
+                          ? 'bg-good/10 text-good border-good/20'
+                          : w.status === 'throttled'
+                          ? 'bg-warn/10 text-warn border-warn/20'
+                          : 'bg-bad/10 text-bad border-bad/20'
+                      }`}>
+                        {w.status === 'running' && <CheckCircle2 className="h-3 w-3" />}
+                        {w.status === 'throttled' && <AlertTriangle className="h-3 w-3" />}
+                        {w.status === 'suspended' && <Power className="h-3 w-3" />}
+                        {w.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setInspectingWorker(w)}
+                          className="px-2 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" /> Inspect
+                        </button>
+                        <button
+                          onClick={() => handleToggleKillSwitch(w.id, w.status)}
+                          className={`px-2 py-1 rounded-btn text-[11px] transition-colors border ${
+                            w.status === 'suspended'
+                              ? 'bg-good/10 text-good border-good/20 hover:bg-good/20'
+                              : 'bg-bad/10 text-bad border-bad/20 hover:bg-bad/20'
+                          }`}
+                          title={w.status === 'suspended' ? 'Resume worker' : 'Emergency kill-switch'}
+                        >
+                          {w.status === 'suspended' ? 'Resume' : 'Kill-switch'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

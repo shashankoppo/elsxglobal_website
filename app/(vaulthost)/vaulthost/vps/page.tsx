@@ -76,7 +76,7 @@ export default function VpsHostingPage() {
       >
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
           <Link
-            href={`/portal?plan=${selectedPlan.id}`}
+            href={`/vaulthost/checkout?plan=vps-${selectedPlan.id}&billing=${isAnnual ? 'annual' : 'monthly'}`}
             className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-btn v4-btn-primary text-sm font-medium"
           >
             Launch VPS in 60s <ArrowRight className="h-4 w-4" />
@@ -220,7 +220,7 @@ export default function VpsHostingPage() {
 
                   <div className="pt-4 border-t border-hairline">
                     <Link
-                      href={`/portal?plan=${plan.id}&billing=${isAnnual ? 'annual' : 'monthly'}`}
+                      href={`/vaulthost/checkout?plan=vps-${plan.id}&billing=${isAnnual ? 'annual' : 'monthly'}`}
                       className={`w-full py-2.5 px-4 rounded-btn text-xs font-medium inline-flex items-center justify-center gap-2 transition-all ${
                         isSelected ? 'v4-btn-primary' : 'bg-ink-surface-2 border border-hairline text-text-primary-v4 hover:bg-ink-surface'
                       }`}
@@ -447,7 +447,7 @@ export default function VpsHostingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
-                  href={`/portal?plan=${selectedPlan.id}`}
+                  href={`/vaulthost/checkout?plan=vps-${selectedPlan.id}&billing=${isAnnual ? 'annual' : 'monthly'}`}
                   className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-btn v4-btn-primary text-sm font-medium"
                 >
                   Deploy {selectedPlan.name} (₹{isAnnual ? selectedPlan.priceAnnual : selectedPlan.priceMonthly}/mo){' '}

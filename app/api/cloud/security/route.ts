@@ -37,32 +37,7 @@ let firewallRules: FirewallRule[] = [
   { id: 'fwr-03', type: 'COUNTRY', value: 'RU, CN (Tor Exit)', action: 'JS Challenge', hits24h: 91400, description: 'Non-domestic sensitive endpoint challenge', enabled: true },
 ];
 
-const ATTACK_LOGS: AttackLog[] = [
-  {
-    id: 'atk-901',
-    timestamp: '2 min ago',
-    targetDomain: 'api.bharatpay.co',
-    vector: 'UDP Flood + Memcached Amplification',
-    peakRate: '340 Gbps / 84 Mpps',
-    scrubbingCenter: 'BOM-01 (Mumbai Anycast)',
-    layer: 'L3/L4',
-    status: 'mitigated',
-    mitigationMethod: 'BGP FlowSpec Filter + Anycast Scrubbing Sinkhole',
-    packetsDropped: '48.2 Billion',
-  },
-  {
-    id: 'atk-902',
-    timestamp: '14 min ago',
-    targetDomain: 'auth.apexdigital.io',
-    vector: 'Credential Stuffing Botnet (12k IPs)',
-    peakRate: '42,000 req/s',
-    scrubbingCenter: 'SIN-02 (Singapore Anycast)',
-    layer: 'L7',
-    status: 'mitigated',
-    mitigationMethod: 'VaultBot ML Fingerprint + Managed Challenge (100% Drops)',
-    packetsDropped: '2.4 Million',
-  },
-];
+const ATTACK_LOGS: AttackLog[] = [];
 
 export async function GET() {
   try {

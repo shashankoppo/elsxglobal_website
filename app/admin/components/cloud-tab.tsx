@@ -62,25 +62,15 @@ const INITIAL_POPS: PopNode[] = [
   { id: 'pop-jnb', code: 'JNB', city: 'Johannesburg', country: 'ZA', region: 'Africa-South', status: 'healthy', latencyMs: 28, cpuLoad: 32, ramUsage: 39, bandwidthGbps: 98.4, bgpPeers: 10, activeRequestsPerSec: 84000 },
 ];
 
-const INITIAL_TENANTS: TenantQuota[] = [
-  { id: 'ten-01', name: 'Apex Digital Systems', email: 'infra@apexdigital.io', plan: 'Enterprise', status: 'active', workersUsed: 42.8, workersLimit: 100, storageUsedGb: 840, storageLimitGb: 2000, d1QueriesUsed: 89.2, d1QueriesLimit: 250, aiTokensUsed: 14.5, aiTokensLimit: 50 },
-  { id: 'ten-02', name: 'Fintech Payments Bharat', email: 'security@bharatpay.co', plan: 'Enterprise', status: 'active', workersUsed: 78.4, workersLimit: 150, storageUsedGb: 1420, storageLimitGb: 3000, d1QueriesUsed: 192.1, d1QueriesLimit: 400, aiTokensUsed: 28.2, aiTokensLimit: 60 },
-  { id: 'ten-03', name: 'HyperScale AI Labs', email: 'founder@hyperscaleai.dev', plan: 'Pro', status: 'active', workersUsed: 8.6, workersLimit: 10, storageUsedGb: 480, storageLimitGb: 500, d1QueriesUsed: 7.9, d1QueriesLimit: 10, aiTokensUsed: 9.8, aiTokensLimit: 10 },
-  { id: 'ten-04', name: 'Global Logistics Hub', email: 'devops@globallogistics.com', plan: 'Pro', status: 'active', workersUsed: 4.1, workersLimit: 10, storageUsedGb: 190, storageLimitGb: 500, d1QueriesUsed: 5.2, d1QueriesLimit: 10, aiTokensUsed: 2.1, aiTokensLimit: 10 },
-  { id: 'ten-05', name: 'CloudNative Devs Studio', email: 'alex@cloudnative.tech', plan: 'Free', status: 'active', workersUsed: 0.08, workersLimit: 0.1, storageUsedGb: 8.4, storageLimitGb: 10, d1QueriesUsed: 0.09, d1QueriesLimit: 0.1, aiTokensUsed: 0.008, aiTokensLimit: 0.01 },
-];
+const INITIAL_TENANTS: TenantQuota[] = [];
 
-const ATTACK_FEED: AttackEvent[] = [
-  { id: 'att-101', timestamp: '2 min ago', targetDomain: 'api.bharatpay.co', type: 'DDoS (L4)', vector: 'SYN Flood + UDP Reflection', peakRate: '680 Gbps / 140 Mpps', mitigation: 'BGP FlowSpec Filter (Absorbed at Edge)', status: 'mitigated' },
-  { id: 'att-102', timestamp: '14 min ago', targetDomain: 'auth.apexdigital.io', type: 'Bot Attack (L7)', vector: 'Credential Stuffing Botnet', peakRate: '42,000 req/sec', mitigation: 'VaultBot JS Challenge (100% Failed Bots)', status: 'mitigated' },
-  { id: 'att-103', timestamp: '38 min ago', targetDomain: 'cdn.hyperscaleai.dev', type: 'DDoS (L7)', vector: 'HTTP/2 Rapid Reset (CVE-2023-44487)', peakRate: '18.4M req/sec', mitigation: 'Anycast RST Enforcement', status: 'mitigated' },
-  { id: 'att-104', timestamp: '1h 12m ago', targetDomain: 'dns.internal-routing.net', type: 'DNS Amplification', vector: 'Anycast Root Spoofing', peakRate: '320 Gbps', mitigation: 'Anycast Scrubbing Center Route Filter', status: 'mitigated' },
-];
+const INITIAL_ATTACK_FEED: AttackEvent[] = [];
 
 export function CloudTab({ showToast }: { showToast: (t: 'success' | 'error', m: string) => void }) {
   const [activeSubTab, setActiveSubTab] = useState<'pops' | 'tenants' | 'ddos'>('pops');
   const [pops, setPops] = useState<PopNode[]>(INITIAL_POPS);
   const [tenants, setTenants] = useState<TenantQuota[]>(INITIAL_TENANTS);
+  const [attackFeed, setAttackFeed] = useState<AttackEvent[]>(INITIAL_ATTACK_FEED);
   const [searchTenant, setSearchTenant] = useState('');
   const [editingTenant, setEditingTenant] = useState<TenantQuota | null>(null);
   const [isDraining, setIsDraining] = useState<string | null>(null);
@@ -234,7 +224,7 @@ export function CloudTab({ showToast }: { showToast: (t: 'success' | 'error', m:
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Shield className="h-3.5 w-3.5" /> DDoS Mitigation & Threats ({ATTACK_FEED.length})
+          <Shield className="h-3.5 w-3.5" /> DDoS Mitigation & Threats ({attackFeed.length})
         </button>
       </div>
 
@@ -371,69 +361,79 @@ export function CloudTab({ showToast }: { showToast: (t: 'success' | 'error', m:
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filteredTenants.map((tenant) => (
-                    <tr key={tenant.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-foreground">{tenant.name}</div>
-                        <div className="text-[11px] text-muted-foreground font-mono">{tenant.email}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          tenant.plan === 'Enterprise'
-                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                            : tenant.plan === 'Pro'
-                            ? 'bg-signal/10 text-signal border border-signal/20'
-                            : 'bg-muted text-muted-foreground'
-                        }`}>
-                          {tenant.plan}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-mono text-foreground">{tenant.workersUsed}M / {tenant.workersLimit}M</div>
-                        <div className="w-24 bg-muted rounded-full h-1 mt-1 overflow-hidden">
-                          <div
-                            className={`h-full ${(tenant.workersUsed / tenant.workersLimit) > 0.85 ? 'bg-amber-500' : 'bg-signal'}`}
-                            style={{ width: `${Math.min(100, (tenant.workersUsed / tenant.workersLimit) * 100)}%` }}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-mono text-foreground">{tenant.storageUsedGb} GB / {tenant.storageLimitGb} GB</div>
-                        <div className="w-24 bg-muted rounded-full h-1 mt-1 overflow-hidden">
-                          <div
-                            className={`h-full ${(tenant.storageUsedGb / tenant.storageLimitGb) > 0.85 ? 'bg-amber-500' : 'bg-blue-500'}`}
-                            style={{ width: `${Math.min(100, (tenant.storageUsedGb / tenant.storageLimitGb) * 100)}%` }}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-mono text-foreground">{tenant.d1QueriesUsed}M / {tenant.d1QueriesLimit}M</div>
-                        <div className="w-24 bg-muted rounded-full h-1 mt-1 overflow-hidden">
-                          <div
-                            className={`h-full ${(tenant.d1QueriesUsed / tenant.d1QueriesLimit) > 0.85 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                            style={{ width: `${Math.min(100, (tenant.d1QueriesUsed / tenant.d1QueriesLimit) * 100)}%` }}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-mono text-foreground">{tenant.aiTokensUsed}M / {tenant.aiTokensLimit}M</div>
-                        <div className="w-24 bg-muted rounded-full h-1 mt-1 overflow-hidden">
-                          <div
-                            className={`h-full ${(tenant.aiTokensUsed / tenant.aiTokensLimit) > 0.85 ? 'bg-amber-500' : 'bg-violet-500'}`}
-                            style={{ width: `${Math.min(100, (tenant.aiTokensUsed / tenant.aiTokensLimit) * 100)}%` }}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => setEditingTenant({ ...tenant })}
-                          className="px-2.5 py-1 rounded bg-muted hover:bg-muted/80 text-foreground text-[11px] font-medium transition-colors flex items-center gap-1 ml-auto"
-                        >
-                          <Edit3 className="h-3 w-3 text-signal" /> Adjust Quotas
-                        </button>
+                  {filteredTenants.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                        <Server className="h-8 w-8 mx-auto mb-2 opacity-40 text-muted-foreground" />
+                        <p className="font-medium text-xs text-foreground">No tenant quotas configured</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Tenant resource allocations and usage counters will appear here.</p>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredTenants.map((tenant) => (
+                      <tr key={tenant.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-foreground">{tenant.name}</div>
+                          <div className="text-[11px] text-muted-foreground font-mono">{tenant.email}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            tenant.plan === 'Enterprise'
+                              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                              : tenant.plan === 'Pro'
+                              ? 'bg-signal/10 text-signal border border-signal/20'
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {tenant.plan}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-mono text-foreground">{tenant.workersUsed}M / {tenant.workersLimit}M</div>
+                          <div className="w-24 bg-muted rounded-full h-1 mt-1 overflow-hidden">
+                            <div
+                              className={`h-full ${(tenant.workersUsed / tenant.workersLimit) > 0.85 ? 'bg-amber-500' : 'bg-signal'}`}
+                              style={{ width: `${Math.min(100, (tenant.workersUsed / tenant.workersLimit) * 100)}%` }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-mono text-foreground">{tenant.storageUsedGb} GB / {tenant.storageLimitGb} GB</div>
+                          <div className="w-24 bg-muted rounded-full h-1 mt-1 overflow-hidden">
+                            <div
+                              className={`h-full ${(tenant.storageUsedGb / tenant.storageLimitGb) > 0.85 ? 'bg-amber-500' : 'bg-blue-500'}`}
+                              style={{ width: `${Math.min(100, (tenant.storageUsedGb / tenant.storageLimitGb) * 100)}%` }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-mono text-foreground">{tenant.d1QueriesUsed}M / {tenant.d1QueriesLimit}M</div>
+                          <div className="w-24 bg-muted rounded-full h-1 mt-1 overflow-hidden">
+                            <div
+                              className={`h-full ${(tenant.d1QueriesUsed / tenant.d1QueriesLimit) > 0.85 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                              style={{ width: `${Math.min(100, (tenant.d1QueriesUsed / tenant.d1QueriesLimit) * 100)}%` }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-mono text-foreground">{tenant.aiTokensUsed}M / {tenant.aiTokensLimit}M</div>
+                          <div className="w-24 bg-muted rounded-full h-1 mt-1 overflow-hidden">
+                            <div
+                              className={`h-full ${(tenant.aiTokensUsed / tenant.aiTokensLimit) > 0.85 ? 'bg-amber-500' : 'bg-violet-500'}`}
+                              style={{ width: `${Math.min(100, (tenant.aiTokensUsed / tenant.aiTokensLimit) * 100)}%` }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => setEditingTenant({ ...tenant })}
+                            className="px-2.5 py-1 rounded bg-muted hover:bg-muted/80 text-foreground text-[11px] font-medium transition-colors flex items-center gap-1 ml-auto"
+                          >
+                            <Edit3 className="h-3 w-3 text-signal" /> Adjust Quotas
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -617,25 +617,35 @@ export function CloudTab({ showToast }: { showToast: (t: 'success' | 'error', m:
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {ATTACK_FEED.map((event) => (
-                    <tr key={event.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3 font-mono text-muted-foreground">{event.timestamp}</td>
-                      <td className="px-4 py-3 font-mono font-medium text-foreground">{event.targetDomain}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/10 text-red-500 border border-red-500/20 font-semibold">
-                          {event.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{event.vector}</td>
-                      <td className="px-4 py-3 font-mono text-signal font-semibold">{event.peakRate}</td>
-                      <td className="px-4 py-3 text-foreground">{event.mitigation}</td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-green-500">
-                          <CheckCircle2 className="h-3 w-3" /> Absorbed (0 Impact)
-                        </span>
+                  {attackFeed.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                        <Shield className="h-8 w-8 mx-auto mb-2 text-green-500 opacity-80" />
+                        <p className="font-medium text-xs text-foreground">All systems secure</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">No active attack vectors detected. BGP FlowSpec and edge scrubbing are in continuous monitoring mode.</p>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    attackFeed.map((event) => (
+                      <tr key={event.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-mono text-muted-foreground">{event.timestamp}</td>
+                        <td className="px-4 py-3 font-mono font-medium text-foreground">{event.targetDomain}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/10 text-red-500 border border-red-500/20 font-semibold">
+                            {event.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{event.vector}</td>
+                        <td className="px-4 py-3 font-mono text-signal font-semibold">{event.peakRate}</td>
+                        <td className="px-4 py-3 text-foreground">{event.mitigation}</td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-green-500">
+                            <CheckCircle2 className="h-3 w-3" /> Absorbed (0 Impact)
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { CLOUD_PRICING, DOMAIN_PRICING } from '@/lib/data/cloud-pricing';
+import { resolvePlan } from '@/lib/data/all-plans';
 
 interface Plan {
   id: string;
@@ -106,58 +107,22 @@ export function CheckoutClient() {
           short_description: 'Custom configured cloud instance',
         });
       } else {
-        const { data: planData, error: planError } = await supabase
-          .from('hosting_plans')
-          .select('*')
-          .eq('id', planId)
-          .maybeSingle();
-        if (planError) console.error(planError);
+        try {
+          const { data: planData } = await supabase
+            .from('hosting_plans')
+            .select('*')
+            .eq('id', planId)
+            .maybeSingle();
 
-        if (planData) {
-          setPlan(planData as any);
-        } else if (planId.startsWith('domain-')) {
-          const tldParam = searchParams.get('tld') || '';
-          const cleanTld = planId.replace('domain-', '');
-          const domainInfo = DOMAIN_PRICING.find(
-            d => d.tld === tldParam || d.tld.replace('.', '') === cleanTld || d.tld === '.' + cleanTld
-          );
-          if (domainInfo) {
-            setPlan({
-              id: planId,
-              name: `${domainInfo.tld} Domain Registration`,
-              tier: 'domain',
-              price_monthly: domainInfo.registration,
-              price_annual: domainInfo.registration,
-              features: ['Free WHOIS Privacy Forever', 'Anycast Global DNS', 'DNSSEC 1-Click Signing', 'Instant Auto-Renewal'],
-              short_description: `1-year registration for ${domainInfo.tld} domain`,
-            });
+          if (planData) {
+            setPlan(planData as any);
           } else {
-            setPlan(null);
+            const resolved = resolvePlan(planId, searchParams);
+            setPlan(resolved);
           }
-        } else {
-          let matchedTier: any = null;
-          let matchedProduct: any = null;
-          for (const prod of Object.values(CLOUD_PRICING)) {
-            const found = prod.tiers.find(t => t.ctaPlanId === planId || t.id === planId);
-            if (found) {
-              matchedTier = found;
-              matchedProduct = prod;
-              break;
-            }
-          }
-          if (matchedTier && matchedProduct) {
-            setPlan({
-              id: planId,
-              name: `${matchedProduct.title} ${matchedTier.name}`,
-              tier: matchedProduct.productId,
-              price_monthly: matchedTier.monthlyPrice,
-              price_annual: matchedTier.annualPrice,
-              features: matchedTier.features,
-              short_description: matchedTier.description,
-            });
-          } else {
-            setPlan(null);
-          }
+        } catch {
+          const resolved = resolvePlan(planId, searchParams);
+          setPlan(resolved);
         }
       }
 

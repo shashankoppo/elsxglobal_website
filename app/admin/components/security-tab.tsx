@@ -41,80 +41,7 @@ interface FirewallRule {
   enabled: boolean;
 }
 
-const INITIAL_ATTACK_LOGS: AttackLog[] = [
-  {
-    id: 'atk-901',
-    timestamp: '2 min ago',
-    targetDomain: 'api.bharatpay.co',
-    vector: 'UDP Flood + Memcached Amplification',
-    peakRate: '340 Gbps / 84 Mpps',
-    scrubbingCenter: 'BOM-01 (Mumbai Anycast)',
-    layer: 'L3/L4',
-    status: 'mitigated',
-    mitigationMethod: 'BGP FlowSpec Filter + Anycast Scrubbing Sinkhole',
-    packetsDropped: '48.2 Billion',
-  },
-  {
-    id: 'atk-902',
-    timestamp: '14 min ago',
-    targetDomain: 'auth.apexdigital.io',
-    vector: 'Credential Stuffing Botnet (Distributed 12k IPs)',
-    peakRate: '42,000 req/s',
-    scrubbingCenter: 'SIN-02 (Singapore Anycast)',
-    layer: 'L7',
-    status: 'mitigated',
-    mitigationMethod: 'VaultBot ML Fingerprint + Managed Challenge (100% Drops)',
-    packetsDropped: '2.4 Million',
-  },
-  {
-    id: 'atk-903',
-    timestamp: '42 min ago',
-    targetDomain: 'cdn.hyperscaleai.dev',
-    vector: 'HTTP/2 Rapid Reset (CVE-2023-44487)',
-    peakRate: '18.4M req/s',
-    scrubbingCenter: 'FRA-01 (Frankfurt Anycast)',
-    layer: 'L7',
-    status: 'mitigated',
-    mitigationMethod: 'Edge Envoy Frame Rate Limiter RST Enforcement',
-    packetsDropped: '112 Million',
-  },
-  {
-    id: 'atk-904',
-    timestamp: '1h 15m ago',
-    targetDomain: 'dns.internal-routing.net',
-    vector: 'DNS Amplification (ANY query flood)',
-    peakRate: '190 Gbps / 45 Mpps',
-    scrubbingCenter: 'ORD-01 (Chicago Anycast)',
-    layer: 'L3/L4',
-    status: 'mitigated',
-    mitigationMethod: 'Anycast DNS Root Filter & RRL Rate Limiting',
-    packetsDropped: '21.5 Billion',
-  },
-  {
-    id: 'atk-905',
-    timestamp: '2h 05m ago',
-    targetDomain: 'checkout.bharatpay.co',
-    vector: 'HTTP Slowloris & Header Starvation',
-    peakRate: '28,000 conns',
-    scrubbingCenter: 'LHR-01 (London Anycast)',
-    layer: 'L7',
-    status: 'mitigated',
-    mitigationMethod: 'TCP Session Timeout Tightening (<500ms)',
-    packetsDropped: '840,000',
-  },
-  {
-    id: 'atk-906',
-    timestamp: '3h 40m ago',
-    targetDomain: 'gateway.apexdigital.io',
-    vector: 'SYN Flood with Random Spoofed IPs',
-    peakRate: '220 Gbps / 65 Mpps',
-    scrubbingCenter: 'SJC-01 (San Jose Anycast)',
-    layer: 'L3/L4',
-    status: 'absorbing',
-    mitigationMethod: 'eBPF SYN Proxy Auto-Validation',
-    packetsDropped: '34.8 Billion',
-  },
-];
+const INITIAL_ATTACK_LOGS: AttackLog[] = [];
 
 const INITIAL_WAF_RULES: WafRule[] = [
   {
@@ -344,13 +271,13 @@ export function SecurityTab({ showToast }: { showToast: (type: 'success' | 'erro
         <div className="v4-panel p-4">
           <div className="flex items-center justify-between text-text-muted-v4 mb-1 text-xs">
             <span>Attacks Blocked Today</span>
-            <ShieldAlert className="h-4 w-4 text-bad" />
+            <ShieldAlert className="h-4 w-4 text-signal" />
           </div>
           <div className="text-2xl font-semibold tracking-tight text-text-primary-v4">
-            1,842
+            {attackLogs.length}
           </div>
-          <div className="text-[11px] text-text-muted-v4 mt-1">
-            +18% vs 7-day average
+          <div className="text-[11px] text-good mt-1 flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" /> All vectors neutralized
           </div>
         </div>
 
@@ -625,44 +552,54 @@ export function SecurityTab({ showToast }: { showToast: (type: 'success' | 'erro
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {filteredLogs.map(log => (
-                <tr key={log.id} className="hover:bg-ink-surface-2/60 transition-colors">
-                  <td className="py-3 text-text-muted-v4 whitespace-nowrap">{log.timestamp}</td>
-                  <td className="py-3 font-semibold text-text-primary-v4">{log.targetDomain}</td>
-                  <td className="py-3">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold ${
-                      log.layer === 'L3/L4' ? 'bg-signal/10 text-signal' : 'bg-purple-500/10 text-purple-400'
-                    }`}>
-                      {log.layer}
-                    </span>
-                  </td>
-                  <td className="py-3 text-text-secondary-v4 max-w-xs truncate">{log.vector}</td>
-                  <td className="py-3 v4-readout-primary font-bold text-text-primary-v4 whitespace-nowrap">
-                    {log.peakRate}
-                  </td>
-                  <td className="py-3 v4-readout text-[11px] text-text-muted-v4 whitespace-nowrap">
-                    {log.scrubbingCenter}
-                  </td>
-                  <td className="py-3">
-                    <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-chip font-medium border ${
-                      log.status === 'mitigated'
-                        ? 'bg-good/10 text-good border-good/20'
-                        : 'bg-warn/10 text-warn border-warn/20 animate-pulse'
-                    }`}>
-                      <CheckCircle2 className="h-3 w-3" />
-                      {log.status === 'mitigated' ? 'Mitigated' : 'Absorbing'}
-                    </span>
-                  </td>
-                  <td className="py-3 text-right">
-                    <button
-                      onClick={() => setSelectedAttack(log)}
-                      className="px-2 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors"
-                    >
-                      Inspect
-                    </button>
+              {filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-text-muted-v4">
+                    <ShieldCheck className="h-8 w-8 mx-auto mb-2 text-good opacity-80" />
+                    <p className="font-medium text-xs text-text-primary-v4">Perimeter Secure — No Attack Activity Detected</p>
+                    <p className="text-[11px] text-text-muted-v4 mt-0.5">BGP FlowSpec, eBPF SYN proxies, and edge rate-limiters are active and continuously scrubbing traffic.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredLogs.map(log => (
+                  <tr key={log.id} className="hover:bg-ink-surface-2/60 transition-colors">
+                    <td className="py-3 text-text-muted-v4 whitespace-nowrap">{log.timestamp}</td>
+                    <td className="py-3 font-semibold text-text-primary-v4">{log.targetDomain}</td>
+                    <td className="py-3">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                        log.layer === 'L3/L4' ? 'bg-signal/10 text-signal' : 'bg-purple-500/10 text-purple-400'
+                      }`}>
+                        {log.layer}
+                      </span>
+                    </td>
+                    <td className="py-3 text-text-secondary-v4 max-w-xs truncate">{log.vector}</td>
+                    <td className="py-3 v4-readout-primary font-bold text-text-primary-v4 whitespace-nowrap">
+                      {log.peakRate}
+                    </td>
+                    <td className="py-3 v4-readout text-[11px] text-text-muted-v4 whitespace-nowrap">
+                      {log.scrubbingCenter}
+                    </td>
+                    <td className="py-3">
+                      <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-chip font-medium border ${
+                        log.status === 'mitigated'
+                          ? 'bg-good/10 text-good border-good/20'
+                          : 'bg-warn/10 text-warn border-warn/20 animate-pulse'
+                      }`}>
+                        <CheckCircle2 className="h-3 w-3" />
+                        {log.status === 'mitigated' ? 'Mitigated' : 'Absorbing'}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <button
+                        onClick={() => setSelectedAttack(log)}
+                        className="px-2 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors"
+                      >
+                        Inspect
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -48,13 +48,7 @@ interface BgpPeer {
   uptime: string;
 }
 
-const INITIAL_ZONES: DnsZone[] = [
-  { id: 'zone-01', domain: 'bharatpay.co', tenantId: 'ten-02', tenantName: 'Fintech Payments Bharat', nsStatus: 'active', dnssec: true, queries24h: 68.4, recordsCount: 18, createdDate: '2026-01-12' },
-  { id: 'zone-02', domain: 'apexdigital.io', tenantId: 'ten-01', tenantName: 'Apex Digital Systems', nsStatus: 'active', dnssec: true, queries24h: 42.1, recordsCount: 24, createdDate: '2026-02-04' },
-  { id: 'zone-03', domain: 'hyperscaleai.dev', tenantId: 'ten-03', tenantName: 'HyperScale AI Labs', nsStatus: 'active', dnssec: false, queries24h: 22.8, recordsCount: 12, createdDate: '2026-03-19' },
-  { id: 'zone-04', domain: 'globallogistics.com', tenantId: 'ten-04', tenantName: 'Global Logistics Hub', nsStatus: 'active', dnssec: true, queries24h: 12.6, recordsCount: 16, createdDate: '2026-04-02' },
-  { id: 'zone-05', domain: 'cloudnative.tech', tenantId: 'ten-05', tenantName: 'CloudNative Devs Studio', nsStatus: 'pending_delegation', dnssec: false, queries24h: 2.3, recordsCount: 6, createdDate: '2026-05-11' },
-];
+const INITIAL_ZONES: DnsZone[] = [];
 
 const INITIAL_BGP_PEERS: BgpPeer[] = [
   { asn: 'AS4755', provider: 'Tata Communications', location: 'Mumbai & Singapore', state: 'Established', latencyMs: 4.2, prefixesAnnounced: 18, uptime: '148 days, 12h' },
@@ -63,19 +57,9 @@ const INITIAL_BGP_PEERS: BgpPeer[] = [
   { asn: 'AS1299', provider: 'Arelion (Telia Carrier)', location: 'Chicago & San Jose', state: 'Established', latencyMs: 14.8, prefixesAnnounced: 18, uptime: '184 days, 09h' },
 ];
 
-const INITIAL_PURGE_LOG: PurgeEvent[] = [
-  { id: 'prg-1', timestamp: '10 min ago', zone: 'bharatpay.co', type: 'Cache-Tag', target: 'checkout-v2, api-manifest', status: 'propagated', latencyMs: 138 },
-  { id: 'prg-2', timestamp: '34 min ago', zone: 'apexdigital.io', type: 'URL', target: 'https://apexdigital.io/assets/main.js', status: 'propagated', latencyMs: 142 },
-  { id: 'prg-3', timestamp: '2h ago', zone: 'cloudnative.tech', type: 'Everything', target: 'All cache items purged', status: 'propagated', latencyMs: 164 },
-];
+const INITIAL_PURGE_LOG: PurgeEvent[] = [];
 
-const SAMPLE_RECORDS: DnsRecord[] = [
-  { id: 'rec-1', type: 'A', name: '@', content: '103.21.244.18', ttl: 300, proxied: true },
-  { id: 'rec-2', type: 'AAAA', name: '@', content: '2606:4700:4700::1111', ttl: 300, proxied: true },
-  { id: 'rec-3', type: 'CNAME', name: 'api', content: 'bharatpay.edge.vaulthost.com', ttl: 300, proxied: true },
-  { id: 'rec-4', type: 'TXT', name: '@', content: 'v=spf1 include:_spf.vaulthost.com ~all', ttl: 3600, proxied: false },
-  { id: 'rec-5', type: 'MX', name: '@', content: '10 mail.vaulthost.com', ttl: 3600, proxied: false },
-];
+const SAMPLE_RECORDS: DnsRecord[] = [];
 
 export function DnsTab({ showToast }: { showToast: (type: 'success' | 'error', msg: string) => void }) {
   const [zones, setZones] = useState<DnsZone[]>(INITIAL_ZONES);
@@ -86,7 +70,7 @@ export function DnsTab({ showToast }: { showToast: (type: 'success' | 'error', m
 
   // Purge Console State
   const [purgeType, setPurgeType] = useState<'Everything' | 'URL' | 'Cache-Tag' | 'Prefix'>('URL');
-  const [targetZone, setTargetZone] = useState('bharatpay.co');
+  const [targetZone, setTargetZone] = useState('*');
   const [purgeInput, setPurgeInput] = useState('');
   const [isPurging, setIsPurging] = useState(false);
 
@@ -277,10 +261,10 @@ export function DnsTab({ showToast }: { showToast: (type: 'success' | 'error', m
             <Activity className="h-4 w-4 text-signal" />
           </div>
           <div className="text-2xl font-semibold tracking-tight text-text-primary-v4">
-            148.2M <span className="text-xs font-normal text-text-muted-v4">queries</span>
+            {zones.reduce((sum, z) => sum + z.queries24h, 0).toFixed(1)}M <span className="text-xs font-normal text-text-muted-v4">queries</span>
           </div>
           <div className="text-[11px] text-text-muted-v4 mt-1">
-            Peak: 12,400 qps
+            {zones.length > 0 ? `Across ${zones.length} active zones` : 'Continuous DNS Anycast routing'}
           </div>
         </div>
 
@@ -303,7 +287,7 @@ export function DnsTab({ showToast }: { showToast: (type: 'success' | 'error', m
             <Shield className="h-4 w-4 text-signal" />
           </div>
           <div className="text-2xl font-semibold tracking-tight text-text-primary-v4">
-            92%
+            {zones.length > 0 ? `${Math.round((zones.filter(z => z.dnssec).length / zones.length) * 100)}%` : '100%'}
           </div>
           <div className="text-[11px] text-signal mt-1">
             Cryptographically authenticated
@@ -376,9 +360,9 @@ export function DnsTab({ showToast }: { showToast: (type: 'success' | 'error', m
                 type="text"
                 required
                 placeholder={
-                  purgeType === 'URL' ? 'https://bharatpay.co/checkout.js, https://bharatpay.co/logo.svg' :
+                  purgeType === 'URL' ? 'https://example.com/checkout.js, https://example.com/logo.svg' :
                   purgeType === 'Cache-Tag' ? 'store-catalog, nav-bar-cache' :
-                  'https://bharatpay.co/assets/*'
+                  'https://example.com/assets/*'
                 }
                 value={purgeInput}
                 onChange={(e) => setPurgeInput(e.target.value)}
@@ -414,23 +398,29 @@ export function DnsTab({ showToast }: { showToast: (type: 'success' | 'error', m
             Recent Global Purges
           </div>
           <div className="space-y-1.5">
-            {purgeLogs.map(p => (
-              <div key={p.id} className="p-2 rounded-btn bg-ink-surface-2 border border-hairline flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-text-muted-v4 text-[10px] whitespace-nowrap">{p.timestamp}</span>
-                  <span className="font-semibold text-text-primary-v4 font-mono">{p.zone}</span>
-                  <span className="px-1.5 py-0.2 rounded text-[10px] bg-ink-surface border border-hairline text-text-secondary-v4">
-                    {p.type}
-                  </span>
-                  <span className="text-text-muted-v4 font-mono truncate max-w-xs">{p.target}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-good flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> Propagated ({p.latencyMs}ms)
-                  </span>
-                </div>
+            {purgeLogs.length === 0 ? (
+              <div className="p-4 rounded-btn bg-ink-surface-2/40 border border-hairline text-center text-xs text-text-muted-v4">
+                No recent cache purge events executed.
               </div>
-            ))}
+            ) : (
+              purgeLogs.map(p => (
+                <div key={p.id} className="p-2 rounded-btn bg-ink-surface-2 border border-hairline flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-text-muted-v4 text-[10px] whitespace-nowrap">{p.timestamp}</span>
+                    <span className="font-semibold text-text-primary-v4 font-mono">{p.zone}</span>
+                    <span className="px-1.5 py-0.2 rounded text-[10px] bg-ink-surface border border-hairline text-text-secondary-v4">
+                      {p.type}
+                    </span>
+                    <span className="text-text-muted-v4 font-mono truncate max-w-xs">{p.target}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-good flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Propagated ({p.latencyMs}ms)
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -480,54 +470,64 @@ export function DnsTab({ showToast }: { showToast: (type: 'success' | 'error', m
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {filteredZones.map(z => (
-                <tr key={z.id} className="hover:bg-ink-surface-2/60 transition-colors">
-                  <td className="py-3 font-semibold text-text-primary-v4 flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-signal shrink-0" />
-                    <span className="font-mono">{z.domain}</span>
-                  </td>
-                  <td className="py-3">
-                    <div className="text-text-primary-v4">{z.tenantName}</div>
-                    <div className="text-[10px] text-text-muted-v4 font-mono">{z.tenantId}</div>
-                  </td>
-                  <td className="py-3">
-                    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
-                      z.nsStatus === 'active'
-                        ? 'bg-good/10 text-good border-good/20'
-                        : 'bg-warn/10 text-warn border-warn/20'
-                    }`}>
-                      {z.nsStatus === 'active' ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                      {z.nsStatus === 'active' ? 'Active' : 'Pending NS'}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <button
-                      onClick={() => handleToggleDnssec(z.id)}
-                      className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
-                        z.dnssec
-                          ? 'bg-good/10 text-good border-good/20'
-                          : 'bg-ink-surface text-text-muted-v4 border-hairline'
-                      }`}
-                    >
-                      {z.dnssec ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                      {z.dnssec ? 'Signed' : 'Unsigned'}
-                    </button>
-                  </td>
-                  <td className="py-3 v4-readout-primary font-bold text-text-primary-v4">
-                    {z.queries24h.toFixed(1)}M
-                  </td>
-                  <td className="py-3 v4-readout text-text-secondary-v4">{z.recordsCount} records</td>
-                  <td className="py-3 text-text-muted-v4 whitespace-nowrap">{z.createdDate}</td>
-                  <td className="py-3 text-right">
-                    <button
-                      onClick={() => setSelectedZoneRecords(z)}
-                      className="px-2.5 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors"
-                    >
-                      Inspect DNS
-                    </button>
+              {filteredZones.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-10 text-center text-text-muted-v4">
+                    <Globe className="h-8 w-8 mx-auto mb-2 opacity-40 text-text-muted-v4" />
+                    <p className="font-medium text-xs text-text-primary-v4">No DNS zones configured</p>
+                    <p className="text-[11px] text-text-muted-v4 mt-0.5">Created or delegated domains will appear here with DNSSEC and query telemetry.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredZones.map(z => (
+                  <tr key={z.id} className="hover:bg-ink-surface-2/60 transition-colors">
+                    <td className="py-3 font-semibold text-text-primary-v4 flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-signal shrink-0" />
+                      <span className="font-mono">{z.domain}</span>
+                    </td>
+                    <td className="py-3">
+                      <div className="text-text-primary-v4">{z.tenantName}</div>
+                      <div className="text-[10px] text-text-muted-v4 font-mono">{z.tenantId}</div>
+                    </td>
+                    <td className="py-3">
+                      <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
+                        z.nsStatus === 'active'
+                          ? 'bg-good/10 text-good border-good/20'
+                          : 'bg-warn/10 text-warn border-warn/20'
+                      }`}>
+                        {z.nsStatus === 'active' ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                        {z.nsStatus === 'active' ? 'Active' : 'Pending NS'}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      <button
+                        onClick={() => handleToggleDnssec(z.id)}
+                        className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
+                          z.dnssec
+                            ? 'bg-good/10 text-good border-good/20'
+                            : 'bg-ink-surface text-text-muted-v4 border-hairline'
+                        }`}
+                      >
+                        {z.dnssec ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                        {z.dnssec ? 'Signed' : 'Unsigned'}
+                      </button>
+                    </td>
+                    <td className="py-3 v4-readout-primary font-bold text-text-primary-v4">
+                      {z.queries24h.toFixed(1)}M
+                    </td>
+                    <td className="py-3 v4-readout text-text-secondary-v4">{z.recordsCount} records</td>
+                    <td className="py-3 text-text-muted-v4 whitespace-nowrap">{z.createdDate}</td>
+                    <td className="py-3 text-right">
+                      <button
+                        onClick={() => setSelectedZoneRecords(z)}
+                        className="px-2.5 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors"
+                      >
+                        Inspect DNS
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -599,35 +599,43 @@ export function DnsTab({ showToast }: { showToast: (type: 'success' | 'error', m
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
-                  {records.map(r => (
-                    <tr key={r.id} className="hover:bg-ink-surface-2/60">
-                      <td className="py-2">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-ink-surface border border-hairline text-signal">
-                          {r.type}
-                        </span>
-                      </td>
-                      <td className="py-2 font-mono text-text-primary-v4">{r.name}</td>
-                      <td className="py-2 font-mono text-text-muted-v4 max-w-xs truncate">{r.content}</td>
-                      <td className="py-2">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
-                          r.proxied
-                            ? 'bg-signal/10 text-signal border-signal/20'
-                            : 'bg-ink-surface text-text-muted-v4 border-hairline'
-                        }`}>
-                          {r.proxied ? 'Proxied' : 'DNS Only'}
-                        </span>
-                      </td>
-                      <td className="py-2 font-mono text-text-muted-v4">{r.ttl}s</td>
-                      <td className="py-2 text-right">
-                        <button
-                          onClick={() => handleDeleteRecord(r.id)}
-                          className="p-1 rounded text-text-muted-v4 hover:text-bad"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                  {records.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-6 text-center text-text-muted-v4 text-xs">
+                        No DNS records found for this zone. Add one using the form below.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    records.map(r => (
+                      <tr key={r.id} className="hover:bg-ink-surface-2/60">
+                        <td className="py-2">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-ink-surface border border-hairline text-signal">
+                            {r.type}
+                          </span>
+                        </td>
+                        <td className="py-2 font-mono text-text-primary-v4">{r.name}</td>
+                        <td className="py-2 font-mono text-text-muted-v4 max-w-xs truncate">{r.content}</td>
+                        <td className="py-2">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                            r.proxied
+                              ? 'bg-signal/10 text-signal border-signal/20'
+                              : 'bg-ink-surface text-text-muted-v4 border-hairline'
+                          }`}>
+                            {r.proxied ? 'Proxied' : 'DNS Only'}
+                          </span>
+                        </td>
+                        <td className="py-2 font-mono text-text-muted-v4">{r.ttl}s</td>
+                        <td className="py-2 text-right">
+                          <button
+                            onClick={() => handleDeleteRecord(r.id)}
+                            className="p-1 rounded text-text-muted-v4 hover:text-bad"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

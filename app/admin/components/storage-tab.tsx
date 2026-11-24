@@ -41,88 +41,11 @@ interface BucketObject {
   contentType: string;
 }
 
-const INITIAL_BUCKETS: StorageBucket[] = [
-  {
-    id: 'bkt-01',
-    name: 'bharatpay-settlement-receipts-2026',
-    tenantId: 'ten-02',
-    tenantName: 'Fintech Payments Bharat',
-    region: 'ap-south-mumbai',
-    objectCount: 4210000,
-    sizeGb: 312000, // 312 TB
-    createdDate: '2026-01-15',
-    publicAccess: false,
-    corsEnabled: true,
-    status: 'active',
-  },
-  {
-    id: 'bkt-02',
-    name: 'apexdigital-user-media-production',
-    tenantId: 'ten-01',
-    tenantName: 'Apex Digital Systems',
-    region: 'auto-anycast',
-    objectCount: 6840000,
-    sizeGb: 284000, // 284 TB
-    createdDate: '2026-02-01',
-    publicAccess: true,
-    corsEnabled: true,
-    status: 'active',
-  },
-  {
-    id: 'bkt-03',
-    name: 'hyperscale-weights-checkpoints',
-    tenantId: 'ten-03',
-    tenantName: 'HyperScale AI Labs',
-    region: 'us-east-virginia',
-    objectCount: 84200,
-    sizeGb: 198000, // 198 TB
-    createdDate: '2026-03-10',
-    publicAccess: false,
-    corsEnabled: false,
-    status: 'active',
-  },
-  {
-    id: 'bkt-04',
-    name: 'globallogistics-telemetry-dumps',
-    tenantId: 'ten-04',
-    tenantName: 'Global Logistics Hub',
-    region: 'eu-west-frankfurt',
-    objectCount: 5210000,
-    sizeGb: 48000, // 48 TB
-    createdDate: '2026-04-18',
-    publicAccess: false,
-    corsEnabled: true,
-    status: 'active',
-  },
-  {
-    id: 'bkt-05',
-    name: 'cloudnative-static-assets-cdn',
-    tenantId: 'ten-05',
-    tenantName: 'CloudNative Devs Studio',
-    region: 'auto-anycast',
-    objectCount: 620000,
-    sizeGb: 600, // 600 GB
-    createdDate: '2026-05-22',
-    publicAccess: true,
-    corsEnabled: true,
-    status: 'active',
-  },
-];
+const INITIAL_BUCKETS: StorageBucket[] = [];
 
-const INITIAL_KEYS: S3Credential[] = [
-  { id: 'key-1', accessKeyId: 'vlt_r2_4f81c9a012b', tenantOwner: 'Fintech Payments Bharat', tenantId: 'ten-02', permissions: 'Read-Write', lastAccessedIp: '103.21.244.18', lastActive: '1 min ago', status: 'active' },
-  { id: 'key-2', accessKeyId: 'vlt_r2_9e2b77d483a', tenantOwner: 'Apex Digital Systems', tenantId: 'ten-01', permissions: 'Admin', lastAccessedIp: '141.101.120.34', lastActive: '8 min ago', status: 'active' },
-  { id: 'key-3', accessKeyId: 'vlt_r2_1a77f02388c', tenantOwner: 'HyperScale AI Labs', tenantId: 'ten-03', permissions: 'Read-Write', lastAccessedIp: '172.68.22.91', lastActive: '23 min ago', status: 'active' },
-  { id: 'key-4', accessKeyId: 'vlt_r2_3d99e5102aa', tenantOwner: 'Global Logistics Hub', tenantId: 'ten-04', permissions: 'Read-Only', lastAccessedIp: '198.41.200.5', lastActive: '2h ago', status: 'active' },
-];
+const INITIAL_KEYS: S3Credential[] = [];
 
-const SAMPLE_BUCKET_OBJECTS: BucketObject[] = [
-  { key: 'production/models/checkpoint-epoch-48.bin', sizeBytes: 14820000000, lastModified: '2026-09-26 18:24:10', storageClass: 'Standard', contentType: 'application/octet-stream' },
-  { key: 'production/models/config.json', sizeBytes: 4210, lastModified: '2026-09-26 18:24:12', storageClass: 'Standard', contentType: 'application/json' },
-  { key: 'logs/2026/09/26/ingress-telemetry.parquet', sizeBytes: 842000000, lastModified: '2026-09-26 23:59:00', storageClass: 'Infrequent-Access', contentType: 'application/vnd.apache.parquet' },
-  { key: 'assets/brand/hero-vector-2026.svg', sizeBytes: 124800, lastModified: '2026-09-25 11:15:32', storageClass: 'Standard', contentType: 'image/svg+xml' },
-  { key: 'backups/db-snapshot-daily-latest.tar.zst', sizeBytes: 42100000000, lastModified: '2026-09-27 02:00:15', storageClass: 'Standard', contentType: 'application/zstd' },
-];
+const SAMPLE_BUCKET_OBJECTS: BucketObject[] = [];
 
 export function StorageTab({ showToast }: { showToast: (type: 'success' | 'error', msg: string) => void }) {
   const [buckets, setBuckets] = useState<StorageBucket[]>(INITIAL_BUCKETS);
@@ -279,14 +202,14 @@ export function StorageTab({ showToast }: { showToast: (type: 'success' | 'error
     setNewKeyData({
       id: accId,
       secret,
-      tenant: 'Apex Digital Systems',
+      tenant: 'VaultHost Cloud',
     });
     setCredentials([
       {
         id: `key-${Date.now()}`,
         accessKeyId: accId,
-        tenantOwner: 'Apex Digital Systems',
-        tenantId: 'ten-01',
+        tenantOwner: 'VaultHost Cloud',
+        tenantId: 'admin',
         permissions: 'Read-Write',
         lastAccessedIp: 'Just generated',
         lastActive: 'Just now',
@@ -478,63 +401,73 @@ export function StorageTab({ showToast }: { showToast: (type: 'success' | 'error
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {filteredBuckets.map(b => (
-                <tr key={b.id} className="hover:bg-ink-surface-2/60 transition-colors">
-                  <td className="py-3 font-semibold text-text-primary-v4 flex items-center gap-2">
-                    <Folder className="h-4 w-4 text-signal shrink-0" />
-                    <span className="font-mono">{b.name}</span>
-                  </td>
-                  <td className="py-3">
-                    <div className="text-text-primary-v4">{b.tenantName}</div>
-                    <div className="text-[10px] text-text-muted-v4 font-mono">{b.tenantId}</div>
-                  </td>
-                  <td className="py-3">
-                    <span className="px-2 py-0.5 rounded-chip text-[10px] font-mono bg-ink-surface border border-hairline text-text-secondary-v4">
-                      {b.region}
-                    </span>
-                  </td>
-                  <td className="py-3 v4-readout-primary font-medium text-text-primary-v4">
-                    {b.objectCount > 1000 ? `${(b.objectCount / 1000).toFixed(0)}k` : b.objectCount}
-                  </td>
-                  <td className="py-3 v4-readout-primary font-bold text-text-primary-v4">
-                    {b.sizeGb >= 1000 ? `${(b.sizeGb / 1000).toFixed(1)} TB` : `${b.sizeGb} GB`}
-                  </td>
-                  <td className="py-3">
-                    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
-                      b.publicAccess
-                        ? 'bg-warn/10 text-warn border-warn/20'
-                        : 'bg-ink-surface text-text-secondary-v4 border-hairline'
-                    }`}>
-                      {b.publicAccess ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                      {b.publicAccess ? 'Public Read' : 'Private'}
-                    </span>
-                  </td>
-                  <td className="py-3 text-text-muted-v4 whitespace-nowrap">{b.createdDate}</td>
-                  <td className="py-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => setBrowsingBucket(b)}
-                        className="px-2 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors flex items-center gap-1"
-                      >
-                        <Eye className="h-3 w-3" /> Browse
-                      </button>
-                      <button
-                        onClick={() => setEditingPolicyBucket(b)}
-                        className="px-2 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors"
-                      >
-                        Policies
-                      </button>
-                      <button
-                        onClick={() => handleDeleteBucket(b.id, b.name)}
-                        className="p-1 rounded text-text-muted-v4 hover:text-bad hover:bg-bad/10 transition-colors"
-                        title="Delete bucket"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+              {filteredBuckets.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-text-muted-v4">
+                    <HardDrive className="h-8 w-8 mx-auto mb-2 opacity-40 text-text-muted-v4" />
+                    <p className="font-medium text-xs text-text-primary-v4">No storage buckets created</p>
+                    <p className="text-[11px] text-text-muted-v4 mt-0.5">S3-compatible R2 storage buckets will appear here once provisioned.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredBuckets.map(b => (
+                  <tr key={b.id} className="hover:bg-ink-surface-2/60 transition-colors">
+                    <td className="py-3 font-semibold text-text-primary-v4 flex items-center gap-2">
+                      <Folder className="h-4 w-4 text-signal shrink-0" />
+                      <span className="font-mono">{b.name}</span>
+                    </td>
+                    <td className="py-3">
+                      <div className="text-text-primary-v4">{b.tenantName}</div>
+                      <div className="text-[10px] text-text-muted-v4 font-mono">{b.tenantId}</div>
+                    </td>
+                    <td className="py-3">
+                      <span className="px-2 py-0.5 rounded-chip text-[10px] font-mono bg-ink-surface border border-hairline text-text-secondary-v4">
+                        {b.region}
+                      </span>
+                    </td>
+                    <td className="py-3 v4-readout-primary font-medium text-text-primary-v4">
+                      {b.objectCount > 1000 ? `${(b.objectCount / 1000).toFixed(0)}k` : b.objectCount}
+                    </td>
+                    <td className="py-3 v4-readout-primary font-bold text-text-primary-v4">
+                      {b.sizeGb >= 1000 ? `${(b.sizeGb / 1000).toFixed(1)} TB` : `${b.sizeGb} GB`}
+                    </td>
+                    <td className="py-3">
+                      <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
+                        b.publicAccess
+                          ? 'bg-warn/10 text-warn border-warn/20'
+                          : 'bg-ink-surface text-text-secondary-v4 border-hairline'
+                      }`}>
+                        {b.publicAccess ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                        {b.publicAccess ? 'Public Read' : 'Private'}
+                      </span>
+                    </td>
+                    <td className="py-3 text-text-muted-v4 whitespace-nowrap">{b.createdDate}</td>
+                    <td className="py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setBrowsingBucket(b)}
+                          className="px-2 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" /> Browse
+                        </button>
+                        <button
+                          onClick={() => setEditingPolicyBucket(b)}
+                          className="px-2 py-1 rounded-btn bg-ink-surface hover:bg-ink-surface-2 border border-hairline text-text-secondary-v4 hover:text-text-primary-v4 text-[11px] transition-colors"
+                        >
+                          Policies
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBucket(b.id, b.name)}
+                          className="p-1 rounded text-text-muted-v4 hover:text-bad hover:bg-bad/10 transition-colors"
+                          title="Delete bucket"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -566,46 +499,56 @@ export function StorageTab({ showToast }: { showToast: (type: 'success' | 'error
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {credentials.map(c => (
-                <tr key={c.id} className="hover:bg-ink-surface-2/60 transition-colors">
-                  <td className="py-3 font-mono font-medium text-text-primary-v4 flex items-center gap-1.5">
-                    <Key className="h-3.5 w-3.5 text-signal" />
-                    {c.accessKeyId}
-                  </td>
-                  <td className="py-3">
-                    <div className="text-text-primary-v4 font-medium">{c.tenantOwner}</div>
-                    <div className="text-[10px] text-text-muted-v4 font-mono">{c.tenantId}</div>
-                  </td>
-                  <td className="py-3">
-                    <span className="px-2 py-0.5 rounded-chip text-[11px] font-medium bg-ink-surface border border-hairline text-text-secondary-v4">
-                      {c.permissions}
-                    </span>
-                  </td>
-                  <td className="py-3 font-mono text-[11px] text-text-secondary-v4">{c.lastAccessedIp}</td>
-                  <td className="py-3 text-text-muted-v4">{c.lastActive}</td>
-                  <td className="py-3">
-                    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
-                      c.status === 'active'
-                        ? 'bg-good/10 text-good border-good/20'
-                        : 'bg-bad/10 text-bad border-bad/20'
-                    }`}>
-                      {c.status === 'active' ? 'Active' : 'Revoked'}
-                    </span>
-                  </td>
-                  <td className="py-3 text-right">
-                    {c.status === 'active' ? (
-                      <button
-                        onClick={() => handleRevokeKey(c.id)}
-                        className="px-2 py-1 rounded-btn bg-bad/10 hover:bg-bad/20 text-bad border border-bad/20 text-[11px] transition-colors"
-                      >
-                        Revoke Key
-                      </button>
-                    ) : (
-                      <span className="text-[11px] text-text-muted-v4">Revoked</span>
-                    )}
+              {credentials.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-text-muted-v4">
+                    <Key className="h-6 w-6 mx-auto mb-2 opacity-40 text-text-muted-v4" />
+                    <p className="font-medium text-xs text-text-primary-v4">No S3 API keys active</p>
+                    <p className="text-[11px] text-text-muted-v4 mt-0.5">Provisioned IAM and client S3 credentials will be listed here.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                credentials.map(c => (
+                  <tr key={c.id} className="hover:bg-ink-surface-2/60 transition-colors">
+                    <td className="py-3 font-mono font-medium text-text-primary-v4 flex items-center gap-1.5">
+                      <Key className="h-3.5 w-3.5 text-signal" />
+                      {c.accessKeyId}
+                    </td>
+                    <td className="py-3">
+                      <div className="text-text-primary-v4 font-medium">{c.tenantOwner}</div>
+                      <div className="text-[10px] text-text-muted-v4 font-mono">{c.tenantId}</div>
+                    </td>
+                    <td className="py-3">
+                      <span className="px-2 py-0.5 rounded-chip text-[11px] font-medium bg-ink-surface border border-hairline text-text-secondary-v4">
+                        {c.permissions}
+                      </span>
+                    </td>
+                    <td className="py-3 font-mono text-[11px] text-text-secondary-v4">{c.lastAccessedIp}</td>
+                    <td className="py-3 text-text-muted-v4">{c.lastActive}</td>
+                    <td className="py-3">
+                      <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-chip font-medium border ${
+                        c.status === 'active'
+                          ? 'bg-good/10 text-good border-good/20'
+                          : 'bg-bad/10 text-bad border-bad/20'
+                      }`}>
+                        {c.status === 'active' ? 'Active' : 'Revoked'}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      {c.status === 'active' ? (
+                        <button
+                          onClick={() => handleRevokeKey(c.id)}
+                          className="px-2 py-1 rounded-btn bg-bad/10 hover:bg-bad/20 text-bad border border-bad/20 text-[11px] transition-colors"
+                        >
+                          Revoke Key
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-text-muted-v4">Revoked</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -641,30 +584,38 @@ export function StorageTab({ showToast }: { showToast: (type: 'success' | 'error
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
-                  {SAMPLE_BUCKET_OBJECTS.map((obj, i) => (
-                    <tr key={i} className="hover:bg-ink-surface-2/60">
-                      <td className="py-2.5 font-mono text-[11px] text-text-primary-v4 flex items-center gap-1.5">
-                        <File className="h-3.5 w-3.5 text-text-muted-v4 shrink-0" />
-                        <span className="truncate max-w-xs">{obj.key}</span>
-                      </td>
-                      <td className="py-2.5 font-mono text-text-muted-v4">{formatBytes(obj.sizeBytes)}</td>
-                      <td className="py-2.5">
-                        <span className="px-1.5 py-0.2 rounded text-[10px] bg-ink-surface border border-hairline text-text-secondary-v4">
-                          {obj.storageClass}
-                        </span>
-                      </td>
-                      <td className="py-2.5 text-text-muted-v4 text-[10px]">{obj.lastModified}</td>
-                      <td className="py-2.5 text-right">
-                        <button
-                          onClick={() => showToast('success', `Initiated signed download for ${obj.key}`)}
-                          className="p-1 rounded text-text-muted-v4 hover:text-signal"
-                          title="Download object"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                        </button>
+                  {SAMPLE_BUCKET_OBJECTS.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-text-muted-v4 text-xs">
+                        This bucket is currently empty. Upload files via S3 API or AWS CLI.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    SAMPLE_BUCKET_OBJECTS.map((obj, i) => (
+                      <tr key={i} className="hover:bg-ink-surface-2/60">
+                        <td className="py-2.5 font-mono text-[11px] text-text-primary-v4 flex items-center gap-1.5">
+                          <File className="h-3.5 w-3.5 text-text-muted-v4 shrink-0" />
+                          <span className="truncate max-w-xs">{obj.key}</span>
+                        </td>
+                        <td className="py-2.5 font-mono text-text-muted-v4">{formatBytes(obj.sizeBytes)}</td>
+                        <td className="py-2.5">
+                          <span className="px-1.5 py-0.2 rounded text-[10px] bg-ink-surface border border-hairline text-text-secondary-v4">
+                            {obj.storageClass}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-text-muted-v4 text-[10px]">{obj.lastModified}</td>
+                        <td className="py-2.5 text-right">
+                          <button
+                            onClick={() => showToast('success', `Initiated signed download for ${obj.key}`)}
+                            className="p-1 rounded text-text-muted-v4 hover:text-signal"
+                            title="Download object"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

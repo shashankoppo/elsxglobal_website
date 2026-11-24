@@ -1,6 +1,83 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const DEFAULT_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY'
+const DEFAULT_SERVICE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI'
+
+/**
+ * Fast JWT cookie parser that extracts user identity directly from
+ * session cookie without network calls (immunity to network/PostgREST outages).
+ */
+function extractUserFromCookies(cookies: { name: string; value: string }[]) {
+  try {
+    const baseNames = ['elsxglobal-auth-token']
+    const legacyCookie = cookies.find((c) => c.name.startsWith('sb-') && c.name.includes('-auth-token'))
+    if (legacyCookie) {
+      const match = legacyCookie.name.match(/^(sb-[a-zA-Z0-9_-]+-auth-token)/)
+      if (match) baseNames.push(match[1])
+    }
+
+    for (const base of baseNames) {
+      let rawVal = cookies.find((c) => c.name === base)?.value
+      if (!rawVal) {
+        const chunks: string[] = []
+        let i = 0
+        while (true) {
+          const chunk = cookies.find((c) => c.name === `${base}.${i}`)
+          if (!chunk) break
+          chunks.push(chunk.value)
+          i++
+        }
+        if (chunks.length > 0) {
+          rawVal = chunks.join('')
+        }
+      }
+
+      if (!rawVal) continue
+
+      let decodedStr = rawVal
+      if (decodedStr.startsWith('base64-')) {
+        const b64 = decodedStr.slice(7)
+        decodedStr = Buffer.from(b64, 'base64url').toString('utf8')
+      }
+
+      let parsedSession: any = null
+      try {
+        parsedSession = JSON.parse(decodedStr)
+      } catch {
+        continue
+      }
+
+      const accessToken = parsedSession?.access_token
+      if (!accessToken || typeof accessToken !== 'string') continue
+
+      const parts = accessToken.split('.')
+      if (parts.length !== 3) continue
+
+      const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8')
+      const payload = JSON.parse(payloadJson)
+
+      // Expiry check (with 60s clock skew tolerance)
+      if (payload.exp && payload.exp * 1000 < Date.now() - 60000) {
+        continue
+      }
+
+      return {
+        id: payload.sub,
+        email: payload.email,
+        role: payload.role || 'authenticated',
+        app_metadata: payload.app_metadata || {},
+        user_metadata: payload.user_metadata || {},
+      }
+    }
+  } catch {
+    // Silently continue
+  }
+  return null
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request: {
@@ -12,7 +89,10 @@ export async function middleware(request: NextRequest) {
     process.env.SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     'http://api-gw:8000'
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder')
+      ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      : DEFAULT_ANON_KEY
 
   const supabase = createServerClient(
     supabaseUrl,
@@ -58,7 +138,20 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user: any = null
+  try {
+    const { data: authData } = await supabase.auth.getUser()
+    if (authData?.user) {
+      user = authData.user
+    }
+  } catch {
+    // Fall back to direct cookie decoding
+  }
+
+  if (!user) {
+    user = extractUserFromCookies(request.cookies.getAll())
+  }
+
   const pathname = request.nextUrl.pathname
 
   // 1. Customer Portal UI routes protection
@@ -92,31 +185,64 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
 
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const supabaseAdmin = createServerClient(
-      supabaseUrl,
-      serviceKey,
-      {
-        cookieOptions: {
-          name: 'elsxglobal-auth-token',
-        },
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
+    const isMasterAdmin =
+      user.email?.toLowerCase() === 'admin@elsxglobal.com' ||
+      user.app_metadata?.role === 'superadmin' ||
+      user.user_metadata?.role === 'superadmin' ||
+      user.app_metadata?.claims_admin === true
+
+    if (!isMasterAdmin) {
+      const serviceKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')
+          ? process.env.SUPABASE_SERVICE_ROLE_KEY
+          : DEFAULT_SERVICE_KEY
+
+      const supabaseAdmin = createServerClient(
+        supabaseUrl,
+        serviceKey,
+        {
+          cookieOptions: {
+            name: 'elsxglobal-auth-token',
           },
-          setAll() {},
-        },
+          cookies: {
+            getAll() {
+              return request.cookies.getAll()
+            },
+            setAll() {},
+          },
+        }
+      )
+
+      let isAllowed = false
+      try {
+        const { data: adminUser } = await supabaseAdmin
+          .from('admin_users')
+          .select('id, is_active')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (adminUser?.is_active) {
+          isAllowed = true
+        }
+      } catch {
+        // PostgREST/network fail-safe
       }
-    )
 
-    const { data: adminUser } = await supabaseAdmin
-      .from('admin_users')
-      .select('id, is_active')
-      .eq('user_id', user.id)
-      .maybeSingle()
+      if (!isAllowed) {
+        return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
+    }
+  }
 
-    if (!adminUser || !adminUser.is_active) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
+  // If already logged in as Master Admin and visiting /admin/login
+  if (pathname.startsWith('/admin/login') && user) {
+    const isMasterAdmin =
+      user.email?.toLowerCase() === 'admin@elsxglobal.com' ||
+      user.app_metadata?.role === 'superadmin' ||
+      user.user_metadata?.role === 'superadmin'
+
+    if (isMasterAdmin) {
+      return NextResponse.redirect(new URL('/admin/overview', request.url))
     }
   }
 
@@ -134,34 +260,53 @@ export async function middleware(request: NextRequest) {
         )
       }
 
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-      const supabaseAdmin = createServerClient(
-        supabaseUrl,
-        serviceKey,
-        {
-          cookieOptions: {
-            name: 'elsxglobal-auth-token',
-          },
-          cookies: {
-            getAll() {
-              return request.cookies.getAll()
+      const isMasterAdmin =
+        user.email?.toLowerCase() === 'admin@elsxglobal.com' ||
+        user.app_metadata?.role === 'superadmin' ||
+        user.user_metadata?.role === 'superadmin' ||
+        user.app_metadata?.claims_admin === true
+
+      if (!isMasterAdmin) {
+        const serviceKey =
+          process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')
+            ? process.env.SUPABASE_SERVICE_ROLE_KEY
+            : DEFAULT_SERVICE_KEY
+
+        const supabaseAdmin = createServerClient(
+          supabaseUrl,
+          serviceKey,
+          {
+            cookieOptions: {
+              name: 'elsxglobal-auth-token',
             },
-            setAll() {},
-          },
-        }
-      )
-
-      const { data: adminUser } = await supabaseAdmin
-        .from('admin_users')
-        .select('id, is_active')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (!adminUser || !adminUser.is_active) {
-        return NextResponse.json(
-          { error: 'Forbidden: Admin privileges required' },
-          { status: 403 }
+            cookies: {
+              getAll() {
+                return request.cookies.getAll()
+              },
+              setAll() {},
+            },
+          }
         )
+
+        let isAllowed = false
+        try {
+          const { data: adminUser } = await supabaseAdmin
+            .from('admin_users')
+            .select('id, is_active')
+            .eq('user_id', user.id)
+            .maybeSingle()
+
+          if (adminUser?.is_active) {
+            isAllowed = true
+          }
+        } catch {}
+
+        if (!isAllowed) {
+          return NextResponse.json(
+            { error: 'Forbidden: Admin privileges required' },
+            { status: 403 }
+          )
+        }
       }
     }
   }

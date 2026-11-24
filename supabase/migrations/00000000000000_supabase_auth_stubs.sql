@@ -324,6 +324,7 @@ BEGIN
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
   );
+  GRANT ALL ON public.admin_users TO authenticator, anon, authenticated, service_role, postgres;
 
   -- Seed admin in admin_users
   IF NOT EXISTS (SELECT 1 FROM public.admin_users WHERE email = 'admin@elsxglobal.com') THEN

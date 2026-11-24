@@ -309,24 +309,33 @@ async function ensureServiceRoles() {
     GRANT supabase_admin TO authenticator;
     GRANT authenticator TO supabase_storage_admin;
 
-    -- Schema and database privileges (critical for PostgreSQL 15+ permission model)
-    GRANT ALL ON SCHEMA public TO supabase_auth_admin, supabase_storage_admin, postgres, anon, authenticated, service_role;
-    GRANT ALL ON SCHEMA auth TO supabase_auth_admin, postgres, service_role;
-    GRANT ALL ON SCHEMA storage TO supabase_storage_admin, postgres, service_role;
-    GRANT ALL PRIVILEGES ON DATABASE postgres TO supabase_auth_admin, supabase_storage_admin;
+    -- Ensure all PostgREST schemas exist
+    CREATE SCHEMA IF NOT EXISTS public;
+    CREATE SCHEMA IF NOT EXISTS storage;
+    CREATE SCHEMA IF NOT EXISTS graphql_public;
+    CREATE SCHEMA IF NOT EXISTS auth;
+    CREATE SCHEMA IF NOT EXISTS extensions;
+
+    -- Schema and database privileges (critical for PostgreSQL 15+ permission model & PostgREST schema cache)
+    GRANT ALL ON SCHEMA public TO authenticator, supabase_auth_admin, supabase_storage_admin, postgres, anon, authenticated, service_role;
+    GRANT ALL ON SCHEMA auth TO authenticator, supabase_auth_admin, postgres, service_role;
+    GRANT ALL ON SCHEMA storage TO authenticator, supabase_storage_admin, postgres, service_role;
+    GRANT ALL ON SCHEMA graphql_public TO authenticator, postgres, anon, authenticated, service_role;
+    GRANT ALL PRIVILEGES ON DATABASE postgres TO authenticator, supabase_auth_admin, supabase_storage_admin;
 
     -- Search path defaults
     ALTER ROLE supabase_auth_admin SET search_path TO auth, public, extensions;
     ALTER ROLE supabase_storage_admin SET search_path TO storage, public, extensions;
+    ALTER ROLE authenticator SET search_path TO public, storage, graphql_public, extensions;
 
     -- Default table/sequence/routine privileges
-    GRANT ALL ON ALL TABLES IN SCHEMA public TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
-    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
-    GRANT ALL ON ALL ROUTINES IN SCHEMA public TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    GRANT ALL ON ALL ROUTINES IN SCHEMA public TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
 
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
 
     -- Ensure extensions exist
     CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;

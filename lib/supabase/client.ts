@@ -1,5 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 
+const DEFAULT_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY';
+
 export function createClient() {
   let url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 
@@ -20,7 +23,9 @@ export function createClient() {
     url = process.env.SUPABASE_URL || 'http://api-gw:8000';
   }
 
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+  const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = rawKey && !rawKey.includes('placeholder') ? rawKey : DEFAULT_ANON_KEY;
+
   return createBrowserClient(url, key, {
     cookieOptions: {
       name: 'elsxglobal-auth-token',

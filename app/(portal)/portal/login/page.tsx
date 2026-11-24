@@ -9,8 +9,8 @@ import { Logo } from '@/components/site/logo';
 
 function LoginContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const redirect = searchParams.get('redirect') || '/portal';
+  const redirectParam = searchParams.get('redirect');
+  const redirect = (!redirectParam || redirectParam === '/portal' || redirectParam === '/portal/') ? '/portal/dashboard/' : redirectParam;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

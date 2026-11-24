@@ -28,12 +28,20 @@ async function initAdminViaPg(connectionString: string, email: string, password:
     await client.query(`
       CREATE SCHEMA IF NOT EXISTS auth;
       CREATE SCHEMA IF NOT EXISTS public;
+      CREATE SCHEMA IF NOT EXISTS storage;
+      CREATE SCHEMA IF NOT EXISTS graphql_public;
       CREATE SCHEMA IF NOT EXISTS extensions;
       CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
       CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+      -- PostgREST role and schema grants
+      GRANT USAGE, CREATE ON SCHEMA public TO authenticator, anon, authenticated, service_role, postgres;
+      GRANT USAGE, CREATE ON SCHEMA storage TO authenticator, anon, authenticated, service_role, postgres;
+      GRANT USAGE, CREATE ON SCHEMA graphql_public TO authenticator, anon, authenticated, service_role, postgres;
+      GRANT USAGE ON SCHEMA auth TO authenticator, service_role, postgres;
     `);
 
-    // 2. Ensure public.admin_users table exists
+    // 2. Ensure public.admin_users table exists with correct permissions
     await client.query(`
       CREATE TABLE IF NOT EXISTS public.admin_users (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -44,6 +52,7 @@ async function initAdminViaPg(connectionString: string, email: string, password:
         created_at timestamptz NOT NULL DEFAULT now(),
         updated_at timestamptz NOT NULL DEFAULT now()
       );
+      GRANT ALL ON public.admin_users TO authenticator, anon, authenticated, service_role, postgres;
     `);
 
     // 3. Ensure auth.instances has default instance
@@ -186,6 +195,9 @@ export async function POST(request: Request) {
       process.env.SUPABASE_DB_URL,
       process.env.POSTGRES_URL,
       `postgresql://postgres:${dbPassword}@db:5432/postgres`,
+      `postgresql://postgres:${dbPassword}@supabase-db:5432/postgres`,
+      `postgresql://postgres:${dbPassword}@10.0.7.2:5432/postgres`,
+      `postgresql://postgres:${dbPassword}@172.17.0.1:5432/postgres`,
       `postgresql://postgres:${dbPassword}@127.0.0.1:5432/postgres`,
       `postgresql://postgres:${dbPassword}@localhost:5432/postgres`,
     ].filter(Boolean) as string[];

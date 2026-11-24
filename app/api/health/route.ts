@@ -36,12 +36,25 @@ export async function GET() {
     }
   }
 
+  let authStatus = 'unconfigured';
+  try {
+    const authTarget = process.env.GOTRUE_URL || 'http://auth:9999';
+    const authRes = await fetch(`${authTarget}/health`, { signal: AbortSignal.timeout(3000) });
+    authStatus = authRes.ok ? 'connected' : `HTTP ${authRes.status}`;
+  } catch (e: any) {
+    authStatus = `unreachable: ${e.message}`;
+  }
+
   return NextResponse.json(
     {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       version: process.env.npm_package_version || '0.1.0',
+      auth: {
+        target: process.env.GOTRUE_URL || 'http://auth:9999',
+        status: authStatus,
+      },
       database: {
         configured: Boolean(supabaseUrl && anonKey),
         supabaseUrl: supabaseUrl ? supabaseUrl.replace(/\/+$/, '') : 'not set',

@@ -51,7 +51,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   const handleSignOut = async () => {
     await createClient().auth.signOut();
-    router.push('/');
+    window.location.href = '/';
   };
 
   const handleSearch = (e: React.FormEvent) => {

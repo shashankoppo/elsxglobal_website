@@ -21,5 +21,9 @@ export function createClient() {
   }
 
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, {
+    cookieOptions: {
+      name: 'elsxglobal-auth-token',
+    },
+  });
 }

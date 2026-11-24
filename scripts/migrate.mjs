@@ -546,16 +546,20 @@ async function ensureServiceRoles() {
     GRANT SELECT ON auth.identities TO authenticated, service_role;
     GRANT SELECT ON auth.sessions TO authenticated, service_role;
 
+    -- Ensure default instance exists in auth.instances
+    INSERT INTO auth.instances (id, uuid, raw_base_config, created_at, updated_at)
+    VALUES ('00000000-0000-0000-0000-000000000000'::uuid, '00000000-0000-0000-0000-000000000000'::uuid, '{}', now(), now())
+    ON CONFLICT (id) DO NOTHING;
+
     -- Seed Master Admin & Demo Client with verified bcrypt credentials
     DO $$
     DECLARE
       v_admin_id uuid := 'a0000000-0000-0000-0000-000000000001'::uuid;
       v_client_id uuid := 'c0000000-0000-0000-0000-000000000001'::uuid;
-      v_admin_hash text;
-      v_client_hash text;
+      -- Pre-computed blowfish bcrypt hashes (cost 10) verified with GoTrue
+      v_admin_hash text := '$2b$10$bIYAipvttvr1i1wAH4mm6uJ7CMRhoMOuz8morSxL2qWN/DBtvfrJa';
+      v_client_hash text := '$2b$10$5AfJ6c5b.Adj5s0HappRQuIsrd84qAcyrAKsgO00tG2v6qFpMFqHC';
     BEGIN
-      v_admin_hash := crypt('Admin@2026!', gen_salt('bf', 10));
-      v_client_hash := crypt('Demo@2026!', gen_salt('bf', 10));
 
       -- Admin in auth.users
       IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@elsxglobal.com') THEN

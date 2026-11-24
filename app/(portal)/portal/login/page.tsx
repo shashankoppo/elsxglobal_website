@@ -24,7 +24,7 @@ function LoginContent() {
     try {
       const { error } = await createClient().auth.signInWithPassword({ email, password });
       if (error) throw error;
-      router.push(redirect);
+      window.location.href = redirect;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid credentials');
     } finally {
@@ -67,37 +67,6 @@ function LoginContent() {
             <button type="submit" disabled={loading} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
               {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-
-            <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-border"></div>
-              <span className="flex-shrink mx-3 text-xs text-muted-foreground uppercase font-mono">or</span>
-              <div className="flex-grow border-t border-border"></div>
-            </div>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={async () => {
-                setLoading(true);
-                setError('');
-                setEmail('client@elsxglobal.com');
-                setPassword('Demo@2026!');
-                try {
-                  const { error } = await createClient().auth.signInWithPassword({
-                    email: 'client@elsxglobal.com',
-                    password: 'Demo@2026!',
-                  });
-                  if (error) throw error;
-                  router.push(redirect);
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : 'Demo sign in failed');
-                  setLoading(false);
-                }
-              }}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-primary/30 bg-primary/10 text-primary font-medium text-sm hover:bg-primary/20 transition-all shadow-sm"
-            >
-              <Zap className="h-4 w-4 text-primary" /> Quick Demo Client Sign In
             </button>
           </form>
           <div className="mt-6 pt-6 border-t border-border text-center">

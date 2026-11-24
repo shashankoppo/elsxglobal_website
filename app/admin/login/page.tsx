@@ -118,38 +118,6 @@ export default function AdminLoginPage() {
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />}
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
-
-            <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-border"></div>
-              <span className="flex-shrink mx-3 text-xs text-muted-foreground uppercase font-mono">or</span>
-              <div className="flex-grow border-t border-border"></div>
-            </div>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={async () => {
-                setLoading(true);
-                setError('');
-                setEmail('admin@elsxglobal.com');
-                setPassword('Admin@2026!');
-                try {
-                  const supabase = createClient();
-                  const { error: signInError } = await supabase.auth.signInWithPassword({
-                    email: 'admin@elsxglobal.com',
-                    password: 'Admin@2026!',
-                  });
-                  if (signInError) throw signInError;
-                  window.location.href = '/admin/overview/';
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : 'Admin sign in failed');
-                  setLoading(false);
-                }
-              }}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-signal/30 bg-signal/10 text-signal font-medium text-sm hover:bg-signal/20 transition-all shadow-sm"
-            >
-              <Zap className="h-4 w-4 text-signal" /> Quick Master Admin Sign In
-            </button>
           </form>
           {needsSetup && (
             <div className="mt-5 pt-5 border-t border-border text-center">

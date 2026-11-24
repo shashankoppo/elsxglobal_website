@@ -30,10 +30,20 @@ function SignupContent() {
       });
       if (error) throw error;
       if (data.session) {
-        router.push(redirect);
-      } else if (data.user) {
-        setSuccess('Account created! Please check your email to confirm, then sign in.');
-        setTimeout(() => router.push(`/portal/login?redirect=${encodeURIComponent(redirect)}`), 3000);
+        window.location.href = redirect;
+        return;
+      }
+      if (data.user) {
+        // With autoconfirm enabled, immediately sign in to establish browser session
+        const { error: signInErr } = await createClient().auth.signInWithPassword({ email, password });
+        if (!signInErr) {
+          window.location.href = redirect;
+          return;
+        }
+        setSuccess('Account created successfully! Redirecting...');
+        setTimeout(() => {
+          window.location.href = `/portal/login?redirect=${encodeURIComponent(redirect)}`;
+        }, 1200);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account');

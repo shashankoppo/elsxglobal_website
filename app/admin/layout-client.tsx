@@ -208,7 +208,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push('/admin/login');
+    window.location.href = '/admin/login/';
   };
 
   const updateOrderStatus = async (orderId: string, status: string) => {

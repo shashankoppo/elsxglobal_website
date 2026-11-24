@@ -18,6 +18,23 @@ const nextConfig = {
   },
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
+  async rewrites() {
+    const supabaseGateway = (process.env.SUPABASE_URL || 'http://api-gw:8000').replace(/\/+$/, '');
+    return [
+      {
+        source: '/auth/v1/:path*',
+        destination: `${supabaseGateway}/auth/v1/:path*`,
+      },
+      {
+        source: '/rest/v1/:path*',
+        destination: `${supabaseGateway}/rest/v1/:path*`,
+      },
+      {
+        source: '/storage/v1/:path*',
+        destination: `${supabaseGateway}/storage/v1/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

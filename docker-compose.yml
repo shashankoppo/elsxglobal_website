@@ -24,15 +24,15 @@ services:
           memory: 512M
     volumes:
       # Official Supabase initialization scripts (run during initdb)
-      - ./supabase/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
-      - ./supabase/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
-      - ./supabase/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
-      - ./supabase/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
-      - ./supabase/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
-      - ./supabase/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
-      - ./supabase/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
-      # Persistent PostgreSQL data directory
-      - db_data:/var/lib/postgresql/data:Z
+      - ./supabase/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:ro
+      - ./supabase/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:ro
+      - ./supabase/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+      - ./supabase/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro
+      - ./supabase/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:ro
+      - ./supabase/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:ro
+      - ./supabase/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:ro
+      # Persistent PostgreSQL data directory (named volume)
+      - db_data:/var/lib/postgresql/data
       # Custom configuration volume
       - db_config:/etc/postgresql-custom
     healthcheck:
@@ -47,8 +47,7 @@ services:
         ]
       interval: 5s
       timeout: 5s
-      retries: 25
-      start_period: 30s
+      retries: 20
     environment:
       POSTGRES_HOST: /var/run/postgresql
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -64,12 +63,12 @@ services:
       [
         "postgres",
         "-c",
-        "config_file=/etc/postgresql/postgresql.conf"
+        "config_file=/etc/postgresql/postgresql.conf",
+        "-c",
+        "log_min_messages=fatal"
       ]
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
-    networks:
-      - elsxglobal
 
   # ── 2. Supabase Auth (GoTrue) ─────────────────────────────────
   auth:
@@ -83,14 +82,13 @@ services:
         reservations:
           memory: 128M
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
       timeout: 10s
       interval: 10s
       retries: 25
-      start_period: 60s
+      start_period: 30s
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
@@ -106,8 +104,6 @@ services:
       GOTRUE_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
       GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-true}
       GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-false}
-    networks:
-      - elsxglobal
 
   # ── 3. PostgREST (Auto-REST API) ──────────────────────────────
   rest:
@@ -115,8 +111,7 @@ services:
     image: postgrest/postgrest:v14.18
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     healthcheck:
       test: ["CMD", "postgrest", "--ready"]
       interval: 5s
@@ -129,8 +124,6 @@ services:
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
       PGRST_DB_USE_LEGACY_GUCS: "false"
-    networks:
-      - elsxglobal
 
   # ── 4. Supabase Storage ───────────────────────────────────────
   storage:
@@ -138,10 +131,8 @@ services:
     image: supabase/storage-api:v1.19.0
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
-      rest:
-        condition: service_started
+      - db
+      - rest
     environment:
       ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY}
       SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI}
@@ -155,9 +146,7 @@ services:
       REGION: stub
       GLOBAL_S3_BUCKET: stub
     volumes:
-      - storage_data:/var/lib/storage:z
-    networks:
-      - elsxglobal
+      - storage_data:/var/lib/storage
 
   # ── 5. Supabase Postgres Meta ─────────────────────────────────
   meta:
@@ -165,8 +154,7 @@ services:
     image: supabase/postgres-meta:v0.100.0
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
       PG_META_PORT: 8080
       PG_META_DB_HOST: db
@@ -175,8 +163,6 @@ services:
       PG_META_DB_USER: postgres
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
       CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-sample-meta-crypto-key-32-chars-long}
-    networks:
-      - elsxglobal
 
   # ── 6. Supabase Studio (Visual DB & Auth Dashboard) ───────────
   studio:
@@ -184,8 +170,7 @@ services:
     image: supabase/studio:2026.11.02-sha-a05e7ec
     restart: unless-stopped
     depends_on:
-      meta:
-        condition: service_started
+      - meta
     environment:
       HOSTNAME: "0.0.0.0"
       STUDIO_PG_META_URL: http://meta:8080
@@ -202,8 +187,6 @@ services:
       AUTH_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
     ports:
       - "${STUDIO_PORT:-54323}:3000"
-    networks:
-      - elsxglobal
 
   # ── 7. Universal API Gateway (Hardened Nginx) ─────────────────
   api-gw:
@@ -213,14 +196,12 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
-      auth:
-        condition: service_started
-      rest:
-        condition: service_started
+      - auth
+      - rest
     ports:
       - "${KONG_HTTP_PORT:-8008}:8000"
     networks:
-      elsxglobal:
+      default:
         aliases:
           - kong
           - envoy
@@ -241,10 +222,8 @@ services:
     expose:
       - 80
     depends_on:
-      db:
-        condition: service_healthy
-      api-gw:
-        condition: service_started
+      - db
+      - api-gw
     environment:
       NODE_ENV: production
       PORT: 80
@@ -266,7 +245,6 @@ services:
     networks:
       - default
       - coolify
-      - elsxglobal
     labels:
       - "com.elsxglobal.service=app"
       - "com.elsxglobal.version=4.0"
@@ -279,8 +257,7 @@ services:
     profiles:
       - backup
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
@@ -295,8 +272,6 @@ services:
         echo '==> Backup service standby. Enable profile when ready.';
         sleep infinity
       "
-    networks:
-      - elsxglobal
 
 # ── Volumes ──────────────────────────────────────────────────────
 volumes:
@@ -314,6 +289,3 @@ networks:
   default:
   coolify:
     external: true
-  elsxglobal:
-    name: elsxglobal
-    driver: bridge

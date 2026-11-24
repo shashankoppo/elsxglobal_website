@@ -180,7 +180,7 @@ async function runQuery(sql) {
 /**
  * Check connection with retries for container boot synchronization
  */
-async function waitForDatabase(maxRetries = 5, delayMs = 3000) {
+async function waitForDatabase(maxRetries = 15, delayMs = 3000) {
   console.log(`[migration] Checking database connectivity...`);
   if (SUPABASE_URL) {
     console.log(`[migration] Target Supabase URL: ${SUPABASE_URL}`);

@@ -33,10 +33,14 @@ BEGIN
     CREATE ROLE supabase_admin NOLOGIN NOINHERIT BYPASSRLS;
   END IF;
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
-    CREATE ROLE supabase_auth_admin NOLOGIN NOINHERIT CREATEROLE;
+    CREATE ROLE supabase_auth_admin LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS;
+  ELSE
+    ALTER ROLE supabase_auth_admin WITH SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS;
   END IF;
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
-    CREATE ROLE supabase_storage_admin NOLOGIN NOINHERIT;
+    CREATE ROLE supabase_storage_admin LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS;
+  ELSE
+    ALTER ROLE supabase_storage_admin WITH SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS;
   END IF;
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
     CREATE ROLE authenticator NOINHERIT LOGIN;
@@ -111,15 +115,15 @@ GRANT EXECUTE ON FUNCTION auth.role()  TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION auth.email() TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION auth.jwt()   TO anon, authenticated, service_role;
 
--- Public schema grants for PostgREST
-GRANT USAGE  ON SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL    ON ALL TABLES    IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL    ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL    ON ALL ROUTINES  IN SCHEMA public TO anon, authenticated, service_role;
+-- Public schema grants for PostgREST & Auth/Storage services
+GRANT ALL    ON SCHEMA public TO postgres, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+GRANT ALL    ON ALL TABLES    IN SCHEMA public TO postgres, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+GRANT ALL    ON ALL SEQUENCES IN SCHEMA public TO postgres, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+GRANT ALL    ON ALL ROUTINES  IN SCHEMA public TO postgres, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT ALL ON TABLES    TO anon, authenticated, service_role;
+  GRANT ALL ON TABLES    TO postgres, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+  GRANT ALL ON SEQUENCES TO postgres, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT ALL ON ROUTINES  TO anon, authenticated, service_role;
+  GRANT ALL ON ROUTINES  TO postgres, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;

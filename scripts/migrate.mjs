@@ -267,25 +267,25 @@ async function ensureServiceRoles() {
         ALTER ROLE authenticator WITH LOGIN PASSWORD '${sanitizedPassword}';
       END IF;
 
-      -- GoTrue auth admin
+      -- GoTrue auth admin (SUPERUSER + CREATEROLE to ensure migrations never get permission denied)
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
-        CREATE ROLE supabase_auth_admin WITH LOGIN NOINHERIT CREATEROLE PASSWORD '${sanitizedPassword}';
+        CREATE ROLE supabase_auth_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       ELSE
-        ALTER ROLE supabase_auth_admin WITH LOGIN PASSWORD '${sanitizedPassword}';
+        ALTER ROLE supabase_auth_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       END IF;
 
-      -- Storage admin
+      -- Storage admin (SUPERUSER to ensure migrations and bucket management never get permission denied)
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
-        CREATE ROLE supabase_storage_admin WITH LOGIN NOINHERIT CREATEROLE PASSWORD '${sanitizedPassword}';
+        CREATE ROLE supabase_storage_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       ELSE
-        ALTER ROLE supabase_storage_admin WITH LOGIN CREATEROLE PASSWORD '${sanitizedPassword}';
+        ALTER ROLE supabase_storage_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       END IF;
 
       -- Functions admin
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_functions_admin') THEN
-        CREATE ROLE supabase_functions_admin WITH LOGIN NOINHERIT CREATEROLE PASSWORD '${sanitizedPassword}';
+        CREATE ROLE supabase_functions_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       ELSE
-        ALTER ROLE supabase_functions_admin WITH LOGIN PASSWORD '${sanitizedPassword}';
+        ALTER ROLE supabase_functions_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       END IF;
 
       -- PgBouncer
@@ -297,14 +297,40 @@ async function ensureServiceRoles() {
     END
     $$;
 
+    -- Ensure schemas exist with proper authorization
+    CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_auth_admin;
+    CREATE SCHEMA IF NOT EXISTS storage AUTHORIZATION supabase_storage_admin;
+    CREATE SCHEMA IF NOT EXISTS extensions;
+
+    -- Role switching grants
     GRANT anon TO authenticator;
     GRANT authenticated TO authenticator;
     GRANT service_role TO authenticator;
+    GRANT supabase_admin TO authenticator;
     GRANT authenticator TO supabase_storage_admin;
+
+    -- Schema and database privileges (critical for PostgreSQL 15+ permission model)
+    GRANT ALL ON SCHEMA public TO supabase_auth_admin, supabase_storage_admin, postgres, anon, authenticated, service_role;
+    GRANT ALL ON SCHEMA auth TO supabase_auth_admin, postgres, service_role;
+    GRANT ALL ON SCHEMA storage TO supabase_storage_admin, postgres, service_role;
+    GRANT ALL PRIVILEGES ON DATABASE postgres TO supabase_auth_admin, supabase_storage_admin;
+
+    -- Search path defaults
+    ALTER ROLE supabase_auth_admin SET search_path TO auth, public, extensions;
+    ALTER ROLE supabase_storage_admin SET search_path TO storage, public, extensions;
+
+    -- Default table/sequence/routine privileges
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    GRANT ALL ON ALL ROUTINES IN SCHEMA public TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
   `;
   try {
     await runQuery(roleSql);
-    console.log(`[migration] Supabase service role credentials synchronized.`);
+    console.log(`[migration] Supabase service role credentials and schema permissions synchronized.`);
   } catch (err) {
     console.warn(`[migration] Notice: Could not sync service roles (${err.message}).`);
   }

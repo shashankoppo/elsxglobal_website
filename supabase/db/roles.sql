@@ -31,19 +31,25 @@ BEGIN
     CREATE ROLE authenticator NOINHERIT LOGIN;
   END IF;
 
-  -- GoTrue auth admin
+  -- GoTrue auth admin (granted SUPERUSER to guarantee schema migrations succeed under PG 15+)
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
-    CREATE ROLE supabase_auth_admin LOGIN NOINHERIT CREATEROLE;
+    CREATE ROLE supabase_auth_admin SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS LOGIN;
+  ELSE
+    ALTER ROLE supabase_auth_admin WITH SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS LOGIN;
   END IF;
 
-  -- Storage admin
+  -- Storage admin (granted SUPERUSER to guarantee bucket & object operations succeed under PG 15+)
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
-    CREATE ROLE supabase_storage_admin LOGIN NOINHERIT CREATEROLE;
+    CREATE ROLE supabase_storage_admin SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS LOGIN;
+  ELSE
+    ALTER ROLE supabase_storage_admin WITH SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS LOGIN;
   END IF;
 
   -- Edge functions admin
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_functions_admin') THEN
-    CREATE ROLE supabase_functions_admin LOGIN NOINHERIT CREATEROLE;
+    CREATE ROLE supabase_functions_admin SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS LOGIN;
+  ELSE
+    ALTER ROLE supabase_functions_admin WITH SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS LOGIN;
   END IF;
 
   -- PgBouncer
@@ -61,6 +67,11 @@ ALTER USER supabase_storage_admin WITH LOGIN PASSWORD :'pgpass';
 ALTER USER supabase_admin WITH LOGIN PASSWORD :'pgpass';
 ALTER USER postgres WITH LOGIN PASSWORD :'pgpass';
 
+-- Ensure schemas exist with proper authorization
+CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_auth_admin;
+CREATE SCHEMA IF NOT EXISTS storage AUTHORIZATION supabase_storage_admin;
+CREATE SCHEMA IF NOT EXISTS extensions;
+
 -- Grant role membership to authenticator for PostgREST JWT switching
 GRANT anon TO authenticator;
 GRANT authenticated TO authenticator;
@@ -70,12 +81,21 @@ GRANT supabase_admin TO authenticator;
 -- Storage admin membership to authenticator
 GRANT authenticator TO supabase_storage_admin;
 
--- Schema permissions
-GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+-- Schema and database privileges (critical for PostgreSQL 15+ permission model)
+GRANT ALL ON SCHEMA public TO postgres, supabase_admin, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+GRANT ALL ON SCHEMA auth TO supabase_auth_admin, postgres, service_role;
+GRANT ALL ON SCHEMA storage TO supabase_storage_admin, postgres, service_role;
+GRANT ALL PRIVILEGES ON DATABASE postgres TO supabase_auth_admin, supabase_storage_admin;
 
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
+-- Default search paths
+ALTER ROLE supabase_auth_admin SET search_path TO auth, public, extensions;
+ALTER ROLE supabase_storage_admin SET search_path TO storage, public, extensions;
+
+-- Table, sequence, routine permissions
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, supabase_admin, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, supabase_admin, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, supabase_admin, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO postgres, supabase_admin, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres, supabase_admin, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO postgres, supabase_admin, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;

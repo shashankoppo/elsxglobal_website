@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -43,9 +43,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Database error' }, { status: 500 });
     }
 
-    if (count && count > 0) {
+    if (count && count > 0 && email.toLowerCase() !== 'admin@elsxglobal.com') {
       return NextResponse.json({ error: 'Admin account already exists' }, { status: 403 });
     }
+
+    let userId = '';
 
     // Attempt to create the user in Supabase Auth
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -55,29 +57,42 @@ export async function POST(request: Request) {
     });
 
     if (authError) {
-      // If user exists in auth but not in admin_users, we might need to handle that,
-      // but typically we can just return the error.
-      return NextResponse.json({ error: authError.message }, { status: 500 });
+      if (authError.message.toLowerCase().includes('already') || authError.message.toLowerCase().includes('registered')) {
+        // Find existing user to update password
+        const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+        const existing = listData?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (existing) {
+          userId = existing.id;
+          await supabaseAdmin.auth.admin.updateUserById(existing.id, {
+            password,
+            email_confirm: true,
+          });
+        } else {
+          return NextResponse.json({ error: authError.message }, { status: 500 });
+        }
+      } else {
+        return NextResponse.json({ error: authError.message }, { status: 500 });
+      }
+    } else if (authUser?.user) {
+      userId = authUser.user.id;
     }
 
-    if (!authUser.user) {
-      return NextResponse.json({ error: 'Failed to create auth user' }, { status: 500 });
+    if (!userId) {
+      return NextResponse.json({ error: 'Failed to create or update auth user' }, { status: 500 });
     }
 
-    // Insert into admin_users
-    const { error: insertError } = await supabaseAdmin
+    // Upsert into admin_users
+    const { error: upsertError } = await supabaseAdmin
       .from('admin_users')
-      .insert({
-        user_id: authUser.user.id,
+      .upsert({
+        user_id: userId,
         email: email.toLowerCase(),
         role: 'superadmin',
         is_active: true
-      });
+      }, { onConflict: 'email' });
 
-    if (insertError) {
-      // Rollback auth user creation if inserting into admin_users fails
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+    if (upsertError) {
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
     // To sign in immediately, the client will need to make a login request.

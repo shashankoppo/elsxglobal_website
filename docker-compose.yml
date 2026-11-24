@@ -92,10 +92,11 @@ services:
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
-      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-https://www.elsxglobal.com}
       GOTRUE_DB_DRIVER: postgres
       GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
       GOTRUE_SITE_URL: ${SITE_URL:-https://www.elsxglobal.com}
+      GOTRUE_URI_ALLOW_LIST: ${URI_ALLOW_LIST:-https://elsxglobal.com,https://www.elsxglobal.com,http://localhost:3000}
       GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
       GOTRUE_JWT_ADMIN_ROLES: service_role
       GOTRUE_JWT_AUD: authenticated
@@ -103,7 +104,7 @@ services:
       GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
       GOTRUE_JWT_SECRET: ${JWT_SECRET:-elsxglobal-standalone-jwt-secret-2026-very-secure-key}
       GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-true}
-      GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-false}
+      GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-true}
 
   # ── 3. PostgREST (Auto-REST API) ──────────────────────────────
   rest:

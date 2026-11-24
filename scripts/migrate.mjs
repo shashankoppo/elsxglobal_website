@@ -596,16 +596,25 @@ async function ensureServiceRoles() {
         );
       END IF;
 
+      -- Ensure admin_users table exists unconditionally
+      CREATE TABLE IF NOT EXISTS public.admin_users (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+        email text NOT NULL UNIQUE,
+        role text NOT NULL DEFAULT 'superadmin',
+        is_active boolean NOT NULL DEFAULT true,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      );
+
       -- Admin in admin_users table
-      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'admin_users') THEN
-        IF NOT EXISTS (SELECT 1 FROM public.admin_users WHERE email = 'admin@elsxglobal.com') THEN
-          INSERT INTO public.admin_users (user_id, email, role, is_active, created_at, updated_at)
-          VALUES (v_admin_id, 'admin@elsxglobal.com', 'superadmin', true, now(), now());
-        ELSE
-          UPDATE public.admin_users
-          SET user_id = v_admin_id, is_active = true, role = 'superadmin'
-          WHERE email = 'admin@elsxglobal.com';
-        END IF;
+      IF NOT EXISTS (SELECT 1 FROM public.admin_users WHERE email = 'admin@elsxglobal.com') THEN
+        INSERT INTO public.admin_users (user_id, email, role, is_active, created_at, updated_at)
+        VALUES (v_admin_id, 'admin@elsxglobal.com', 'superadmin', true, now(), now());
+      ELSE
+        UPDATE public.admin_users
+        SET user_id = v_admin_id, is_active = true, role = 'superadmin'
+        WHERE email = 'admin@elsxglobal.com';
       END IF;
 
       -- Demo Client in auth.users

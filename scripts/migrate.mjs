@@ -327,6 +327,28 @@ async function ensureServiceRoles() {
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+
+    -- Ensure auth.users has official GoTrue columns (resolves SQLSTATE 42703)
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'users') THEN
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS instance_id uuid;
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS aud varchar(255);
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS "role" varchar(255);
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS encrypted_password varchar(255);
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS confirmed_at timestamptz;
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS invited_at timestamptz;
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS confirmation_token varchar(255);
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS confirmation_sent_at timestamptz;
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS recovery_token varchar(255);
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS recovery_sent_at timestamptz;
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_change_token varchar(255);
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_change varchar(255);
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_change_sent_at timestamptz;
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS last_sign_in_at timestamptz;
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS is_super_admin bool;
+      END IF;
+    END $$;
   `;
   try {
     await runQuery(roleSql);

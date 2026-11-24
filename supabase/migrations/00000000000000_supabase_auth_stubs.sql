@@ -54,16 +54,48 @@ GRANT authenticated  TO authenticator;
 GRANT service_role   TO authenticator;
 GRANT supabase_admin TO authenticator;
 
--- auth.users table stub
+-- auth.users table definition matching official GoTrue schema
 CREATE TABLE IF NOT EXISTS auth.users (
+  instance_id     uuid NULL,
   id              uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+  aud             varchar(255) NULL,
+  "role"          varchar(255) NULL,
   email           text,
+  encrypted_password varchar(255) NULL,
+  confirmed_at    timestamptz NULL,
+  invited_at      timestamptz NULL,
+  confirmation_token varchar(255) NULL,
+  confirmation_sent_at timestamptz NULL,
+  recovery_token  varchar(255) NULL,
+  recovery_sent_at timestamptz NULL,
+  email_change_token varchar(255) NULL,
+  email_change    varchar(255) NULL,
+  email_change_sent_at timestamptz NULL,
+  last_sign_in_at timestamptz NULL,
   raw_user_meta_data jsonb DEFAULT '{}'::jsonb,
   raw_app_meta_data  jsonb DEFAULT '{}'::jsonb,
+  is_super_admin  bool NULL,
   created_at      timestamptz DEFAULT now(),
   updated_at      timestamptz DEFAULT now(),
   CONSTRAINT users_email_key UNIQUE (email)
 );
+
+-- Ensure all columns exist even if table was previously created with minimal columns
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS instance_id uuid;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS aud varchar(255);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS "role" varchar(255);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS encrypted_password varchar(255);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS confirmed_at timestamptz;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS invited_at timestamptz;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS confirmation_token varchar(255);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS confirmation_sent_at timestamptz;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS recovery_token varchar(255);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS recovery_sent_at timestamptz;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_change_token varchar(255);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_change varchar(255);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_change_sent_at timestamptz;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS last_sign_in_at timestamptz;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS is_super_admin bool;
 
 GRANT ALL    ON auth.users TO supabase_auth_admin;
 GRANT SELECT ON auth.users TO authenticated, service_role;

@@ -49,14 +49,21 @@ export async function POST(req: Request) {
       const vcpu = Math.max(1, Number(custom_vcpu || 4));
       const ram = Math.max(1, Number(custom_ram || 8));
       const storage = Math.max(10, Number(custom_storage || 100));
-      basePrice = (vcpu * 150) + (ram * 100) + (storage * 10);
+      // Enterprise rate 3-5% lower than AWS on-demand: vCPU ₹1,488, RAM ₹211, NVMe ₹6.70/GB
+      basePrice = Math.round((vcpu * 1488) + (ram * 211) + (storage * 6.7));
     } else {
       const { data: planData } = await supabase.from('hosting_plans').select('price_monthly').eq('id', planId).single();
-      if (planData) basePrice = planData.price_monthly;
+      if (planData && planData.price_monthly) {
+        basePrice = Number(planData.price_monthly);
+      } else {
+        const { resolvePlan } = await import('@/lib/data/all-plans');
+        basePrice = resolvePlan(planId).price_monthly;
+      }
     }
 
-    const cycleMultiplier = billingCycle === 'annual' ? 12 : billingCycle === 'semi_annual' ? 6 : 1;
-    const cycleDiscount = billingCycle === 'annual' ? 0.167 : billingCycle === 'semi_annual' ? 0.05 : 0;
+    const normalizedCycle = billingCycle === 'payg' ? 'pay_as_you_go' : billingCycle;
+    const cycleMultiplier = normalizedCycle === 'annual' ? 12 : normalizedCycle === 'semi_annual' ? 6 : 1;
+    const cycleDiscount = normalizedCycle === 'annual' ? 0.167 : normalizedCycle === 'semi_annual' ? 0.05 : 0;
     const panelPrice = panel === 'cpanel' ? 1500 : panel === 'plesk' ? 800 : panel === 'directadmin' ? 500 : 0;
     const addonTotal = addons.reduce((sum: number, id: string) => sum + (addonMap.get(id) || 0), 0);
     

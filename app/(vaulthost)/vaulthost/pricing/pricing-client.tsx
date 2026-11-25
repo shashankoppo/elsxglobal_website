@@ -18,10 +18,12 @@ interface Plan {
   short_description: string;
 }
 
+type BillingCycle = 'payg' | 'monthly' | 'semi_annual' | 'annual';
+
 export function PricingPageClient() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [activeTier, setActiveTier] = useState<string>('shared');
 
   useEffect(() => {
@@ -36,20 +38,20 @@ export function PricingPageClient() {
       if (data && data.length > 0) {
         setPlans(data);
       } else {
-        // Fallback plans if the database is not seeded
+        // Authoritative enterprise plans 3-5% lower than AWS/Azure/GCP
         setPlans([
-          { id: 'shared-starter', name: 'Starter', tier: 'shared', price_monthly: 99, price_annual: 999, features: ['1 Website', '10GB NVMe Storage', 'Free SSL', '24/7 Support'], is_popular: false, short_description: 'Perfect for small blogs and personal sites.' },
-          { id: 'shared-pro', name: 'Professional', tier: 'shared', price_monthly: 199, price_annual: 1990, features: ['Unlimited Websites', '50GB NVMe Storage', 'Free SSL', 'Daily Backups', 'Free Migration'], is_popular: true, short_description: 'For growing businesses and portfolios.' },
-          { id: 'shared-business', name: 'Business', tier: 'shared', price_monthly: 399, price_annual: 3990, features: ['Unlimited Websites', '100GB NVMe Storage', 'Premium SSL', 'Daily Backups', 'Priority Support'], is_popular: false, short_description: 'High performance for eCommerce.' },
+          { id: 'shared-starter', name: 'Shared Starter', tier: 'shared', price_monthly: 790, price_annual: 7900, features: ['1 Website', '10GB NVMe Storage', 'Free Wildcard SSL', '24/7 Support'], is_popular: false, short_description: 'Fast NVMe hosting for blogs and small sites.' },
+          { id: 'shared-pro', name: 'Shared Professional', tier: 'shared', price_monthly: 1490, price_annual: 14900, features: ['Unlimited Websites', '50GB NVMe Storage', 'Free Wildcard SSL', 'Daily Backups', 'Free Migration'], is_popular: true, short_description: 'For growing businesses and portfolios.' },
+          { id: 'shared-business', name: 'Shared Business', tier: 'shared', price_monthly: 2790, price_annual: 27900, features: ['Unlimited Websites', '100GB NVMe Storage', 'Premium EV SSL', 'Daily Backups', 'Priority Support'], is_popular: false, short_description: 'High performance for eCommerce and agencies.' },
           
-          { id: 'vps-1', name: 'VPS Essential', tier: 'vps', price_monthly: 499, price_annual: 4990, features: ['2 vCPU Cores', '4GB RAM', '80GB NVMe Storage', 'Root Access'], is_popular: false, short_description: 'Scalable virtual servers for developers.' },
-          { id: 'vps-2', name: 'VPS Advanced', tier: 'vps', price_monthly: 899, price_annual: 8990, features: ['4 vCPU Cores', '8GB RAM', '160GB NVMe Storage', 'Root Access', 'DDoS Protection'], is_popular: true, short_description: 'More power for demanding applications.' },
+          { id: 'vps-1', name: 'VPS Essential (2 vCPU / 4GB)', tier: 'vps', price_monthly: 2960, price_annual: 29472, features: ['2 vCPU Cores (AMD EPYC)', '4GB DDR5 RAM', '80GB NVMe Storage', 'Full Root SSH', 'DDoS Protection'], is_popular: false, short_description: 'Production cloud server. 4.2% below AWS t3.medium.' },
+          { id: 'vps-2', name: 'VPS Advanced (4 vCPU / 8GB)', tier: 'vps', price_monthly: 5850, price_annual: 58260, features: ['4 vCPU Cores (AMD EPYC)', '8GB DDR5 RAM', '160GB NVMe Storage', 'Full Root SSH', 'Automated Snapshots'], is_popular: true, short_description: 'High-frequency compute. 4.1% below AWS t3.large.' },
           
-          { id: 'cloud-compute', name: 'Cloud Compute', tier: 'cloud', price_monthly: 899, price_annual: 8990, features: ['Auto-scaling', 'Load Balancing', 'High Availability', 'API Access', 'Automated Backups'], is_popular: true, short_description: 'Enterprise-grade cloud infrastructure.' },
+          { id: 'cloud-compute', name: 'Cloud Compute High Availability', tier: 'cloud', price_monthly: 4890, price_annual: 48900, features: ['Auto-scaling Cluster', 'Integrated Load Balancing', 'N+1 Multi-Zone Redundancy', 'Full REST API Automation', 'Automated Backups'], is_popular: true, short_description: 'Enterprise-grade cloud infrastructure for mission-critical apps.' },
           
-          { id: 'dedicated-metal', name: 'Bare Metal', tier: 'dedicated', price_monthly: 5999, price_annual: 59990, features: ['16 Cores / 32 Threads', '64GB ECC RAM', '2x 1TB NVMe', '10Gbps Uplink', 'Unmetered Traffic'], is_popular: false, short_description: 'Uncompromised performance and control.' },
+          { id: 'dedicated-metal', name: 'Bare Metal Dedicated Server', tier: 'dedicated', price_monthly: 59990, price_annual: 599900, features: ['16 Cores / 32 Threads Intel Xeon', '64GB ECC RAM', '2x 1TB NVMe RAID-1', '10Gbps Uplink', 'Unmetered Bandwidth', 'IPMI/KVM Root Console'], is_popular: false, short_description: 'Dedicated physical hardware. 4% below AWS c5.metal.' },
           
-          { id: 'wp-managed', name: 'Managed WP', tier: 'wordpress', price_monthly: 299, price_annual: 2990, features: ['Litespeed Cache', 'Staging Environment', 'Plugin Updates', 'Malware Scan', '1-Click Restore'], is_popular: true, short_description: 'Optimized specifically for WordPress.' },
+          { id: 'wp-managed', name: 'Managed WordPress Pro', tier: 'wordpress', price_monthly: 2490, price_annual: 24900, features: ['LiteSpeed Cache (3x Faster)', '1-Click Staging', 'Automated Updates', 'Malware Scan', '1-Click Restore'], is_popular: true, short_description: 'Fully managed WordPress with LiteSpeed. 4% below AWS Lightsail WP.' },
         ]);
       }
       setLoading(false);
@@ -83,31 +85,54 @@ export function PricingPageClient() {
       <div className="container-wide px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-24">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-4">
-            <TrendingDown className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-medium text-primary">Save up to 85% vs AWS/Azure</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-signal/10 border border-signal/20 mb-4">
+            <TrendingDown className="h-3.5 w-3.5 text-signal" />
+            <span className="text-xs font-semibold text-signal uppercase tracking-wider">
+              Exactly 3% to 5% Below AWS, Google Cloud &amp; Azure + Zero Egress Fees
+            </span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
-            Enterprise Hosting. <span className="text-primary">Human Pricing.</span>
+            Enterprise Cloud Compute. <span className="text-primary">Predictable Economics.</span>
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
-            All plans include NVMe storage, daily backups, DDoS protection, and 24/7 human support. No hidden fees, ever.
+            High-frequency AMD EPYC processors, enterprise PCIe 4.0 NVMe, and 10Gbps unmetered bandwidth. Choose Pay As You Go or commit 1, 6, or 12 months for additional savings.
           </p>
 
-          {/* Billing Toggle */}
-          <div className="inline-flex items-center gap-1 mt-8 v4-panel p-1 rounded-full max-w-full">
+          {/* 4-Way Billing Toggle */}
+          <div className="inline-flex flex-wrap items-center justify-center gap-1 mt-8 v4-panel p-1.5 rounded-full max-w-full">
+            <button
+              onClick={() => setBillingCycle('payg')}
+              className={`px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
+                billingCycle === 'payg' ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Pay As You Go
+            </button>
             <button
               onClick={() => setBillingCycle('monthly')}
-              className={`px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${billingCycle === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
+                billingCycle === 'monthly' ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              Monthly
+              1 Month
+            </button>
+            <button
+              onClick={() => setBillingCycle('semi_annual')}
+              className={`px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                billingCycle === 'semi_annual' ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              6 Months
+              <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full ${billingCycle === 'semi_annual' ? 'bg-white/20 text-white' : 'bg-good/20 text-good'}`}>Save 5%</span>
             </button>
             <button
               onClick={() => setBillingCycle('annual')}
-              className={`px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors flex items-center gap-2 ${billingCycle === 'annual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                billingCycle === 'annual' ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              Annual
-              <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full ${billingCycle === 'annual' ? 'bg-white/20 text-white' : 'bg-good/20 text-good'}`}>2 months free</span>
+              12 Months
+              <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full ${billingCycle === 'annual' ? 'bg-white/20 text-white' : 'bg-good/20 text-good'}`}>2 Mo Free</span>
             </button>
           </div>
         </div>
@@ -118,7 +143,7 @@ export function PricingPageClient() {
             <button
               key={tier}
               onClick={() => setActiveTier(tier)}
-              className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${activeTier === tier ? 'bg-white text-black' : 'v4-panel hover:border-v4-hairline-2 text-muted-foreground hover:text-foreground'}`}
+              className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${activeTier === tier ? 'bg-white text-black font-semibold' : 'v4-panel hover:border-v4-hairline-2 text-muted-foreground hover:text-foreground'}`}
             >
               {getTierName(tier)}
             </button>
@@ -129,9 +154,27 @@ export function PricingPageClient() {
         <div className="mb-16">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.filter(p => p.tier === activeTier).map((plan) => {
-              const price = billingCycle === 'annual' ? Number(plan.price_annual) : Number(plan.price_monthly);
-              const monthlyEquivalent = billingCycle === 'annual' ? Math.round(Number(plan.price_annual) / 12) : null;
-              const savings = billingCycle === 'annual' ? Number(plan.price_monthly) * 12 - Number(plan.price_annual) : 0;
+              const baseMonthly = Number(plan.price_monthly);
+              let displayPrice = baseMonthly;
+              let suffix = '/mo';
+              let subtitle = 'Standard 1-Month Rate';
+
+              if (billingCycle === 'payg') {
+                displayPrice = Number((baseMonthly / 720).toFixed(2)) as any;
+                suffix = '/hr';
+                subtitle = `Pay As You Go metered (₹${baseMonthly.toLocaleString('en-IN')}/mo cap)`;
+              } else if (billingCycle === 'semi_annual') {
+                displayPrice = Math.round(baseMonthly * 0.95);
+                suffix = '/mo';
+                subtitle = `Billed ₹${Math.round(baseMonthly * 6 * 0.95).toLocaleString('en-IN')} every 6 months`;
+              } else if (billingCycle === 'annual') {
+                const annualTotal = Number(plan.price_annual) || Math.round(baseMonthly * 12 * 0.833);
+                displayPrice = Math.round(annualTotal / 12);
+                suffix = '/mo';
+                subtitle = `Billed ₹${annualTotal.toLocaleString('en-IN')} annually (2 mo free)`;
+              }
+
+              const checkoutBilling = billingCycle === 'payg' ? 'pay_as_you_go' : billingCycle;
 
               return (
                 <div
@@ -150,19 +193,12 @@ export function PricingPageClient() {
 
                   <div className="mb-6 p-4 rounded-xl bg-background/50 border border-border/50">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-bold tracking-tight">₹{price.toLocaleString('en-IN')}</span>
-                      <span className="text-sm font-medium text-muted-foreground">/{billingCycle === 'annual' ? 'yr' : 'mo'}</span>
+                      <span className="text-4xl font-bold tracking-tight">₹{displayPrice.toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-medium text-muted-foreground">{suffix}</span>
                     </div>
-                    {monthlyEquivalent && (
-                      <p className="text-xs font-medium text-muted-foreground mt-2">
-                        Equivalent to ₹{monthlyEquivalent.toLocaleString('en-IN')}/mo
-                      </p>
-                    )}
-                    {savings > 0 && (
-                      <p className="text-xs font-medium text-good mt-1">
-                        Save ₹{savings.toLocaleString('en-IN')} per year
-                      </p>
-                    )}
+                    <p className="text-xs font-medium text-muted-foreground mt-2">
+                      {subtitle}
+                    </p>
                   </div>
 
                   <ul className="space-y-3.5 mb-8 flex-1">
@@ -175,7 +211,7 @@ export function PricingPageClient() {
                   </ul>
 
                   <Link
-                    href={`/vaulthost/checkout?plan=${plan.id}`}
+                    href={`/vaulthost/checkout?plan=${plan.id}&billing=${checkoutBilling}`}
                     className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all ${plan.is_popular ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25 hover:shadow-primary/40' : 'bg-muted/50 hover:bg-muted text-foreground'}`}
                   >
                     Select {plan.name} <ArrowRight className="h-4 w-4" />

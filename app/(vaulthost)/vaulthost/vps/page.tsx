@@ -38,13 +38,15 @@ interface VpsPlan {
   popular?: boolean;
 }
 
+type BillingCycle = 'payg' | 'monthly' | 'semi_annual' | 'annual';
+
 const VPS_PLANS: VpsPlan[] = [
-  { id: 'nano', name: 'VPS Nano', vcpu: 1, ram: '2 GB DDR5', storage: '40 GB NVMe', bandwidth: '1 TB', priceMonthly: 399, priceAnnual: 319 },
-  { id: 'standard', name: 'VPS Standard', vcpu: 2, ram: '4 GB DDR5', storage: '80 GB NVMe', bandwidth: '3 TB', priceMonthly: 799, priceAnnual: 639 },
-  { id: 'pro', name: 'VPS Pro', vcpu: 4, ram: '8 GB DDR5', storage: '160 GB NVMe', bandwidth: '6 TB', priceMonthly: 1499, priceAnnual: 1199, popular: true },
-  { id: 'elite', name: 'VPS Elite', vcpu: 8, ram: '16 GB DDR5', storage: '320 GB NVMe', bandwidth: '10 TB', priceMonthly: 2999, priceAnnual: 2399 },
-  { id: 'ultra', name: 'VPS Ultra', vcpu: 16, ram: '32 GB DDR5', storage: '640 GB NVMe', bandwidth: '15 TB', priceMonthly: 5999, priceAnnual: 4799 },
-  { id: 'beast', name: 'VPS Beast', vcpu: 32, ram: '64 GB DDR5', storage: '1.2 TB NVMe', bandwidth: '20 TB', priceMonthly: 11999, priceAnnual: 9599 },
+  { id: 'nano', name: 'VPS Nano', vcpu: 1, ram: '2 GB DDR5', storage: '40 GB NVMe', bandwidth: '1 TB', priceMonthly: 1480, priceAnnual: 1228 },
+  { id: 'standard', name: 'VPS Standard', vcpu: 2, ram: '4 GB DDR5', storage: '80 GB NVMe', bandwidth: '3 TB', priceMonthly: 2960, priceAnnual: 2456 },
+  { id: 'pro', name: 'VPS Pro', vcpu: 4, ram: '8 GB DDR5', storage: '160 GB NVMe', bandwidth: '6 TB', priceMonthly: 5850, priceAnnual: 4855, popular: true },
+  { id: 'elite', name: 'VPS Elite', vcpu: 8, ram: '16 GB DDR5', storage: '320 GB NVMe', bandwidth: '10 TB', priceMonthly: 11700, priceAnnual: 9711 },
+  { id: 'ultra', name: 'VPS Ultra', vcpu: 16, ram: '32 GB DDR5', storage: '640 GB NVMe', bandwidth: '15 TB', priceMonthly: 23800, priceAnnual: 19754 },
+  { id: 'beast', name: 'VPS Beast', vcpu: 32, ram: '64 GB DDR5', storage: '1.2 TB NVMe', bandwidth: '20 TB', priceMonthly: 48300, priceAnnual: 40089 },
 ];
 
 const OS_OPTIONS = [
@@ -57,9 +59,11 @@ const OS_OPTIONS = [
 ];
 
 export default function VpsHostingPage() {
-  const [isAnnual, setIsAnnual] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<VpsPlan>(VPS_PLANS[2]); // Default Pro
   const [selectedOs, setSelectedOs] = useState<string>('ubuntu');
+
+  const checkoutBilling = billingCycle === 'payg' ? 'pay_as_you_go' : billingCycle;
 
   return (
     <div className="v4-page pb-32">
@@ -72,11 +76,11 @@ export default function VpsHostingPage() {
             Next-Gen VPS Hosting on <span className="text-signal">Pure NVMe &amp; AMD EPYC</span>
           </>
         }
-        description="Deploy high-frequency cloud servers in seconds. Dedicated vCPU, PCIe 4.0 NVMe storage, 10Gbps redundant network uplinks, and complete root access across Mumbai and global regions."
+        description="Deploy high-frequency cloud servers in seconds. Exactly 3% to 5% below AWS & Google Cloud on raw compute with 100% free unmetered egress. Dedicated vCPU, PCIe 4.0 NVMe storage, and 10Gbps redundant network uplinks."
       >
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
           <Link
-            href={`/vaulthost/checkout?plan=vps-${selectedPlan.id}&billing=${isAnnual ? 'annual' : 'monthly'}`}
+            href={`/vaulthost/checkout?plan=vps-${selectedPlan.id}&billing=${checkoutBilling}`}
             className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-btn v4-btn-primary text-sm font-medium"
           >
             Launch VPS in 60s <ArrowRight className="h-4 w-4" />
@@ -130,23 +134,39 @@ export default function VpsHostingPage() {
               </p>
             </div>
 
-            {/* Monthly / Annual Toggle */}
-            <div className="flex items-center gap-3 bg-ink-surface p-1 rounded-lg border border-hairline self-start md:self-auto">
+            {/* 4-Way Billing Toggle */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-ink-surface p-1 rounded-xl border border-hairline self-start md:self-auto">
               <button
-                onClick={() => setIsAnnual(false)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  !isAnnual ? 'bg-ink-surface-2 text-text-primary-v4 shadow-sm' : 'text-text-muted-v4 hover:text-text-secondary-v4'
+                onClick={() => setBillingCycle('payg')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  billingCycle === 'payg' ? 'bg-signal text-black font-semibold shadow-sm' : 'text-text-muted-v4 hover:text-text-secondary-v4'
                 }`}
               >
-                Monthly
+                Pay As You Go
               </button>
               <button
-                onClick={() => setIsAnnual(true)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 ${
-                  isAnnual ? 'bg-signal text-black font-semibold shadow-sm' : 'text-text-muted-v4 hover:text-text-secondary-v4'
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  billingCycle === 'monthly' ? 'bg-signal text-black font-semibold shadow-sm' : 'text-text-muted-v4 hover:text-text-secondary-v4'
                 }`}
               >
-                Annual <span className="text-[10px] bg-black/20 px-1.5 py-0.5 rounded font-mono">Save 20%</span>
+                1 Month
+              </button>
+              <button
+                onClick={() => setBillingCycle('semi_annual')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                  billingCycle === 'semi_annual' ? 'bg-signal text-black font-semibold shadow-sm' : 'text-text-muted-v4 hover:text-text-secondary-v4'
+                }`}
+              >
+                6 Months <span className="text-[10px] bg-black/20 px-1 py-0.2 rounded font-mono">Save 5%</span>
+              </button>
+              <button
+                onClick={() => setBillingCycle('annual')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                  billingCycle === 'annual' ? 'bg-signal text-black font-semibold shadow-sm' : 'text-text-muted-v4 hover:text-text-secondary-v4'
+                }`}
+              >
+                12 Months <span className="text-[10px] bg-black/20 px-1 py-0.2 rounded font-mono">2 Mo Free</span>
               </button>
             </div>
           </div>
@@ -155,7 +175,23 @@ export default function VpsHostingPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {VPS_PLANS.map((plan) => {
               const isSelected = selectedPlan.id === plan.id;
-              const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
+              let displayPrice = plan.priceMonthly;
+              let priceSuffix = '/mo';
+              let cycleLabel = 'Standard monthly';
+
+              if (billingCycle === 'payg') {
+                displayPrice = Number((plan.priceMonthly / 720).toFixed(2)) as any;
+                priceSuffix = '/hr';
+                cycleLabel = `Metered (₹${plan.priceMonthly.toLocaleString()}/mo cap)`;
+              } else if (billingCycle === 'semi_annual') {
+                displayPrice = Math.round(plan.priceMonthly * 0.95);
+                priceSuffix = '/mo';
+                cycleLabel = `Billed ₹${Math.round(plan.priceMonthly * 6 * 0.95).toLocaleString()}/6mo`;
+              } else if (billingCycle === 'annual') {
+                displayPrice = plan.priceAnnual;
+                priceSuffix = '/mo';
+                cycleLabel = `Billed ₹${(plan.priceAnnual * 12).toLocaleString()}/yr (2 mo free)`;
+              }
 
               return (
                 <div
@@ -181,12 +217,10 @@ export default function VpsHostingPage() {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold v4-display text-text-primary-v4">
-                          ₹{price.toLocaleString()}
-                          <span className="text-xs font-normal text-text-muted-v4">/mo</span>
+                          ₹{displayPrice.toLocaleString()}
+                          <span className="text-xs font-normal text-text-muted-v4">{priceSuffix}</span>
                         </div>
-                        {isAnnual && (
-                          <div className="text-[10px] text-signal font-mono">Billed ₹{(price * 12).toLocaleString()}/yr</div>
-                        )}
+                        <div className="text-[10px] text-signal font-mono">{cycleLabel}</div>
                       </div>
                     </div>
 
@@ -220,7 +254,7 @@ export default function VpsHostingPage() {
 
                   <div className="pt-4 border-t border-hairline">
                     <Link
-                      href={`/vaulthost/checkout?plan=vps-${plan.id}&billing=${isAnnual ? 'annual' : 'monthly'}`}
+                      href={`/vaulthost/checkout?plan=vps-${plan.id}&billing=${checkoutBilling}`}
                       className={`w-full py-2.5 px-4 rounded-btn text-xs font-medium inline-flex items-center justify-center gap-2 transition-all ${
                         isSelected ? 'v4-btn-primary' : 'bg-ink-surface-2 border border-hairline text-text-primary-v4 hover:bg-ink-surface'
                       }`}
@@ -411,14 +445,14 @@ export default function VpsHostingPage() {
                   <td className="py-3 px-4 text-text-muted-v4">1 Gbps Shared</td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-4 font-medium font-sans text-text-primary-v4">Monthly Cost in India</td>
-                  <td className="py-3 px-4 text-emerald-400 font-bold text-sm">₹1,499 / mo</td>
-                  <td className="py-3 px-4 text-text-muted-v4">~₹6,200 / mo + Data Transfer</td>
-                  <td className="py-3 px-4 text-text-muted-v4">~₹4,800 / mo</td>
+                  <td className="py-3 px-4 font-medium font-sans text-text-primary-v4">Monthly Compute (4 vCPU / 8GB)</td>
+                  <td className="py-3 px-4 text-emerald-400 font-bold text-sm">₹5,850 / mo (4.1% &lt; AWS)</td>
+                  <td className="py-3 px-4 text-text-muted-v4">~₹6,100 / mo + Egress</td>
+                  <td className="py-3 px-4 text-text-muted-v4">~₹5,980 / mo</td>
                 </tr>
                 <tr>
                   <td className="py-3 px-4 font-medium font-sans text-text-primary-v4">Free Egress Bandwidth</td>
-                  <td className="py-3 px-4 text-signal">6,000 GB Included</td>
+                  <td className="py-3 px-4 text-signal">6,000 GB Included (₹0 egress)</td>
                   <td className="py-3 px-4 text-text-muted-v4">100 GB Included ($0.09/GB after)</td>
                   <td className="py-3 px-4 text-text-secondary-v4">5,000 GB Included</td>
                 </tr>
@@ -447,10 +481,10 @@ export default function VpsHostingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
-                  href={`/vaulthost/checkout?plan=vps-${selectedPlan.id}&billing=${isAnnual ? 'annual' : 'monthly'}`}
+                  href={`/vaulthost/checkout?plan=vps-${selectedPlan.id}&billing=${checkoutBilling}`}
                   className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-btn v4-btn-primary text-sm font-medium"
                 >
-                  Deploy {selectedPlan.name} (₹{isAnnual ? selectedPlan.priceAnnual : selectedPlan.priceMonthly}/mo){' '}
+                  Deploy {selectedPlan.name} (₹{billingCycle === 'payg' ? (selectedPlan.priceMonthly / 720).toFixed(2) + '/hr' : (billingCycle === 'annual' ? selectedPlan.priceAnnual : selectedPlan.priceMonthly) + '/mo'}){' '}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link

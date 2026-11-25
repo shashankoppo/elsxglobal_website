@@ -4,7 +4,7 @@ export const checkoutSchema = z.object({
   planId: z.string().min(1, 'planId is required'),
   planName: z.string().min(1, 'planName is required'),
   planTier: z.string().optional().default('cloud'),
-  billingCycle: z.enum(['monthly', 'semi_annual', 'annual']).default('monthly'),
+  billingCycle: z.enum(['pay_as_you_go', 'payg', 'monthly', 'semi_annual', 'annual']).default('monthly'),
   domain: z.string()
     .regex(/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/, 'Invalid domain name format')
     .optional()

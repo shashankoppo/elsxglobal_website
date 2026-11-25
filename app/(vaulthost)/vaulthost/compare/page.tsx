@@ -31,14 +31,14 @@ interface ComparisonRow {
 export default function ComparePage() {
   const comparisonData: ComparisonRow[] = [
     {
-      criterion: 'Entry VPS Price',
-      vaulthost: { text: '₹399 /mo' },
-      aws: { text: '₹2,800 /mo' },
-      azure: { text: '₹2,500 /mo' },
-      gcp: { text: '₹2,200 /mo' },
+      criterion: 'Entry Cloud Compute (1-2 vCPU)',
+      vaulthost: { text: '₹1,480 /mo (4.5% < AWS)' },
+      aws: { text: '₹1,550 /mo (t3.small)' },
+      azure: { text: '₹1,520 /mo (B1ms)' },
+      gcp: { text: '₹1,540 /mo (e2-small)' },
       digitalocean: { text: '₹1,100 /mo' },
-      hostinger: { text: '₹500 /mo' },
-      godaddy: { text: '₹650 /mo' },
+      hostinger: { text: '₹750 /mo' },
+      godaddy: { text: '₹1,200 /mo' },
     },
     {
       criterion: 'DDoS Protection Included',

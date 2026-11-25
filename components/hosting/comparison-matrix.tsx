@@ -12,10 +12,10 @@ interface ComparisonRow {
 
 const rows: ComparisonRow[] = [
   {
-    label: 'Monthly Price',
-    vaulthost: 'Rs 2,999/mo',
-    aws: 'Rs 7,200/mo (~$86)',
-    azure: 'Rs 6,800/mo (~$81)',
+    label: 'Compute Price (4 vCPU / 8GB)',
+    vaulthost: '₹5,850/mo (3-5% below AWS)',
+    aws: '₹6,100/mo (t3.xlarge)',
+    azure: '₹5,980/mo (D4s v5)',
   },
   {
     label: 'vCPU Count',
@@ -73,7 +73,7 @@ const rows: ComparisonRow[] = [
   },
   {
     label: 'Total Estimated Monthly Cost',
-    vaulthost: 'Rs 2,999/mo',
+    vaulthost: '₹5,850/mo (Flat, ₹0 egress)',
     aws: 'Rs 41,400/mo',
     azure: 'Rs 38,350/mo',
     highlight: true,

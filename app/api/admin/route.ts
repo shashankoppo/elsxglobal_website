@@ -11,6 +11,50 @@ import { ProvisioningEngine } from '@/lib/provisioning/ProvisioningEngine';
 import { CORE_HOSTING_PLANS } from '@/lib/data/all-plans';
 import { CLOUD_PRICING } from '@/lib/data/cloud-pricing';
 import { getAnnualPricing } from '@/lib/billing/pricingMath';
+import {
+  isPostgrestUnavailable,
+  healPostgrestSchema,
+  pgGetSingleRow,
+  pgListTable,
+  pgUpsertRow,
+  pgDeleteById,
+  withPgClient,
+} from '@/lib/db/pgFallback';
+
+async function resilientSingleSetting(supabaseAdmin: any, table: string) {
+  const { data, error } = await supabaseAdmin.from(table).select('*').eq('id', 1).maybeSingle();
+  if (!error) return data || {};
+  if (isPostgrestUnavailable(error)) {
+    healPostgrestSchema().catch(() => {});
+    return (await pgGetSingleRow(table, 1)) || {};
+  }
+  return data || {};
+}
+
+async function resilientUpsertSetting(supabaseAdmin: any, table: string, settings: Record<string, any>) {
+  const row = { id: 1, ...(settings || {}), updated_at: new Date().toISOString() };
+  const { error } = await supabaseAdmin.from(table).upsert(row, { onConflict: 'id' });
+  if (!error) return;
+  if (isPostgrestUnavailable(error)) {
+    healPostgrestSchema().catch(() => {});
+    await pgUpsertRow(table, row, 'id');
+    return;
+  }
+  throw error;
+}
+
+async function resilientList(supabaseAdmin: any, table: string, orderCol = 'created_at', ascending = false, limit?: number) {
+  let query = supabaseAdmin.from(table).select('*').order(orderCol, { ascending });
+  if (limit) query = query.limit(limit);
+  const { data, error } = await query;
+  if (!error) return data || [];
+  if (isPostgrestUnavailable(error)) {
+    healPostgrestSchema().catch(() => {});
+    const rows = await pgListTable(table, orderCol, ascending);
+    return limit ? rows.slice(0, limit) : rows;
+  }
+  return data || [];
+}
 
 const planSchema = z.object({
   id: z.string().min(1).optional(),
@@ -205,7 +249,7 @@ export async function POST(request: Request) {
     // --- HANDLE ACTIONS ---
 
     if (action === 'stats') {
-      const [ordersRes, adminUsersRes, plansRes, ticketsRes, invoicesRes, servicesRes, authUsersRes] = await Promise.all([
+      let [ordersRes, adminUsersRes, plansRes, ticketsRes, invoicesRes, servicesRes, authUsersRes] = await Promise.all([
         supabaseAdmin.from('hosting_orders').select('total, status, created_at, plan_name'),
         supabaseAdmin.from('admin_users').select('id', { count: 'exact' }),
         supabaseAdmin.from('hosting_plans').select('id', { count: 'exact' }).eq('is_active', true),
@@ -215,7 +259,39 @@ export async function POST(request: Request) {
         supabaseAdmin.auth.admin.listUsers()
       ]);
 
-      const orders = ordersRes.data || [];
+      let orders = ordersRes.data || [];
+      let activeServices = servicesRes.count || 0;
+      let openTickets = ticketsRes.count || 0;
+      let unpaidInvoices = invoicesRes.count || 0;
+      let activePlans = plansRes.count || 0;
+
+      if (ordersRes.error && isPostgrestUnavailable(ordersRes.error)) {
+        healPostgrestSchema().catch(() => {});
+        try {
+          const pgData = await withPgClient(async (client) => {
+            const [oR, pR, tR, iR, sR] = await Promise.all([
+              client.query('SELECT total, status, created_at, plan_name FROM public.hosting_orders'),
+              client.query('SELECT count(*)::int AS c FROM public.hosting_plans WHERE is_active = true'),
+              client.query("SELECT count(*)::int AS c FROM public.support_tickets WHERE status = 'open'"),
+              client.query("SELECT count(*)::int AS c FROM public.hosting_invoices WHERE status <> 'paid'"),
+              client.query("SELECT count(*)::int AS c FROM public.hosting_services WHERE status IN ('active', 'provisioning')"),
+            ]);
+            return {
+              orders: oR.rows || [],
+              activePlans: pR.rows?.[0]?.c || 0,
+              openTickets: tR.rows?.[0]?.c || 0,
+              unpaidInvoices: iR.rows?.[0]?.c || 0,
+              activeServices: sR.rows?.[0]?.c || 0,
+            };
+          });
+          orders = pgData.orders;
+          activePlans = pgData.activePlans;
+          openTickets = pgData.openTickets;
+          unpaidInvoices = pgData.unpaidInvoices;
+          activeServices = pgData.activeServices;
+        } catch {}
+      }
+
       const totalRevenue = orders.filter(o => o.status !== 'cancelled' && o.status !== 'refunded').reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
       const pendingOrders = orders.filter(o => o.status === 'pending_payment' || o.status === 'provisioning').length;
 
@@ -259,11 +335,11 @@ export async function POST(request: Request) {
       return NextResponse.json({
         totalRevenue,
         totalOrders: orders.length,
-        activeServices: servicesRes.count || 0,
+        activeServices,
         pendingOrders,
-        openTickets: ticketsRes.count || 0,
-        unpaidInvoices: invoicesRes.count || 0,
-        activePlans: plansRes.count || 0,
+        openTickets,
+        unpaidInvoices,
+        activePlans,
         totalTransactions: orders.length,
         revenueThisWeek,
         revenueLastWeek,
@@ -278,8 +354,8 @@ export async function POST(request: Request) {
 
     // Orders & Tickets & Invoices
     if (action === 'get-orders') {
-      const { data } = await supabaseAdmin.from('hosting_orders').select('*').order('created_at', { ascending: false }).limit(100);
-      return NextResponse.json({ data: data || [] });
+      const data = await resilientList(supabaseAdmin, 'hosting_orders', 'created_at', false, 100);
+      return NextResponse.json({ data });
     }
     
     if (action === 'order-detail') {
@@ -292,13 +368,12 @@ export async function POST(request: Request) {
     }
 
     if (action === 'get-tickets') {
-      const { data } = await supabaseAdmin.from('support_tickets').select('*').order('created_at', { ascending: false }).limit(50);
-      return NextResponse.json({ data: data || [] });
+      const data = await resilientList(supabaseAdmin, 'support_tickets', 'created_at', false, 50);
+      return NextResponse.json({ data });
     }
 
     if (action === 'reply-ticket') {
       const { ticketId, message, adminEmail } = payload;
-      // In a real app, this would add a message to ticket_messages table and update ticket status
       const { error: replyError } = await supabaseAdmin.from('ticket_replies').insert({
         ticket_id: ticketId,
         message: message,
@@ -312,13 +387,13 @@ export async function POST(request: Request) {
     }
 
     if (action === 'get-invoices') {
-      const { data } = await supabaseAdmin.from('hosting_invoices').select('*').order('created_at', { ascending: false }).limit(50);
-      return NextResponse.json({ data: data || [] });
+      const data = await resilientList(supabaseAdmin, 'hosting_invoices', 'created_at', false, 50);
+      return NextResponse.json({ data });
     }
 
     if (action === 'get-leads') {
-      const { data } = await supabaseAdmin.from('leads').select('*').order('created_at', { ascending: false }).limit(100);
-      return NextResponse.json({ data: data || [] });
+      const data = await resilientList(supabaseAdmin, 'leads', 'created_at', false, 100);
+      return NextResponse.json({ data });
     }
 
     if (action === 'list-users') {
@@ -437,8 +512,8 @@ export async function POST(request: Request) {
 
     // Plans & Addons
     if (action === 'list-plans') {
-      const { data } = await supabaseAdmin.from('hosting_plans').select('*').order('sort_order', { ascending: true });
-      return NextResponse.json({ data: data || [] });
+      const data = await resilientList(supabaseAdmin, 'hosting_plans', 'sort_order', true);
+      return NextResponse.json({ data });
     }
     
     if (action === 'save-plan') {
@@ -449,6 +524,7 @@ export async function POST(request: Request) {
         `${planData.tier}-${planData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`;
       const record = {
         id: slug,
+        slug,
         name: rest.name,
         tier: rest.tier,
         price_monthly: rest.price_monthly,
@@ -464,20 +540,33 @@ export async function POST(request: Request) {
         is_active: rest.is_active ?? true,
       };
       const { error } = await supabaseAdmin.from('hosting_plans').upsert(record, { onConflict: 'id' });
-      if (error) throw error;
+      if (error) {
+        if (isPostgrestUnavailable(error)) {
+          healPostgrestSchema().catch(() => {});
+          await pgUpsertRow('hosting_plans', record, 'id');
+        } else {
+          throw error;
+        }
+      }
       return NextResponse.json({ ok: true, id: slug });
     }
 
     if (action === 'delete-plan') {
       const { planId } = payload;
       const { error } = await supabaseAdmin.from('hosting_plans').delete().eq('id', planId);
-      if (error) throw error;
+      if (error) {
+        if (isPostgrestUnavailable(error)) {
+          await pgDeleteById('hosting_plans', planId, 'id');
+        } else {
+          throw error;
+        }
+      }
       return NextResponse.json({ ok: true });
     }
 
     if (action === 'list-addons') {
-      const { data } = await supabaseAdmin.from('hosting_addons').select('*').order('price_monthly', { ascending: true });
-      return NextResponse.json({ data: data || [] });
+      const data = await resilientList(supabaseAdmin, 'hosting_addons', 'price_monthly', true);
+      return NextResponse.json({ data });
     }
 
     if (action === 'save-addon') {
@@ -486,24 +575,37 @@ export async function POST(request: Request) {
       const slug =
         id ||
         rest.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const record = { id: slug, ...rest };
       const { error } = await supabaseAdmin
         .from('hosting_addons')
-        .upsert({ id: slug, ...rest }, { onConflict: 'id' });
-      if (error) throw error;
+        .upsert(record, { onConflict: 'id' });
+      if (error) {
+        if (isPostgrestUnavailable(error)) {
+          await pgUpsertRow('hosting_addons', record, 'id');
+        } else {
+          throw error;
+        }
+      }
       return NextResponse.json({ ok: true, id: slug });
     }
 
     if (action === 'delete-addon') {
       const { addonId } = payload;
       const { error } = await supabaseAdmin.from('hosting_addons').delete().eq('id', addonId);
-      if (error) throw error;
+      if (error) {
+        if (isPostgrestUnavailable(error)) {
+          await pgDeleteById('hosting_addons', addonId, 'id');
+        } else {
+          throw error;
+        }
+      }
       return NextResponse.json({ ok: true });
     }
 
     // Coupons
     if (action === 'list-coupons') {
-      const { data } = await supabaseAdmin.from('hosting_coupons').select('*').order('created_at', { ascending: false });
-      return NextResponse.json({ data: data || [] });
+      const data = await resilientList(supabaseAdmin, 'hosting_coupons', 'created_at', false);
+      return NextResponse.json({ data });
     }
 
     if (action === 'save-coupon') {
@@ -511,10 +613,22 @@ export async function POST(request: Request) {
       const { id, ...rest } = couponData;
       if (id) {
         const { error } = await supabaseAdmin.from('hosting_coupons').update(rest).eq('id', id);
-        if (error) throw error;
+        if (error) {
+          if (isPostgrestUnavailable(error)) {
+            await pgUpsertRow('hosting_coupons', { id, ...rest }, 'id');
+          } else {
+            throw error;
+          }
+        }
       } else {
         const { error } = await supabaseAdmin.from('hosting_coupons').insert(rest);
-        if (error) throw error;
+        if (error) {
+          if (isPostgrestUnavailable(error)) {
+            await pgUpsertRow('hosting_coupons', { id: crypto.randomUUID(), ...rest }, 'id');
+          } else {
+            throw error;
+          }
+        }
       }
       return NextResponse.json({ ok: true });
     }
@@ -522,63 +636,72 @@ export async function POST(request: Request) {
     if (action === 'delete-coupon') {
       const { couponId } = payload;
       const { error } = await supabaseAdmin.from('hosting_coupons').delete().eq('id', couponId);
-      if (error) throw error;
+      if (error) {
+        if (isPostgrestUnavailable(error)) {
+          await pgDeleteById('hosting_coupons', couponId, 'id');
+        } else {
+          throw error;
+        }
+      }
       return NextResponse.json({ ok: true });
     }
 
     // Services
     if (action === 'list-services') {
-      const { data } = await supabaseAdmin.from('hosting_services').select('*').order('created_at', { ascending: false });
-      return NextResponse.json({ data: data || [] });
+      const data = await resilientList(supabaseAdmin, 'hosting_services', 'created_at', false);
+      return NextResponse.json({ data });
     }
     
     if (action === 'update-service') {
       const validatedPayload = updateServiceSchema.parse(payload);
       const { serviceId, action: _action, ...updates } = validatedPayload;
       const { error } = await supabaseAdmin.from('hosting_services').update(updates).eq('id', serviceId);
-      if (error) throw error;
+      if (error) {
+        if (isPostgrestUnavailable(error)) {
+          await pgUpsertRow('hosting_services', { id: serviceId, ...updates, updated_at: new Date().toISOString() }, 'id');
+        } else {
+          throw error;
+        }
+      }
       return NextResponse.json({ ok: true });
     }
 
     // Settings
     if (action === 'get-payment-settings') {
-      const { data } = await supabaseAdmin.from('payment_settings').select('*').eq('id', 1).single();
-      return NextResponse.json({ settings: data || {} });
+      const settings = await resilientSingleSetting(supabaseAdmin, 'payment_settings');
+      return NextResponse.json({ settings });
     }
 
     if (action === 'save-payment-settings') {
       const { settings } = payload;
-      const { error } = await supabaseAdmin.from('payment_settings').upsert({ id: 1, ...settings }, { onConflict: 'id' });
-      if (error) throw error;
+      await resilientUpsertSetting(supabaseAdmin, 'payment_settings', settings);
       return NextResponse.json({ ok: true });
     }
 
     if (action === 'get-site-settings') {
-      const { data } = await supabaseAdmin.from('site_settings').select('*').eq('id', 1).single();
-      return NextResponse.json({ settings: data || {} });
+      const settings = await resilientSingleSetting(supabaseAdmin, 'site_settings');
+      return NextResponse.json({ settings });
     }
 
     if (action === 'save-site-settings') {
       const { settings } = payload;
-      const { error } = await supabaseAdmin.from('site_settings').upsert({ id: 1, ...settings }, { onConflict: 'id' });
-      if (error) throw error;
+      await resilientUpsertSetting(supabaseAdmin, 'site_settings', settings);
       return NextResponse.json({ ok: true });
     }
 
     if (action === 'get-provisioning-settings') {
-      const { data } = await supabaseAdmin.from('provisioning_settings').select('*').eq('id', 1).single();
-      return NextResponse.json({ settings: data || {} });
+      const settings = await resilientSingleSetting(supabaseAdmin, 'provisioning_settings');
+      return NextResponse.json({ settings });
     }
 
     if (action === 'save-provisioning-settings') {
       const { settings } = payload;
-      const { error } = await supabaseAdmin.from('provisioning_settings').upsert({ id: 1, ...settings }, { onConflict: 'id' });
-      if (error) throw error;
+      await resilientUpsertSetting(supabaseAdmin, 'provisioning_settings', settings);
       return NextResponse.json({ ok: true });
     }
 
     if (action === 'get-integrations') {
-      const { data } = await supabaseAdmin.from('integrations').select('*');
+      const data = await resilientList(supabaseAdmin, 'integrations', 'key', true);
       const settings = (data || []).reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }), {});
       return NextResponse.json({ data: settings });
     }
@@ -588,27 +711,48 @@ export async function POST(request: Request) {
       const records = Object.entries(settings).map(([key, value]) => ({ key, value }));
       if (records.length > 0) {
         const { error } = await supabaseAdmin.from('integrations').upsert(records, { onConflict: 'key' });
-        if (error) throw error;
+        if (error) {
+          if (isPostgrestUnavailable(error)) {
+            healPostgrestSchema().catch(() => {});
+            for (const rec of records) {
+              await pgUpsertRow('integrations', rec, 'key');
+            }
+          } else {
+            throw error;
+          }
+        }
       }
       return NextResponse.json({ ok: true });
     }
 
     if (action === 'get-nodes') {
-      const { data } = await supabaseAdmin.from('infrastructure_nodes').select('*').order('created_at', { ascending: true });
-      return NextResponse.json({ data: data || [] });
+      const data = await resilientList(supabaseAdmin, 'infrastructure_nodes', 'created_at', true);
+      return NextResponse.json({ data });
     }
 
     if (action === 'save-node') {
       const { node } = payload;
       const { error } = await supabaseAdmin.from('infrastructure_nodes').upsert(node);
-      if (error) throw error;
+      if (error) {
+        if (isPostgrestUnavailable(error)) {
+          await pgUpsertRow('infrastructure_nodes', { id: node.id || crypto.randomUUID(), ...node }, 'id');
+        } else {
+          throw error;
+        }
+      }
       return NextResponse.json({ ok: true });
     }
 
     if (action === 'delete-node') {
       const { id } = payload;
       const { error } = await supabaseAdmin.from('infrastructure_nodes').delete().eq('id', id);
-      if (error) throw error;
+      if (error) {
+        if (isPostgrestUnavailable(error)) {
+          await pgDeleteById('infrastructure_nodes', id, 'id');
+        } else {
+          throw error;
+        }
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -1118,6 +1262,11 @@ export async function POST(request: Request) {
       });
     }
 
+    if (action === 'repair-postgrest') {
+      const result = await healPostgrestSchema();
+      return NextResponse.json(result);
+    }
+
     // Sync calibrated 3-5% below AWS catalog plans into PostgreSQL hosting_plans
     if (action === 'sync-catalog-plans') {
       const records: any[] = [];
@@ -1127,6 +1276,7 @@ export async function POST(request: Request) {
         const feats = Array.isArray(p.features) ? p.features : [];
         records.push({
           id: p.id,
+          slug: p.id,
           name: p.name,
           tier: p.tier,
           price_monthly: p.price_monthly,
@@ -1148,6 +1298,7 @@ export async function POST(request: Request) {
           const planId = t.ctaPlanId || t.id;
           records.push({
             id: planId,
+            slug: planId,
             name: `${prod.productName} ${t.name}`,
             tier: prod.productId,
             price_monthly: t.monthlyPrice,
@@ -1162,7 +1313,16 @@ export async function POST(request: Request) {
       }
 
       const { error } = await supabaseAdmin.from('hosting_plans').upsert(records, { onConflict: 'id' });
-      if (error) throw error;
+      if (error) {
+        if (isPostgrestUnavailable(error)) {
+          healPostgrestSchema().catch(() => {});
+          for (const rec of records) {
+            await pgUpsertRow('hosting_plans', rec, 'id');
+          }
+        } else {
+          throw error;
+        }
+      }
 
       return NextResponse.json({
         ok: true,
@@ -1182,18 +1342,48 @@ export async function POST(request: Request) {
         supabaseAdmin.from('provisioning_settings').select('*').eq('id', 1).maybeSingle(),
       ]);
 
-      const cfg = settingsRes.data || {};
-      const nodes = nodesRes.data || [];
+      let counts = {
+        plans: plansRes.count || 0,
+        orders: ordersRes.count || 0,
+        services: servicesRes.count || 0,
+        nodesTotal: (nodesRes.data || []).length,
+        nodesOnline: (nodesRes.data || []).filter((n: any) => n.status === 'online').length,
+        coupons: couponsRes.count || 0,
+      };
+      let cfg = settingsRes.data || {};
+
+      if ((plansRes.error && isPostgrestUnavailable(plansRes.error)) || (settingsRes.error && isPostgrestUnavailable(settingsRes.error))) {
+        healPostgrestSchema().catch(() => {});
+        try {
+          const pgDiag = await withPgClient(async (client) => {
+            const [pR, oR, sR, nR, cR, cfgR] = await Promise.all([
+              client.query('SELECT count(*)::int AS c FROM public.hosting_plans'),
+              client.query('SELECT count(*)::int AS c FROM public.hosting_orders'),
+              client.query('SELECT count(*)::int AS c FROM public.hosting_services'),
+              client.query('SELECT id, status FROM public.infrastructure_nodes'),
+              client.query('SELECT count(*)::int AS c FROM public.hosting_coupons'),
+              client.query('SELECT * FROM public.provisioning_settings WHERE id = 1 LIMIT 1'),
+            ]);
+            const nRows = nR.rows || [];
+            return {
+              counts: {
+                plans: pR.rows?.[0]?.c || 0,
+                orders: oR.rows?.[0]?.c || 0,
+                services: sR.rows?.[0]?.c || 0,
+                nodesTotal: nRows.length,
+                nodesOnline: nRows.filter((n: any) => n.status === 'online').length,
+                coupons: cR.rows?.[0]?.c || 0,
+              },
+              cfg: cfgR.rows?.[0] || {},
+            };
+          });
+          counts = pgDiag.counts;
+          cfg = pgDiag.cfg;
+        } catch {}
+      }
 
       return NextResponse.json({
-        counts: {
-          plans: plansRes.count || 0,
-          orders: ordersRes.count || 0,
-          services: servicesRes.count || 0,
-          nodesTotal: nodes.length,
-          nodesOnline: nodes.filter((n: any) => n.status === 'online').length,
-          coupons: couponsRes.count || 0,
-        },
+        counts,
         backendsConfigured: {
           proxmox: Boolean(cfg.proxmox_url && cfg.proxmox_token_secret),
           hestiacp: Boolean(cfg.hestiacp_url && cfg.hestiacp_user),

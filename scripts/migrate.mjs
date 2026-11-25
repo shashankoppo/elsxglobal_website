@@ -246,10 +246,11 @@ async function ensureServiceRoles() {
   if (!password) return;
 
   const sanitizedPassword = password.replace(/'/g, "''");
-  const roleSql = `
+
+  // Part 1: Roles, schemas, and PostgREST permissions (executed independently so auth DDL never rolls this back)
+  const rolesAndSchemasSql = `
     DO $$
     BEGIN
-      -- Create persona roles
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
         CREATE ROLE anon NOLOGIN NOINHERIT;
       END IF;
@@ -259,36 +260,34 @@ async function ensureServiceRoles() {
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN
         CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;
       END IF;
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_admin') THEN
+        CREATE ROLE supabase_admin NOLOGIN NOINHERIT BYPASSRLS;
+      END IF;
 
-      -- Authenticator
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
         CREATE ROLE authenticator WITH LOGIN NOINHERIT PASSWORD '${sanitizedPassword}';
       ELSE
-        ALTER ROLE authenticator WITH LOGIN PASSWORD '${sanitizedPassword}';
+        ALTER ROLE authenticator WITH LOGIN NOINHERIT PASSWORD '${sanitizedPassword}';
       END IF;
 
-      -- GoTrue auth admin (SUPERUSER + CREATEROLE to ensure migrations never get permission denied)
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
         CREATE ROLE supabase_auth_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       ELSE
         ALTER ROLE supabase_auth_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       END IF;
 
-      -- Storage admin (SUPERUSER to ensure migrations and bucket management never get permission denied)
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
         CREATE ROLE supabase_storage_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       ELSE
         ALTER ROLE supabase_storage_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       END IF;
 
-      -- Functions admin
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_functions_admin') THEN
         CREATE ROLE supabase_functions_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       ELSE
         ALTER ROLE supabase_functions_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       END IF;
 
-      -- PgBouncer
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'pgbouncer') THEN
         CREATE ROLE pgbouncer WITH LOGIN PASSWORD '${sanitizedPassword}';
       ELSE
@@ -297,49 +296,54 @@ async function ensureServiceRoles() {
     END
     $$;
 
-    -- Ensure schemas exist with proper authorization
+    CREATE SCHEMA IF NOT EXISTS public;
+    CREATE SCHEMA IF NOT EXISTS graphql_public;
+    CREATE SCHEMA IF NOT EXISTS extensions;
     CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_auth_admin;
     CREATE SCHEMA IF NOT EXISTS storage AUTHORIZATION supabase_storage_admin;
-    CREATE SCHEMA IF NOT EXISTS extensions;
 
-    -- Role switching grants
     GRANT anon TO authenticator;
     GRANT authenticated TO authenticator;
     GRANT service_role TO authenticator;
     GRANT supabase_admin TO authenticator;
     GRANT authenticator TO supabase_storage_admin;
 
-    -- Ensure all PostgREST schemas exist
-    CREATE SCHEMA IF NOT EXISTS public;
-    CREATE SCHEMA IF NOT EXISTS storage;
-    CREATE SCHEMA IF NOT EXISTS graphql_public;
-    CREATE SCHEMA IF NOT EXISTS auth;
-    CREATE SCHEMA IF NOT EXISTS extensions;
-
-    -- Schema and database privileges (critical for PostgreSQL 15+ permission model & PostgREST schema cache)
-    GRANT ALL ON SCHEMA public TO authenticator, supabase_auth_admin, supabase_storage_admin, postgres, anon, authenticated, service_role;
-    GRANT ALL ON SCHEMA auth TO authenticator, supabase_auth_admin, postgres, service_role;
-    GRANT ALL ON SCHEMA storage TO authenticator, supabase_storage_admin, postgres, service_role;
-    GRANT ALL ON SCHEMA graphql_public TO authenticator, postgres, anon, authenticated, service_role;
-    GRANT ALL PRIVILEGES ON DATABASE postgres TO authenticator, supabase_auth_admin, supabase_storage_admin;
-
-    -- Search path defaults
+    -- Reset any stale pgrst.db_schemas role override so env PGRST_DB_SCHEMAS takes effect cleanly
+    ALTER ROLE authenticator RESET pgrst.db_schemas;
+    ALTER ROLE authenticator SET search_path TO public, graphql_public, extensions;
     ALTER ROLE supabase_auth_admin SET search_path TO auth, public, extensions;
     ALTER ROLE supabase_storage_admin SET search_path TO storage, public, extensions;
-    ALTER ROLE authenticator SET search_path TO public, storage, graphql_public, extensions;
 
-    -- Default table/sequence/routine privileges
+    GRANT ALL ON SCHEMA public TO authenticator, supabase_auth_admin, supabase_storage_admin, postgres, anon, authenticated, service_role;
+    GRANT ALL ON SCHEMA graphql_public TO authenticator, postgres, anon, authenticated, service_role;
+    GRANT USAGE ON SCHEMA extensions TO authenticator, supabase_auth_admin, supabase_storage_admin, postgres, anon, authenticated, service_role;
+    GRANT ALL ON SCHEMA auth TO authenticator, supabase_auth_admin, postgres, service_role;
+    GRANT ALL ON SCHEMA storage TO authenticator, supabase_storage_admin, postgres, service_role;
+    GRANT ALL PRIVILEGES ON DATABASE postgres TO authenticator, supabase_auth_admin, supabase_storage_admin;
+
     GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
     GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
     GRANT ALL ON ALL ROUTINES IN SCHEMA public TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+    GRANT ALL ON ALL TABLES IN SCHEMA graphql_public TO authenticator, anon, authenticated, service_role;
+    GRANT ALL ON ALL ROUTINES IN SCHEMA graphql_public TO authenticator, anon, authenticated, service_role;
 
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
 
-    -- Ensure extensions exist
     CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
+  `;
+
+  try {
+    await runQuery(rolesAndSchemasSql);
+    console.log(`[migration] PostgREST roles, schemas, and privileges synchronized.`);
+  } catch (err) {
+    console.warn(`[migration] Notice: Role/schema sync warning (${err.message}).`);
+  }
+
+  // Part 2: Auth schema stubs and seed users
+  const roleSql = `
 
     -- Enums used by Supabase GoTrue
     DO $$ BEGIN
@@ -670,12 +674,19 @@ async function ensureServiceRoles() {
 }
 
 /**
- * Notify PostgREST to reload its schema cache
+ * Notify PostgREST to reload its schema & config cache
  */
 async function reloadPostgrestSchema() {
   try {
-    await runQuery(`NOTIFY pgrst, 'reload schema';`);
-    console.log(`[migration] PostgREST schema cache reload signal dispatched.`);
+    await runQuery(`
+      GRANT USAGE ON SCHEMA public, graphql_public, extensions TO authenticator, anon, authenticated, service_role;
+      GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticator, anon, authenticated, service_role;
+      GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticator, anon, authenticated, service_role;
+      GRANT ALL ON ALL ROUTINES IN SCHEMA public TO authenticator, anon, authenticated, service_role;
+      NOTIFY pgrst, 'reload config';
+      NOTIFY pgrst, 'reload schema';
+    `);
+    console.log(`[migration] PostgREST config + schema cache reload signal dispatched.`);
   } catch (err) {
     console.warn(`[migration] Notice: Could not notify PostgREST (${err.message}). PostgREST will reload on interval.`);
   }
@@ -796,8 +807,8 @@ async function main() {
     console.log(`[migration] All migrations are already up to date. (0 pending)`);
   } else {
     console.log(`\n[migration] Successfully applied ${appliedCount} new migration(s)!`);
-    await reloadPostgrestSchema();
   }
+  await reloadPostgrestSchema();
 
   console.log(`[migration] Database migration routine complete.\n`);
   process.exit(0);

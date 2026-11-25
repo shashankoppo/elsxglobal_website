@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withPgClient, healPostgrestSchema } from '@/lib/db/pgFallback';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,19 @@ export async function GET() {
   let dbStatus = 'unconfigured';
   let latencyMs = -1;
   let errorDetail: string | null = null;
+  let directPgStatus = 'unconfigured';
+  let healAttempted = false;
+
+  if (hasDbUrl) {
+    try {
+      await withPgClient(async (client) => {
+        await client.query('SELECT 1');
+      });
+      directPgStatus = 'connected';
+    } catch (err: any) {
+      directPgStatus = `error: ${err?.message || 'connection failed'}`;
+    }
+  }
 
   if (supabaseUrl && anonKey) {
     const start = Date.now();
@@ -28,6 +42,10 @@ export async function GET() {
       } else {
         dbStatus = 'error';
         errorDetail = `HTTP ${res.status}`;
+        if (res.status === 503 && directPgStatus === 'connected') {
+          healAttempted = true;
+          await healPostgrestSchema().catch(() => {});
+        }
       }
     } catch (err: any) {
       latencyMs = Date.now() - start;
@@ -61,6 +79,8 @@ export async function GET() {
         hasAnonKey: Boolean(anonKey),
         hasServiceRoleKey: hasServiceKey,
         hasDirectDbUrl: hasDbUrl,
+        directPostgres: directPgStatus,
+        healAttempted,
         status: dbStatus,
         latencyMs,
         error: errorDetail,

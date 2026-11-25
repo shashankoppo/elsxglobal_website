@@ -5,6 +5,7 @@ import { PanelCard } from '@/components/ui/panel-card';
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
 import Link from 'next/link';
 import { Github, Globe, GitBranch, ShieldCheck, Zap, Activity, LayoutTemplate, Rocket, Check } from 'lucide-react';
+import { ProductPricingSection } from '@/components/hosting/ProductPricingSection';
 
 export default function VaultPagesPage() {
   return (
@@ -142,100 +143,7 @@ export default function VaultPagesPage() {
         </div>
       </div>
 
-      {/* Pricing */}
-      <section className="v4-section border-t border-hairline">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* Free tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Fast git-connected deployments for personal sites and portfolios.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 500 builds / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 100GB edge bandwidth / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited preview environments</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Automatic SSL &amp; custom domains</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
-            </div>
-            {/* Pro tier — highlighted */}
-            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
-              <div>
-                <div className="text-signal text-sm font-medium mb-2">PRO</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹499 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Unlimited builds with edge SSR rendering for commercial web apps.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited builds / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 1TB edge bandwidth / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Next.js 14/15 App Router &amp; SSR support</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Edge caching with stale-while-revalidate</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Priority email &amp; ticket support</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=pages-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-            {/* Business tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹1,999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">High-traffic enterprise frontends with priority build queues.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited concurrent builds</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 5TB edge bandwidth / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Custom edge caching headers &amp; WAF rules</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Dedicated build runners (instant starts)</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 99.99% uptime SLA &amp; dedicated engineer</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=pages-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-          </div>
-          {/* Competitor comparison */}
-          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
-            <table className="w-full text-sm">
-              <thead className="bg-ink-surface-2 text-text-secondary-v4">
-                <tr>
-                  <th className="py-3 px-4 text-left font-medium">Provider</th>
-                  <th className="py-3 px-4 text-left font-medium">Pricing</th>
-                  <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                <tr className="bg-signal/5">
-                  <td className="py-3 px-4 font-semibold text-signal">VaultHost Pages</td>
-                  <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹499 Pro / ₹1,999 Business</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Flat team pricing (no per-seat fee), Next.js SSR supported, 300+ edge locations</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">Vercel Pro</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹1,650/mo ($20) per seat</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Charges escalate per team member + steep bandwidth overage rates</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">Netlify Pro</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹1,580/mo ($19) per seat</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Caps concurrent build minutes and requires enterprise tier for SSO</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">AWS Amplify</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹1,800 - ₹4,500/mo</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Complex backend CloudFormation stacks with unpredictable hosting charges</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      <ProductPricingSection productId="pages" />
     </div>
   );
 }

@@ -26,6 +26,12 @@ import {
 import { PageHeroV4 } from '@/components/ui/page-hero-v4';
 import { PanelCard } from '@/components/ui/panel-card';
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
+import {
+  CanonicalBillingCycle,
+  CYCLE_CONFIG,
+  calculateHourlyRate,
+  getAnnualPricing,
+} from '@/lib/billing/pricingMath';
 
 interface DedicatedRig {
   id: string;
@@ -51,7 +57,7 @@ const RIGS: DedicatedRig[] = [
     storage: '2x 1.92 TB Enterprise NVMe (RAID 1)',
     network: '10 Gbps Unmetered Uplink',
     remote: 'Dedicated IPMI 2.0 / HTML5 KVM',
-    price: 14999,
+    price: 29990,
   },
   {
     id: 'epyc-128',
@@ -63,7 +69,7 @@ const RIGS: DedicatedRig[] = [
     storage: '4x 3.84 TB Enterprise NVMe U.2 (Hardware RAID 10)',
     network: '20 Gbps Dual-LACP Unmetered',
     remote: 'Dedicated IPMI 2.0 / HTML5 KVM',
-    price: 26999,
+    price: 59990,
   },
   {
     id: 'xeon-32',
@@ -75,7 +81,7 @@ const RIGS: DedicatedRig[] = [
     storage: '2x 960 GB Enterprise NVMe + Broadcom MegaRAID',
     network: '10 Gbps Unmetered Uplink',
     remote: 'Dell iDRAC9 Enterprise',
-    price: 16999,
+    price: 34990,
   },
   {
     id: 'ai-gpu',
@@ -87,7 +93,7 @@ const RIGS: DedicatedRig[] = [
     storage: '4x 3.84 TB NVMe Gen4 + NVLink Bridge',
     network: '25 Gbps SFP28 Fabric Uplink',
     remote: 'Dedicated IPMI + NVIDIA System Management Interface',
-    price: 64999,
+    price: 119990,
   },
 ];
 
@@ -96,13 +102,23 @@ export default function DedicatedHostingPage() {
   const [extraRam, setExtraRam] = useState(0); // GB
   const [extraStorage, setExtraStorage] = useState(false); // +1x 3.84TB NVMe
   const [enableBgp, setEnableBgp] = useState(false); // Bring your own ASN / IP
+  const [billingCycle, setBillingCycle] = useState<CanonicalBillingCycle>('monthly');
 
-  // Calculate customized quote
+  // Calculate customized monthly quote (benchmarked 3–5% below AWS bare metal)
   const calculatedTotal =
     selectedRig.price +
-    (extraRam / 64) * 2000 +
-    (extraStorage ? 4000 : 0) +
+    (extraRam / 64) * 3200 +
+    (extraStorage ? 4800 : 0) +
     (enableBgp ? 3000 : 0);
+
+  const cycleDisplay =
+    billingCycle === 'pay_as_you_go'
+      ? { amount: calculateHourlyRate(calculatedTotal), suffix: '/hr', sub: `Hourly metered · ₹${calculatedTotal.toLocaleString('en-IN')}/mo cap` }
+      : billingCycle === 'semi_annual'
+      ? { amount: Math.round(calculatedTotal * (1 - CYCLE_CONFIG.semi_annual.discount)), suffix: '/mo', sub: '6-month cycle · 5% discount applied' }
+      : billingCycle === 'annual'
+      ? { amount: getAnnualPricing(calculatedTotal).annualMonthlyEquivalent, suffix: '/mo', sub: `₹${getAnnualPricing(calculatedTotal).annualTotal.toLocaleString('en-IN')}/yr (2 months free)` }
+      : { amount: calculatedTotal, suffix: '/mo', sub: 'Standard 1-month commitment' };
 
   return (
     <div className="v4-page pb-32">
@@ -245,10 +261,10 @@ export default function DedicatedHostingPage() {
                       {isSelected ? 'Currently Selected' : 'Click to customize'}
                     </span>
                     <Link
-                      href={`/contact?server=${rig.id}`}
+                      href={`/vaulthost/checkout?plan=dedicated-metal&billing=${billingCycle}&hostname=${encodeURIComponent(rig.id)}`}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-btn v4-btn-primary text-xs font-medium"
                     >
-                      Provision Server <ArrowRight className="h-3.5 w-3.5" />
+                      Deploy Now <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
                 </div>
@@ -301,7 +317,7 @@ export default function DedicatedHostingPage() {
                 <div className="flex items-center justify-between p-4 rounded-xl border border-hairline bg-ink-surface">
                   <div>
                     <div className="text-xs font-semibold text-text-primary-v4">Add 1x 3.84TB Enterprise NVMe Drive</div>
-                    <div className="text-[11px] text-text-muted-v4">+₹4,000 / month (Hot-swap Gen4)</div>
+                    <div className="text-[11px] text-text-muted-v4">+₹4,800 / month (Hot-swap Gen4)</div>
                   </div>
                   <button
                     onClick={() => setExtraStorage(!extraStorage)}
@@ -350,6 +366,24 @@ export default function DedicatedHostingPage() {
                   <span className="text-[11px] font-mono text-emerald-400">READY TO PROVISION</span>
                 </div>
 
+                {/* Billing cycle pills */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-4">
+                  {(['pay_as_you_go', 'monthly', 'semi_annual', 'annual'] as CanonicalBillingCycle[]).map((cid) => (
+                    <button
+                      key={cid}
+                      type="button"
+                      onClick={() => setBillingCycle(cid)}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-medium transition-colors ${
+                        billingCycle === cid
+                          ? 'bg-signal text-black font-bold'
+                          : 'bg-ink-surface-2 text-text-muted-v4 hover:text-text-primary-v4 border border-hairline'
+                      }`}
+                    >
+                      {CYCLE_CONFIG[cid].label}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="space-y-3 py-4 border-b border-hairline/40">
                   <div className="flex justify-between">
                     <span className="text-text-muted-v4">Base Server Model</span>
@@ -375,19 +409,20 @@ export default function DedicatedHostingPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 flex items-center justify-between">
+                <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <div className="text-[11px] text-text-muted-v4 uppercase">Estimated Monthly Fee</div>
+                    <div className="text-[11px] text-text-muted-v4 uppercase">Estimated Rate</div>
                     <div className="text-3xl font-bold v4-display text-text-primary-v4 mt-0.5">
-                      ₹{calculatedTotal.toLocaleString()}
-                      <span className="text-xs font-normal text-text-muted-v4"> / mo</span>
+                      ₹{cycleDisplay.amount.toLocaleString('en-IN')}
+                      <span className="text-xs font-normal text-text-muted-v4"> {cycleDisplay.suffix}</span>
                     </div>
+                    <div className="text-[10px] text-signal mt-0.5">{cycleDisplay.sub}</div>
                   </div>
                   <Link
-                    href={`/contact?server=${selectedRig.id}&ram=${extraRam}&storage=${extraStorage}&bgp=${enableBgp}`}
-                    className="px-6 py-3 rounded-btn v4-btn-primary text-xs font-medium inline-flex items-center gap-2"
+                    href={`/vaulthost/checkout?plan=dedicated-metal&billing=${billingCycle}&hostname=${encodeURIComponent(selectedRig.id)}`}
+                    className="px-6 py-3 rounded-btn v4-btn-primary text-xs font-medium inline-flex items-center justify-center gap-2"
                   >
-                    Lock in Quote <ArrowRight className="h-4 w-4" />
+                    Deploy Bare Metal <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>

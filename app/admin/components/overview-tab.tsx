@@ -1,9 +1,12 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { adminFetch } from './admin-fetch';
 import {
   RefreshCw, DollarSign, ShoppingCart, Server, CreditCard,
   LifeBuoy, Receipt, Package, Wallet, TrendingUp, TrendingDown,
-  ArrowUpRight, Activity, Clock,
+  ArrowUpRight, Activity, Clock, CheckCircle2, AlertCircle, Cpu,
 } from 'lucide-react';
 export interface Stats {
   totalRevenue: number;
@@ -24,10 +27,43 @@ export interface Stats {
   newUsersThisWeek?: number;
   revenueByTier?: Record<string, number>;
 }
+
+interface DiagnosticsPayload {
+  counts: {
+    plans: number;
+    orders: number;
+    services: number;
+    nodesTotal: number;
+    nodesOnline: number;
+    coupons: number;
+  };
+  backendsConfigured: Record<string, boolean>;
+}
+
 export function OverviewTab({ stats, orders, tickets, onRefresh, onTab, statusColors }: {
   stats: Stats | null; orders: Record<string, unknown>[]; tickets: Record<string, unknown>[];
   onRefresh: () => void; onTab: (t: string) => void; statusColors: Record<string, string>;
 }) {
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsPayload | null>(null);
+
+  const loadDiagnostics = useCallback(async () => {
+    try {
+      const res = await adminFetch('system-diagnostics');
+      if (res.ok) setDiagnostics(await res.json());
+    } catch {
+      // ignore diagnostics error on initial boot
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDiagnostics();
+  }, [loadDiagnostics]);
+
+  const handleRefreshAll = () => {
+    onRefresh();
+    loadDiagnostics();
+  };
+
   const statCards = [
     { label: 'Total Revenue', value: stats ? `Rs ${stats.totalRevenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : 'Rs 0', icon: DollarSign, color: '#10b981', bg: 'rgba(16,185,129,0.1)', trend: stats?.revenueTrend !== undefined ? `${stats.revenueTrend >= 0 ? '+' : ''}${stats.revenueTrend.toFixed(1)}%` : '+0%' },
     { label: 'Total Orders', value: stats?.totalOrders ?? '0', icon: ShoppingCart, color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)', trend: stats?.ordersTrend !== undefined ? `${stats.ordersTrend >= 0 ? '+' : ''}${stats.ordersTrend.toFixed(1)}%` : '+0%' },
@@ -75,9 +111,9 @@ export function OverviewTab({ stats, orders, tickets, onRefresh, onTab, statusCo
       <div className="flex items-center justify-between pb-4 border-b border-border/50">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Dashboard Overview</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Real-time metrics and system activity</p>
+          <p className="text-[13px] text-muted-foreground mt-1">Real-time metrics, infrastructure readiness, and system activity</p>
         </div>
-        <button onClick={onRefresh} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/80 text-[13px] font-medium transition-colors">
+        <button onClick={handleRefreshAll} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/80 text-[13px] font-medium transition-colors">
           <RefreshCw className="h-3.5 w-3.5" />Refresh
         </button>
       </div>
@@ -115,7 +151,7 @@ export function OverviewTab({ stats, orders, tickets, onRefresh, onTab, statusCo
       </div>
 
       {/* Quick Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button 
           onClick={() => onTab('orders')} 
           className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors ${stats?.pendingOrders ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'bg-muted hover:bg-muted/80'}`}
@@ -128,13 +164,65 @@ export function OverviewTab({ stats, orders, tickets, onRefresh, onTab, statusCo
         >
           Resolve Tickets ({stats?.openTickets ?? 0})
         </button>
+        <Link
+          href="/admin/services"
+          className="px-3 py-1.5 rounded-md text-[12px] font-medium bg-muted hover:bg-muted/80 transition-colors"
+        >
+          Manual Server Setup
+        </Link>
+        <Link
+          href="/admin/plans"
+          className="px-3 py-1.5 rounded-md text-[12px] font-medium bg-muted hover:bg-muted/80 transition-colors"
+        >
+          Sync Enterprise Catalog
+        </Link>
+        <Link
+          href="/admin/settings-nodes"
+          className="px-3 py-1.5 rounded-md text-[12px] font-medium bg-muted hover:bg-muted/80 transition-colors"
+        >
+          Nodes ({diagnostics ? `${diagnostics.counts.nodesOnline}/${diagnostics.counts.nodesTotal}` : '—'})
+        </Link>
         <button 
-          onClick={onRefresh} 
+          onClick={handleRefreshAll} 
           className="px-3 py-1.5 rounded-md text-[12px] font-medium bg-muted hover:bg-muted/80 transition-colors"
         >
           Sync All Data
         </button>
       </div>
+
+      {/* Backend Infrastructure Readiness Matrix */}
+      {diagnostics && (
+        <div className="rounded-lg bg-background border border-border shadow-sm p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <Cpu className="h-4 w-4 text-primary" />
+              <h2 className="text-[14px] font-semibold text-foreground">Backend Infrastructure Readiness Matrix (14 Self-Hosted Adapters)</h2>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span>Catalog: <strong className="text-foreground">{diagnostics.counts.plans}</strong> plans</span>
+              <span>Nodes: <strong className="text-foreground">{diagnostics.counts.nodesOnline}/{diagnostics.counts.nodesTotal}</strong> online</span>
+              <span>Services: <strong className="text-foreground">{diagnostics.counts.services}</strong></span>
+              <Link href="/admin/settings-provisioning" className="text-primary font-medium hover:underline">Configure &amp; Probe &rarr;</Link>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+            {Object.entries(diagnostics.backendsConfigured).map(([key, ok]) => (
+              <Link
+                key={key}
+                href="/admin/settings-provisioning"
+                className={`flex items-center justify-between px-2.5 py-2 rounded-md border text-[11px] font-medium transition-colors ${
+                  ok
+                    ? 'bg-emerald-500/5 border-emerald-500/25 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10'
+                    : 'bg-muted/30 border-border/60 text-muted-foreground hover:bg-muted/50'
+                }`}
+              >
+                <span className="uppercase tracking-wider truncate">{key}</span>
+                {ok ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 opacity-60" />}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Revenue chart */}

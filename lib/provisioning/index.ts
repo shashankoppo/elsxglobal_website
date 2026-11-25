@@ -10,6 +10,7 @@ export interface ProvisioningAdapter {
   createService(serviceId: string, params: Record<string, any>): Promise<{ success: boolean; data?: any; error?: string }>;
   suspendService(serviceId: string): Promise<{ success: boolean; error?: string }>;
   terminateService(serviceId: string): Promise<{ success: boolean; error?: string }>;
+  startService?(serviceId: string): Promise<{ success: boolean; error?: string }>;
   restartService?(serviceId: string): Promise<{ success: boolean; error?: string }>;
   snapshotService?(serviceId: string, snapshotName: string): Promise<{ success: boolean; data?: any; error?: string }>;
   listSnapshots?(serviceId: string): Promise<{ success: boolean; data?: any; error?: string }>;

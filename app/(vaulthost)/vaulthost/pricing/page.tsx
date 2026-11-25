@@ -3,9 +3,9 @@ import { createMetadata } from '@/lib/seo';
 import { PricingPageClient } from './pricing-client';
 
 export const metadata: Metadata = createMetadata({
-  title: "Pricing — India's Best Enterprise Hosting Plans | VaultHost by ELSxGlobal",
-  description: "India's best hosting pricing. Shared, VPS, Cloud, Dedicated, WordPress, and Reseller plans starting at Rs 299/mo. Compare with AWS and Azure — save up to 85% with VaultHost.",
-  keywords: ['hosting pricing India', 'VPS pricing Mumbai', 'cloud hosting pricing', 'dedicated server pricing India', 'AWS vs VaultHost pricing', 'Azure vs VaultHost', 'cheapest VPS India', 'enterprise hosting pricing'],
+  title: "Pricing — India's Enterprise Cloud & Hosting Plans | VaultHost by ELSxGlobal",
+  description: "Enterprise cloud & hosting pricing benchmarked 3–5% below AWS, Google Cloud & Azure with zero egress fees. Shared from ₹790/mo, VPS from ₹1,480/mo, PAYG hourly & 1/6/12-month billing.",
+  keywords: ['hosting pricing India', 'VPS pricing Mumbai', 'cloud hosting pricing', 'dedicated server pricing India', 'AWS vs VaultHost pricing', 'Azure vs VaultHost', 'enterprise cloud India', 'enterprise hosting pricing'],
   canonical: 'https://elsxglobal.com/vaulthost/pricing',
   breadcrumb: [
     { name: 'Home', url: 'https://elsxglobal.com/' },
@@ -13,14 +13,14 @@ export const metadata: Metadata = createMetadata({
     { name: 'Pricing', url: 'https://elsxglobal.com/vaulthost/pricing' },
   ],
   faq: [
-    { question: 'How does VaultHost pricing compare to AWS and Azure?', answer: 'VaultHost includes storage, bandwidth, backups, DDoS protection, and 24/7 support in one price. AWS and Azure charge separately for each, often totaling 10-15x more for equivalent specs.' },
-    { question: 'What is included in the monthly price?', answer: 'All VaultHost plans include NVMe/SSD storage, fixed bandwidth, daily backups, DDoS protection, SSL certificate, and 24/7 human support. No hidden fees.' },
-    { question: 'Do you offer annual billing discounts?', answer: 'Yes. Annual billing gives you 2 months free (16.67% savings). For example, a Rs 2,999/mo VPS costs Rs 29,990/yr instead of Rs 35,988 — saving Rs 5,998 per year.' },
-    { question: 'Can I upgrade my plan later?', answer: 'Yes, you can upgrade at any time. We prorate the difference and apply it immediately. No downtime during upgrades.' },
-    { question: 'Is there a money-back guarantee?', answer: 'Yes, all plans come with a 30-day money-back guarantee. If you are not satisfied, we refund the full amount, no questions asked.' },
-    { question: 'What payment methods do you accept?', answer: 'We accept Razorpay (credit/debit cards, net banking, wallets), UPI (Google Pay, PhonePe, Paytm), and bank transfer (NEFT/IMPS).' },
-    { question: 'Do you offer custom enterprise plans?', answer: 'Yes. For high-volume or specialized requirements, contact our sales team for a custom quote tailored to your workload.' },
-    { question: 'Is there a setup fee?', answer: 'No. All plans have zero setup fees. You only pay the monthly or annual plan price.' },
+    { question: 'How does VaultHost pricing compare to AWS and Azure?', answer: 'VaultHost compute is benchmarked 3–5% below AWS ap-south-1, Google Cloud, and Azure base rates while bundling NVMe storage, DDoS mitigation, and zero outbound egress fees.' },
+    { question: 'What is included in the monthly price?', answer: 'All VaultHost plans include NVMe/SSD storage, generous unmetered/high-cap bandwidth, DDoS protection, SSL certificate, and 24/7 engineering support. No surprise egress bills.' },
+    { question: 'What billing cycles do you support?', answer: 'Choose Pay As You Go (hourly metered at monthly/730), 1 Month, 6 Months (5% off), or 12 Months (~16.7% off / 2 months free).' },
+    { question: 'Can I upgrade my plan later?', answer: 'Yes, you can upgrade at any time. We prorate the difference and apply it immediately with minimal or zero downtime.' },
+    { question: 'Is there a money-back guarantee?', answer: 'Yes, eligible plans come with a 30-day money-back guarantee.' },
+    { question: 'What payment methods do you accept?', answer: 'We accept Razorpay (credit/debit cards, net banking, wallets), UPI (Google Pay, PhonePe, Paytm), wallet credits, and bank transfer (NEFT/IMPS).' },
+    { question: 'Do you offer custom enterprise plans?', answer: 'Yes. Configure custom vCPU/RAM/NVMe in real time or contact our sales team for dedicated bare-metal clusters.' },
+    { question: 'Is there a setup fee?', answer: 'No. All standard plans have zero setup fees.' },
   ],
   serviceSchema: {
     name: 'VaultHost Hosting Plans',

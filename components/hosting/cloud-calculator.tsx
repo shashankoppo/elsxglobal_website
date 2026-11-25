@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Server, Cpu, Database, HardDrive, ArrowRight, Activity, Cloud, Zap, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { calculateCustomComputeMonthly, calculateHourlyRate } from '@/lib/billing/pricingMath';
 
 type BillingCycle = 'payg' | 'monthly' | 'semi_annual' | 'annual';
 
@@ -13,8 +14,8 @@ export function CloudCalculator() {
   const [storage, setStorage] = useState(100);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
 
-  // Enterprise VaultHost Base Rate (configured exactly 3.8% - 4.2% below AWS on-demand)
-  const vhMonthlyBase = Math.round((vcpu * 1488) + (ram * 211) + (storage * 6.7));
+  // Enterprise VaultHost Base Rate (configured 3.8% - 4.5% below AWS on-demand)
+  const vhMonthlyBase = calculateCustomComputeMonthly(vcpu, ram, storage);
   
   // Real AWS & Azure comparison on-demand in ap-south-1 (Mumbai)
   const awsPrice = Math.round((vcpu * 1550) + (ram * 220) + (storage * 7.0));
@@ -27,10 +28,10 @@ export function CloudCalculator() {
   let cycleNote = 'Standard 1-Month Commitment (4% lower than AWS)';
 
   if (billingCycle === 'payg') {
-    displayPrice = Number((vhMonthlyBase / 720).toFixed(2)) as any;
+    displayPrice = calculateHourlyRate(vhMonthlyBase);
     priceSuffix = '/hr';
     billingParam = 'pay_as_you_go';
-    cycleNote = 'Metered Pay As You Go (Billed hourly, 0 commitment)';
+    cycleNote = 'Metered Pay As You Go (730 hrs/mo · Billed hourly, 0 commitment)';
   } else if (billingCycle === 'semi_annual') {
     displayPrice = Math.round(vhMonthlyBase * 0.95);
     priceSuffix = '/mo';

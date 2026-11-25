@@ -6,6 +6,7 @@ import { ScrollReveal } from '@/components/ui/scroll-reveal';
 import Link from 'next/link';
 import { Database, Search, GitMerge, RotateCcw, Network, Link2, Check, ExternalLink, Zap } from 'lucide-react';
 import { D1SQLConsole } from '@/components/vaulthost/interactive/D1SQLConsole';
+import { ProductPricingSection } from '@/components/hosting/ProductPricingSection';
 
 export default function VaultD1Page() {
   return (
@@ -163,100 +164,7 @@ export default function VaultD1Page() {
         </div>
       </div>
 
-      {/* Pricing */}
-      <section className="py-12 sm:py-16 lg:py-24 border-t border-hairline">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4 text-base sm:text-lg">Higher than GoDaddy. Way below AWS.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* Free tier */}
-            <div className="v4-panel rounded-2xl p-6 sm:p-7 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Serverless distributed SQL database at zero cost.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 500MB distributed storage</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 100K row reads / day</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10K row writes / day</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 24-hour time-travel rollback</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
-            </div>
-            {/* Pro tier — highlighted */}
-            <div className="v4-panel rounded-2xl p-6 sm:p-7 border-2 border-signal relative flex flex-col justify-between">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
-              <div>
-                <div className="text-signal text-sm font-medium mb-2">PRO</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹349 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Production edge database with 10GB storage and read replicas.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10GB distributed storage</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 25M row reads / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 5M row writes / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 7-day time-travel recovery</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Automatic read replicas</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=database-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-            {/* Business tier */}
-            <div className="v4-panel rounded-2xl p-6 sm:p-7 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹1,499 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">100GB distributed SQL database with instant time-travel rollback.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 100GB distributed storage</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited row reads (fair use)</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited row writes (fair use)</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 30-day time-travel backup</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Dedicated instances &amp; 99.99% SLA</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=database-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-          </div>
-          {/* Competitor comparison */}
-          <div className="border border-hairline rounded-2xl overflow-x-auto mb-12">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead className="bg-ink-surface-2 text-text-secondary-v4">
-                <tr>
-                  <th className="py-3 px-4 text-left font-medium">Provider</th>
-                  <th className="py-3 px-4 text-left font-medium">Pricing</th>
-                  <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                <tr className="bg-signal/5">
-                  <td className="py-3 px-4 font-semibold text-signal">VaultHost D1 Database</td>
-                  <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹349 Pro / ₹1,499 Business</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Serverless SQLite at edge, zero cold starts, fast Pune/Mumbai nodes, time-travel restore</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">PlanetScale</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹3,200/mo ($39)</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">No free tier, high baseline for MySQL database workloads</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">Neon Serverless</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹1,580/mo ($19)</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Compute hours drain quickly on idle connections</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">AWS RDS PostgreSQL</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹3,500 - ₹12,000/mo</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Requires VPC, NAT gateways, storage provisioning, and complex maintenance</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      <ProductPricingSection productId="database" />
     </div>
   );
 }

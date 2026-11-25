@@ -6,6 +6,7 @@ import { ComparisonMatrix } from '@/components/hosting/comparison-matrix';
 import { Check, Sparkles, TrendingDown, ArrowRight, Loader2 } from 'lucide-react';
 import { CloudCalculator } from '@/components/hosting/cloud-calculator';
 import Link from 'next/link';
+import { calculateHourlyRate, getAnnualPricing } from '@/lib/billing/pricingMath';
 
 interface Plan {
   id: string;
@@ -160,16 +161,16 @@ export function PricingPageClient() {
               let subtitle = 'Standard 1-Month Rate';
 
               if (billingCycle === 'payg') {
-                displayPrice = Number((baseMonthly / 720).toFixed(2)) as any;
+                displayPrice = calculateHourlyRate(baseMonthly) as any;
                 suffix = '/hr';
-                subtitle = `Pay As You Go metered (₹${baseMonthly.toLocaleString('en-IN')}/mo cap)`;
+                subtitle = `Pay As You Go metered · 730 hrs (₹${baseMonthly.toLocaleString('en-IN')}/mo cap)`;
               } else if (billingCycle === 'semi_annual') {
                 displayPrice = Math.round(baseMonthly * 0.95);
                 suffix = '/mo';
                 subtitle = `Billed ₹${Math.round(baseMonthly * 6 * 0.95).toLocaleString('en-IN')} every 6 months`;
               } else if (billingCycle === 'annual') {
-                const annualTotal = Number(plan.price_annual) || Math.round(baseMonthly * 12 * 0.833);
-                displayPrice = Math.round(annualTotal / 12);
+                const { annualMonthlyEquivalent, annualTotal } = getAnnualPricing(baseMonthly, plan.price_annual);
+                displayPrice = annualMonthlyEquivalent;
                 suffix = '/mo';
                 subtitle = `Billed ₹${annualTotal.toLocaleString('en-IN')} annually (2 mo free)`;
               }

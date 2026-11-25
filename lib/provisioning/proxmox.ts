@@ -199,7 +199,8 @@ export class ProxmoxAdapter implements ProvisioningAdapter {
         console.warn('[ProxmoxAdapter] /cluster/nextid failed, falling back to deterministic VMID:', err.message);
       }
 
-      const vmName = `vps-${orderId.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 16)}`;
+      const safeHost = typeof params.hostname === 'string' ? params.hostname.replace(/[^a-zA-Z0-9.-]/g, '').slice(0, 32) : '';
+      const vmName = safeHost || `vps-${orderId.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 16)}`;
 
       // 2. Clone template VM with qemu clone API
       const clonePayload: Record<string, any> = {
@@ -276,9 +277,12 @@ export class ProxmoxAdapter implements ProvisioningAdapter {
       await sleep(15000);
       const ip = await this.getIP(node, newVmId);
 
-      // 8. Return success with server_id = vmid.toString(), controlPanelUrl
+      // 8. Return success with server_id = vmid.toString(), controlPanelUrl, webConsoleUrl
       const cleanUrl = (this.config.proxmox_url || '').replace(/\/+$/, '');
-      const controlPanelUrl = `${cleanUrl}/#v1:0:=qemu/${newVmId}`;
+      const controlPanelUrl = cleanUrl ? `${cleanUrl}/#v1:0:=qemu/${newVmId}` : null;
+      const webConsoleUrl = cleanUrl
+        ? `${cleanUrl}/?console=kvm&novnc=1&node=${encodeURIComponent(node)}&vmid=${newVmId}`
+        : null;
 
       return {
         success: true,
@@ -287,8 +291,11 @@ export class ProxmoxAdapter implements ProvisioningAdapter {
           vmid: newVmId,
           ip: ip || null,
           controlPanelUrl,
+          webConsoleUrl,
           username: ciuser,
           password: cipassword,
+          ssh_port: 22,
+          hostname: vmName,
         },
       };
     } catch (error: any) {
@@ -488,6 +495,23 @@ export class ProxmoxAdapter implements ProvisioningAdapter {
       return { success: true, data: vms };
     } catch (error: any) {
       console.error('[ProxmoxAdapter] listVMs error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Update live VM config (cloud-init SSH key, password, hostname, etc.)
+   */
+  async updateVMConfig(serviceId: string, payload: Record<string, any>): Promise<{ success: boolean; error?: string }> {
+    try {
+      const node = this.config.proxmox_node || 'pve';
+      const vmid = this.getVMId(serviceId);
+      const res = await this.fetchProxmox(`/nodes/${node}/qemu/${vmid}/config`, 'POST', payload);
+      if (!res.ok) {
+        return { success: false, error: await res.text() };
+      }
+      return { success: true };
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   }

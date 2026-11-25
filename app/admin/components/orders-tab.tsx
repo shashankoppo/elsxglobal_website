@@ -8,15 +8,13 @@ import {
 
 export function OrdersTab({ orders, searchQuery, setSearchQuery, statusFilter, setStatusFilter, actionLoading, updateOrderStatus, refundOrder, statusColors }: {
   orders: Record<string, unknown>[]; searchQuery: string; setSearchQuery: (v: string) => void; statusFilter: string; setStatusFilter: (v: string) => void;
-  actionLoading: string | null; updateOrderStatus: (id: string, s: string) => void; refundOrder: (id: string, r: string) => void; statusColors: Record<string, string>;
+  actionLoading: string | null; updateOrderStatus: (id: string, s: string, manualOnly?: boolean) => void; refundOrder: (id: string, r: string) => void; statusColors: Record<string, string>;
 }) {
   const [detailOrder, setDetailOrder] = useState<Record<string, unknown> | null>(null);
   const [detailData, setDetailData] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [refundModal, setRefundModal] = useState<string | null>(null);
   const [refundReason, setRefundReason] = useState('');
-
-
 
   const loadDetail = async (orderId: string) => {
     setDetailLoading(true);
@@ -31,12 +29,21 @@ export function OrdersTab({ orders, searchQuery, setSearchQuery, statusFilter, s
     setDetailLoading(false);
   };
 
+  let parsedNotes: Record<string, any> = {};
+  if (detailData?.order?.notes) {
+    try {
+      parsedNotes = typeof detailData.order.notes === 'string' ? JSON.parse(detailData.order.notes) : detailData.order.notes;
+    } catch {
+      parsedNotes = {};
+    }
+  }
+
   return (
     <div className="animate-fade-in space-y-4">
       <div className="flex items-center justify-between pb-4 border-b border-border/50">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Orders Management</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">View, approve, and manage customer orders</p>
+          <p className="text-[13px] text-muted-foreground mt-1">View specs, approve automated provisioning, or assign to manual dedicated setup</p>
         </div>
       </div>
       
@@ -61,11 +68,27 @@ export function OrdersTab({ orders, searchQuery, setSearchQuery, statusFilter, s
 
       {detailOrder ? (
         <div className="rounded-lg bg-background border border-border shadow-sm animate-fade-in flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/10">
-            <h3 className="text-[14px] font-semibold text-foreground">Order Configuration</h3>
-            <button onClick={() => setDetailOrder(null)} className="px-3 py-1.5 rounded-md bg-muted text-muted-foreground hover:text-foreground text-[12px] font-medium transition-colors">
-              &larr; Back to List
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-border/50 bg-muted/10">
+            <h3 className="text-[14px] font-semibold text-foreground">Order Configuration &amp; Fulfillment</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => updateOrderStatus(detailData.order.id, 'active', false)}
+                disabled={actionLoading === detailData?.order?.id}
+                className="px-3 py-1.5 rounded-md bg-green-600 text-white hover:bg-green-700 text-[12px] font-medium transition-colors"
+              >
+                Approve &amp; Auto-Provision
+              </button>
+              <button
+                onClick={() => updateOrderStatus(detailData.order.id, 'active', true)}
+                disabled={actionLoading === detailData?.order?.id}
+                className="px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 text-[12px] font-medium transition-colors"
+              >
+                Approve &amp; Manual Setup
+              </button>
+              <button onClick={() => setDetailOrder(null)} className="px-3 py-1.5 rounded-md bg-muted text-muted-foreground hover:text-foreground text-[12px] font-medium transition-colors">
+                &larr; Back to List
+              </button>
+            </div>
           </div>
           {detailLoading ? <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : detailData && (
             <div className="p-4 space-y-6">
@@ -74,15 +97,24 @@ export function OrdersTab({ orders, searchQuery, setSearchQuery, statusFilter, s
                 <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Plan</p><p className="font-medium text-foreground">{detailData.order.plan_name}</p></div>
                 <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Email</p><p className="text-foreground truncate" title={detailData.order.user_email}>{detailData.order.user_email || '—'}</p></div>
                 <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Billing Cycle</p><p className="capitalize text-foreground">{detailData.order.billing_cycle}</p></div>
-                <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Total</p><p className="font-semibold text-foreground">Rs {Number(detailData.order.total).toLocaleString('en-IN')}</p></div>
+                <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Total</p><p className="font-semibold text-foreground">₹{Number(detailData.order.total).toLocaleString('en-IN')}</p></div>
                 <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Status</p><span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${statusColors[detailData.order.status] || 'text-muted-foreground bg-muted'}`}>{detailData.order.status}</span></div>
-                <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Domain</p><p className="text-foreground">{detailData.order.domain || '—'}</p></div>
+                <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Domain / Host</p><p className="text-foreground font-mono">{parsedNotes.hostname || detailData.order.domain || '—'}</p></div>
                 <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Gateway</p><p className="capitalize text-foreground">{detailData.order.payment_method || '—'}</p></div>
                 <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">OS</p><p className="text-foreground">{detailData.order.os_selection || '—'}</p></div>
                 <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Control Panel</p><p className="text-foreground">{detailData.order.panel_selection || '—'}</p></div>
                 <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Region</p><p className="text-foreground">{detailData.order.server_location || '—'}</p></div>
                 <div><p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Created At</p><p className="text-foreground whitespace-nowrap">{new Date(detailData.order.created_at).toLocaleString()}</p></div>
               </div>
+
+              {(parsedNotes.custom_vcpu || parsedNotes.custom_ram || parsedNotes.custom_storage || parsedNotes.ssh_public_key || parsedNotes.coupon_code) && (
+                <div className="p-3 rounded-lg bg-muted/10 border border-border/50 text-[12px] grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {parsedNotes.custom_vcpu && <div><span className="text-muted-foreground">vCPU / RAM / NVMe:</span> <span className="font-mono font-semibold">{parsedNotes.custom_vcpu}c / {parsedNotes.custom_ram}GB / {parsedNotes.custom_storage}GB</span></div>}
+                  {parsedNotes.hourly_rate && <div><span className="text-muted-foreground">PAYG Rate:</span> <span className="font-mono font-semibold">₹{parsedNotes.hourly_rate}/hr</span></div>}
+                  {parsedNotes.coupon_code && <div><span className="text-muted-foreground">Coupon:</span> <span className="font-mono font-semibold">{parsedNotes.coupon_code}</span></div>}
+                  {parsedNotes.ssh_public_key && <div className="sm:col-span-2 lg:col-span-4"><span className="text-muted-foreground">SSH Key:</span> <code className="font-mono text-[11px] block mt-1 truncate">{parsedNotes.ssh_public_key}</code></div>}
+                </div>
+              )}
               
               {detailData.order.payment_proof_url && (
                 <div className="pt-4 border-t border-border/50">
@@ -117,9 +149,23 @@ export function OrdersTab({ orders, searchQuery, setSearchQuery, statusFilter, s
                     <p className="text-[13px] font-semibold text-foreground mb-2">Provisioned Resources</p>
                     <div className="space-y-1.5">
                       {detailData.services.map((s: any) => (
-                        <div key={s.id} className="text-[12px] flex justify-between items-center bg-background border border-border p-2 rounded-md shadow-sm">
-                          <span className="text-foreground font-medium">{s.plan_name}</span>
-                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${statusColors[s.status] || ''}`}>{s.status}</span>
+                        <div key={s.id} className="text-[12px] flex justify-between items-center bg-background border border-border p-2 rounded-md shadow-sm gap-2">
+                          <div>
+                            <span className="text-foreground font-medium">{s.plan_name}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground ml-2">{s.ip_address || s.setup_status || 'pending'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${statusColors[s.status] || ''}`}>{s.status}</span>
+                            <button
+                              onClick={async () => {
+                                await adminFetch('trigger-provision', { serviceId: s.id });
+                                loadDetail(detailData.order.id);
+                              }}
+                              className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-semibold hover:bg-primary/20"
+                            >
+                              Retry Auto-Provision
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -137,7 +183,7 @@ export function OrdersTab({ orders, searchQuery, setSearchQuery, statusFilter, s
                             <span className="text-[10px] text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</span>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="font-semibold text-foreground">Rs {Number(t.amount).toLocaleString('en-IN')}</span>
+                            <span className="font-semibold text-foreground">₹{Number(t.amount).toLocaleString('en-IN')}</span>
                             <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${statusColors[t.status] || ''}`}>{t.status}</span>
                           </div>
                         </div>
@@ -185,7 +231,7 @@ export function OrdersTab({ orders, searchQuery, setSearchQuery, statusFilter, s
                   <th className="px-4 py-2 font-medium">Identifier</th>
                   <th className="px-4 py-2 font-medium">Plan / Customer</th>
                   <th className="px-4 py-2 font-medium">Billing</th>
-                  <th className="px-4 py-2 font-medium text-right">Total (Rs)</th>
+                  <th className="px-4 py-2 font-medium text-right">Total (₹)</th>
                   <th className="px-4 py-2 font-medium">Status</th>
                   <th className="px-4 py-2 font-medium text-right">Timestamp</th>
                   <th className="px-4 py-2 font-medium text-center">Actions</th>
@@ -202,7 +248,7 @@ export function OrdersTab({ orders, searchQuery, setSearchQuery, statusFilter, s
                       <p className="text-[11px] text-muted-foreground">{(order.user_email as string) || '—'}</p>
                     </td>
                     <td className="px-4 py-2.5 text-muted-foreground capitalize">{order.billing_cycle as string}</td>
-                    <td className="px-4 py-2.5 text-right font-medium text-foreground">{(order.total as number)?.toLocaleString('en-IN', { maximumFractionDigits: 2 }) || '—'}</td>
+                    <td className="px-4 py-2.5 text-right font-medium text-foreground">₹{(order.total as number)?.toLocaleString('en-IN', { maximumFractionDigits: 2 }) || '—'}</td>
                     <td className="px-4 py-2.5">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${statusColors[order.status as string] || 'text-muted-foreground bg-muted'}`}>
                         {order.status as string}
@@ -213,13 +259,16 @@ export function OrdersTab({ orders, searchQuery, setSearchQuery, statusFilter, s
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => loadDetail(order.id as string)} className="p-1 rounded bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Inspect">
+                        <button onClick={() => loadDetail(order.id as string)} className="p-1 rounded bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Inspect & Setup">
                           <Eye className="h-3.5 w-3.5" />
                         </button>
-                        {(order.status === 'pending_verification' || order.status === 'pending_payment' || order.status === 'pending') && (
+                        {(order.status === 'pending_verification' || order.status === 'pending_payment' || order.status === 'pending' || order.status === 'paid') && (
                           <div className="inline-flex items-center gap-1 border-l border-border/50 pl-1 ml-1">
-                            <button onClick={() => updateOrderStatus(order.id as string, 'active')} disabled={actionLoading === order.id} className="p-1 rounded bg-green-500/10 hover:bg-green-500/20 text-green-600 transition-colors" title="Approve">
-                              {actionLoading === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                            <button onClick={() => updateOrderStatus(order.id as string, 'active', false)} disabled={actionLoading === order.id} className="px-1.5 py-1 rounded bg-green-500/10 hover:bg-green-500/20 text-green-600 text-[10px] font-semibold transition-colors" title="Approve & Auto-Provision">
+                              {actionLoading === order.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Auto'}
+                            </button>
+                            <button onClick={() => updateOrderStatus(order.id as string, 'active', true)} disabled={actionLoading === order.id} className="px-1.5 py-1 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 text-[10px] font-semibold transition-colors" title="Approve for Manual Setup">
+                              Manual
                             </button>
                             <button onClick={() => updateOrderStatus(order.id as string, 'cancelled')} disabled={actionLoading === order.id} className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-600 transition-colors" title="Reject">
                               <XIcon className="h-3.5 w-3.5" />

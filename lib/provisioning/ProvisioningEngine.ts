@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 import { ProvisioningAdapter } from './index';
 import { PterodactylAdapter } from './pterodactyl';
 import { ProxmoxAdapter } from './proxmox';
 import { HestiaCPAdapter } from './hestiacp';
 import { CyberPanelAdapter } from './cyberpanel';
+import { resolvePlan } from '@/lib/data/all-plans';
 
 export interface ServiceMetrics {
   cpuPercent: number;
@@ -67,7 +69,7 @@ export class ProvisioningEngine {
   /**
    * Helper: Retrieve database client, service record, configuration, and resolved adapter
    */
-  private static async getServiceContext(serviceId: string) {
+  public static async getServiceContext(serviceId: string) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -122,6 +124,64 @@ export class ProvisioningEngine {
   }
 
   /**
+   * Resolve CPU / RAM (GB) / Disk (GB) from orderNotes custom sliders or plan specs
+   */
+  static async resolveServiceSpecs(
+    supabaseAdmin: any,
+    planId: string | null | undefined,
+    orderNotes: any,
+    existingSpecs?: any
+  ): Promise<{ vcpu: number; ramGb: number; diskGb: number }> {
+    const parseNum = (val: unknown, fallback: number): number => {
+      if (typeof val === 'number' && !isNaN(val) && val > 0) return val;
+      if (typeof val === 'string') {
+        const m = val.match(/[\d.]+/);
+        if (m) {
+          const n = parseFloat(m[0]);
+          if (/tb/i.test(val)) return Math.round(n * 1000);
+          return Math.round(n);
+        }
+      }
+      return fallback;
+    };
+
+    if (orderNotes?.custom_vcpu || orderNotes?.custom_ram || orderNotes?.custom_storage) {
+      return {
+        vcpu: Number(orderNotes.custom_vcpu) || 2,
+        ramGb: Number(orderNotes.custom_ram) || 4,
+        diskGb: Number(orderNotes.custom_storage) || 40,
+      };
+    }
+
+    if (existingSpecs?.vcpu && existingSpecs?.ram_gb && existingSpecs?.disk_gb) {
+      return {
+        vcpu: Number(existingSpecs.vcpu),
+        ramGb: Number(existingSpecs.ram_gb),
+        diskGb: Number(existingSpecs.disk_gb),
+      };
+    }
+
+    if (planId) {
+      const { data: dbPlan } = await supabaseAdmin
+        .from('hosting_plans')
+        .select('cpu, ram, storage')
+        .eq('id', planId)
+        .maybeSingle();
+
+      const resolved = dbPlan || resolvePlan(planId);
+      if (resolved) {
+        return {
+          vcpu: parseNum((resolved as any).cpu, 2),
+          ramGb: parseNum((resolved as any).ram, 4),
+          diskGb: parseNum((resolved as any).storage, 40),
+        };
+      }
+    }
+
+    return { vcpu: 2, ramGb: 4, diskGb: 40 };
+  }
+
+  /**
    * Full provisioning lifecycle for a service
    */
   static async provisionService(serviceId: string): Promise<void> {
@@ -134,27 +194,74 @@ export class ProvisioningEngine {
 
     console.log(`[ProvisioningEngine] Starting provisioning for service ${serviceId} using ${adapter.name}...`);
 
-    const memory = orderNotes.custom_ram ? orderNotes.custom_ram * 1024 : 2048;
-    const disk = orderNotes.custom_storage ? orderNotes.custom_storage * 1000 : 20000;
-    const vcpu = orderNotes.custom_vcpu ? orderNotes.custom_vcpu : 2;
+    const specs = await ProvisioningEngine.resolveServiceSpecs(
+      supabaseAdmin,
+      order.plan_id,
+      orderNotes,
+      service.specs_json
+    );
+    const memory = specs.ramGb * 1024;
+    const disk = specs.diskGb * 1000;
+    const vcpu = specs.vcpu;
+
+    const hostname =
+      orderNotes.hostname ||
+      service.hostname ||
+      service.domain ||
+      order.domain ||
+      `srv-${serviceId.slice(0, 8)}.vaulthost.cloud`;
+
+    const sshKey = orderNotes.ssh_public_key || service.ssh_public_key || undefined;
+    const osTemplate = orderNotes.os_selection || order.os_selection || service.os_template || 'ubuntu-22.04';
 
     const result = await adapter.createService(serviceId, {
       memory,
       disk,
       vcpu,
-      os: orderNotes.os_selection || order.os_selection,
+      os: osTemplate,
       email: orderNotes.user_email || 'client@vaulthost.com',
       domain: service.domain || order.domain,
+      hostname,
+      ssh_key: sshKey,
       plan_name: service.plan_name,
     });
 
     if (result.success) {
+      const ipAddress = result.data?.ip || service.ip_address || null;
+      const sshPort = result.data?.ssh_port || service.ssh_port || 22;
+      const username = result.data?.username || service.username || (adapter.id === 'proxmox' ? 'vaultuser' : 'root');
+      const password = result.data?.password || service.password || null;
+      const webConsoleUrl = result.data?.webConsoleUrl || result.data?.controlPanelUrl || service.web_console_url || null;
+      const controlPanelUrl = result.data?.controlPanelUrl || service.control_panel_url || null;
+
+      const accessEndpoints = {
+        ...(typeof service.access_endpoints === 'object' && service.access_endpoints ? service.access_endpoints : {}),
+        ssh: ipAddress ? `ssh ${username}@${ipAddress} -p ${sshPort}` : null,
+        web_console: webConsoleUrl,
+        control_panel: controlPanelUrl,
+      };
+
       await supabaseAdmin.from('hosting_services').update({
         status: 'active',
+        setup_status: 'ready',
         external_id: result.data?.server_id || serviceId,
         adapter: adapter.id,
-        control_panel_url: result.data?.controlPanelUrl || null,
-        ip_address: result.data?.ip || null,
+        provisioning_mode: 'automated',
+        control_panel_url: controlPanelUrl,
+        web_console_url: webConsoleUrl,
+        ip_address: ipAddress,
+        hostname: result.data?.hostname || hostname,
+        os_template: osTemplate,
+        ssh_port: sshPort,
+        ssh_public_key: sshKey || null,
+        username,
+        password,
+        specs_json: {
+          vcpu,
+          ram_gb: specs.ramGb,
+          disk_gb: specs.diskGb,
+        },
+        access_endpoints: accessEndpoints,
         updated_at: new Date().toISOString(),
       }).eq('id', serviceId);
 
@@ -169,6 +276,7 @@ export class ProvisioningEngine {
 
       await supabaseAdmin.from('hosting_services').update({
         status: 'failed',
+        setup_status: 'failed',
         updated_at: new Date().toISOString(),
       }).eq('id', serviceId);
 
@@ -334,6 +442,137 @@ export class ProvisioningEngine {
     } catch {
       return 'unknown';
     }
+  }
+
+  /**
+   * Inject or rotate SSH public key for a dedicated/VPS instance
+   */
+  static async updateSshKey(serviceId: string, sshPublicKey: string): Promise<{ success: boolean; syncedToBackend: boolean; error?: string }> {
+    const ctx = await ProvisioningEngine.getServiceContext(serviceId);
+    const { supabaseAdmin, adapter, externalId, config } = ctx;
+    let syncedToBackend = false;
+
+    if (adapter instanceof ProxmoxAdapter && config?.proxmox_url && config?.proxmox_token_secret) {
+      const res = await adapter.updateVMConfig(externalId, {
+        sshkeys: encodeURIComponent(sshPublicKey.trim()),
+      });
+      if (res.success) syncedToBackend = true;
+    }
+
+    const { error } = await supabaseAdmin
+      .from('hosting_services')
+      .update({
+        ssh_public_key: sshPublicKey.trim(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId);
+
+    if (error) return { success: false, syncedToBackend, error: error.message };
+    return { success: true, syncedToBackend };
+  }
+
+  /**
+   * Reset OS login / SSH password and persist in DB (+ Proxmox Cloud-Init when configured)
+   */
+  static async resetPassword(serviceId: string, providedPassword?: string): Promise<{ success: boolean; password?: string; syncedToBackend: boolean; error?: string }> {
+    const ctx = await ProvisioningEngine.getServiceContext(serviceId);
+    const { supabaseAdmin, adapter, externalId, config } = ctx;
+    const newPassword = (providedPassword && providedPassword.trim().length >= 8)
+      ? providedPassword.trim()
+      : `Vh#${crypto.randomBytes(8).toString('hex')}!`;
+    let syncedToBackend = false;
+
+    if (adapter instanceof ProxmoxAdapter && config?.proxmox_url && config?.proxmox_token_secret) {
+      const res = await adapter.updateVMConfig(externalId, {
+        cipassword: newPassword,
+      });
+      if (res.success) syncedToBackend = true;
+    }
+
+    const { error } = await supabaseAdmin
+      .from('hosting_services')
+      .update({
+        password: newPassword,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId);
+
+    if (error) return { success: false, syncedToBackend, error: error.message };
+    return { success: true, password: newPassword, syncedToBackend };
+  }
+
+  /**
+   * Update hostname / rDNS label
+   */
+  static async updateHostname(serviceId: string, hostname: string): Promise<{ success: boolean; syncedToBackend: boolean; error?: string }> {
+    const cleanHost = hostname.trim().toLowerCase().replace(/[^a-z0-9.-]/g, '');
+    if (!cleanHost) return { success: false, syncedToBackend: false, error: 'Invalid hostname' };
+
+    const ctx = await ProvisioningEngine.getServiceContext(serviceId);
+    const { supabaseAdmin, adapter, externalId, config } = ctx;
+    let syncedToBackend = false;
+
+    if (adapter instanceof ProxmoxAdapter && config?.proxmox_url && config?.proxmox_token_secret) {
+      const res = await adapter.updateVMConfig(externalId, {
+        name: cleanHost.slice(0, 63),
+      });
+      if (res.success) syncedToBackend = true;
+    }
+
+    const { error } = await supabaseAdmin
+      .from('hosting_services')
+      .update({
+        hostname: cleanHost,
+        domain: cleanHost,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId);
+
+    if (error) return { success: false, syncedToBackend, error: error.message };
+    return { success: true, syncedToBackend };
+  }
+
+  /**
+   * Trigger OS reinstall with new OS template selection
+   */
+  static async reinstallOS(serviceId: string, osTemplate: string): Promise<{ success: boolean; error?: string }> {
+    const ctx = await ProvisioningEngine.getServiceContext(serviceId);
+    const { supabaseAdmin } = ctx;
+
+    await supabaseAdmin
+      .from('hosting_services')
+      .update({
+        os_template: osTemplate,
+        setup_status: 'reinstalling',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId);
+
+    try {
+      await ProvisioningEngine.provisionService(serviceId);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Reinstall queued for manual completion' };
+    }
+  }
+
+  /**
+   * Save firewall / security group port rules to DB
+   */
+  static async updateFirewallRules(serviceId: string, rules: any[]): Promise<{ success: boolean; error?: string }> {
+    const ctx = await ProvisioningEngine.getServiceContext(serviceId);
+    const { supabaseAdmin } = ctx;
+
+    const { error } = await supabaseAdmin
+      .from('hosting_services')
+      .update({
+        firewall_rules: Array.isArray(rules) ? rules : [],
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   }
 
   // Backward compatibility instance methods for portal routes

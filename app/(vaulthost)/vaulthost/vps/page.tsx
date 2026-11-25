@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { PageHeroV4 } from '@/components/ui/page-hero-v4';
+import { calculateHourlyRate, getAnnualPricing } from '@/lib/billing/pricingMath';
 import { PanelCard } from '@/components/ui/panel-card';
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
 
@@ -180,17 +181,18 @@ export default function VpsHostingPage() {
               let cycleLabel = 'Standard monthly';
 
               if (billingCycle === 'payg') {
-                displayPrice = Number((plan.priceMonthly / 720).toFixed(2)) as any;
+                displayPrice = calculateHourlyRate(plan.priceMonthly) as any;
                 priceSuffix = '/hr';
-                cycleLabel = `Metered (₹${plan.priceMonthly.toLocaleString()}/mo cap)`;
+                cycleLabel = `Metered · 730 hrs (₹${plan.priceMonthly.toLocaleString()}/mo cap)`;
               } else if (billingCycle === 'semi_annual') {
                 displayPrice = Math.round(plan.priceMonthly * 0.95);
                 priceSuffix = '/mo';
                 cycleLabel = `Billed ₹${Math.round(plan.priceMonthly * 6 * 0.95).toLocaleString()}/6mo`;
               } else if (billingCycle === 'annual') {
-                displayPrice = plan.priceAnnual;
+                const { annualMonthlyEquivalent, annualTotal } = getAnnualPricing(plan.priceMonthly, plan.priceAnnual);
+                displayPrice = annualMonthlyEquivalent;
                 priceSuffix = '/mo';
-                cycleLabel = `Billed ₹${(plan.priceAnnual * 12).toLocaleString()}/yr (2 mo free)`;
+                cycleLabel = `Billed ₹${annualTotal.toLocaleString()}/yr (2 mo free)`;
               }
 
               return (

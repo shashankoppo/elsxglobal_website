@@ -9,6 +9,7 @@ import {
   MessageSquare, Settings, CheckCircle, ArrowRight, Check 
 } from 'lucide-react';
 import Link from 'next/link';
+import { ProductPricingSection } from '@/components/hosting/ProductPricingSection';
 
 const modelCategories = [
   {
@@ -183,64 +184,9 @@ export default function InferencePage() {
         </div>
       </section>
 
-      {/* Pricing */}
+      <ProductPricingSection productId="inference" />
       <section className="v4-section border-t border-hairline">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* Free tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Test top open-weight models with a daily free token allowance.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 100K tokens / day free</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Llama 3 8B &amp; Whisper v3 access</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> OpenAI-compatible endpoint</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Streaming responses</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
-            </div>
-            {/* Pro tier — highlighted */}
-            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
-              <div>
-                <div className="text-signal text-sm font-medium mb-2">PRO</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Production inference with 50M tokens included + pay-as-you-go.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 50M tokens included / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Llama 3 70B &amp; Mixtral access</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Rock bottom overage: ₹0.08/1M (8B)</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 50 concurrent streams</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Priority GPU queue</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=inference-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-            {/* Business tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹3,999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Dedicated GPU clusters with guaranteed tokens/sec throughput.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 250M tokens included / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited concurrent streams</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Custom weights &amp; LoRA fine-tunes</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Sub-20ms TTFT in India</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 99.95% inference SLA guarantee</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=inference-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-          </div>
 
           {/* Per-token table */}
           <div className="mb-12">

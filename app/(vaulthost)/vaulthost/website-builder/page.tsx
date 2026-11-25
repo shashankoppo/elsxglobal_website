@@ -21,6 +21,7 @@ import {
   Shield,
   Palette,
 } from 'lucide-react';
+import { TierPageClient } from '@/components/hosting/tier-page';
 
 export default function WebsiteBuilderPage() {
   const plans = [
@@ -160,7 +161,7 @@ export default function WebsiteBuilderPage() {
       <PageHeroV4
         eyebrow="AI Website Builder"
         title={<>Build a Website in <span className="text-signal">60 Seconds.</span></>}
-        description="Describe your business and AI generates a complete website. No coding. No design skills. Plans from ₹99/mo."
+        description="Describe your business and AI generates a complete website. No coding. No design skills. Plans from ₹490/mo."
       />
 
       {/* Stats Bar */}
@@ -191,7 +192,7 @@ export default function WebsiteBuilderPage() {
       <div className="v4-section bg-ink">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
-            <div className="text-center mb-16">
+            <div className="text-center mb-12">
               <span className="v4-readout text-[11px] font-semibold uppercase tracking-widest text-signal px-3 py-1 rounded-full border border-signal/30 bg-signal/5">
                 Simple Transparent Pricing
               </span>
@@ -204,64 +205,7 @@ export default function WebsiteBuilderPage() {
             </div>
           </ScrollReveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map((plan, idx) => (
-              <ScrollReveal key={plan.name} delay={idx * 0.1}>
-                <div
-                  className={`v4-panel p-8 rounded-2xl flex flex-col h-full relative transition-all ${
-                    plan.popular
-                      ? 'border-signal ring-1 ring-signal/50 bg-ink-surface'
-                      : 'border-hairline bg-ink-surface/60 hover:border-hairline-2'
-                  }`}
-                >
-                  {plan.popular && (
-                    <div className="absolute top-0 right-8 -translate-y-1/2 bg-signal text-ink text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                      Most Popular
-                    </div>
-                  )}
-                  <div className="mb-6">
-                    <h3 className="text-2xl font-medium text-text-primary-v4">{plan.name}</h3>
-                    <div className="mt-4 flex items-baseline gap-1">
-                      <span className="text-4xl font-bold text-text-primary-v4">{plan.price}</span>
-                      <span className="text-sm text-text-muted-v4 font-mono">{plan.unit}</span>
-                    </div>
-                    <div className="mt-4 grid grid-cols-3 gap-2 border-y border-hairline py-3 text-center">
-                      <div>
-                        <div className="text-[11px] text-text-muted-v4 uppercase">Pages</div>
-                        <div className="text-xs font-semibold text-text-primary-v4 mt-0.5">{plan.specs.pages}</div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] text-text-muted-v4 uppercase">Storage</div>
-                        <div className="text-xs font-semibold text-text-primary-v4 mt-0.5">{plan.specs.storage}</div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] text-text-muted-v4 uppercase">Store</div>
-                        <div className="text-xs font-semibold text-text-primary-v4 mt-0.5">{plan.specs.ecommerce}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-3 mb-8 flex-1">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start text-sm text-text-secondary-v4">
-                        <Check className="w-4 h-4 text-signal mr-3 flex-shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link
-                    href="/portal/signup"
-                    className={`w-full justify-center rounded-btn py-3 text-sm font-semibold transition-all ${
-                      plan.popular ? 'v4-btn-primary' : 'v4-btn-secondary'
-                    }`}
-                  >
-                    {plan.ctaText}
-                  </Link>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
+          <TierPageClient tier="website-builder" tierName="AI Website Builder" />
         </div>
       </div>
 

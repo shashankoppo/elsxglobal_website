@@ -10,6 +10,7 @@ import {
   CheckCircle, ArrowRight, Check
 } from 'lucide-react';
 import { AIGatewayTester } from '@/components/vaulthost/interactive/AIGatewayTester';
+import { ProductPricingSection } from '@/components/hosting/ProductPricingSection';
 
 const providers = [
   "OpenAI", "Anthropic Claude", "Google Gemini", "Mistral", "Groq", 
@@ -220,102 +221,7 @@ export default function AIGatewayPage() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section className="py-12 sm:py-16 lg:py-24 border-t border-hairline">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10 sm:mb-12">
-            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-3 sm:mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4 text-sm sm:text-base">Higher than GoDaddy. Way below AWS.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* Free tier */}
-            <div className="v4-panel rounded-2xl p-6 sm:p-7 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-xs font-semibold tracking-widest mb-2">FREE</div>
-                <div className="text-3xl sm:text-4xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Unified AI API gateway for hobbyists and developers.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10K requests / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 1 Connected AI provider</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Basic request logging &amp; analytics</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Standard latency monitoring</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5 text-sm">Start Free</Link>
-            </div>
-            {/* Pro tier — highlighted */}
-            <div className="v4-panel rounded-2xl p-6 sm:p-7 border-2 border-signal relative flex flex-col justify-between">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
-              <div>
-                <div className="text-signal text-xs font-semibold tracking-widest mb-2">PRO</div>
-                <div className="text-3xl sm:text-4xl font-bold text-text-primary-v4 mb-1">₹999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Intelligent caching and fallback routing for AI apps.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 1M requests / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited AI providers</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Semantic caching (save 40-60% tokens)</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Custom rate limits &amp; budget alerts</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Automated fallback &amp; model routing</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=ai-gateway-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5 text-sm">Get Started</Link>
-            </div>
-            {/* Business tier */}
-            <div className="v4-panel rounded-2xl p-6 sm:p-7 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-xs font-semibold tracking-widest mb-2">BUSINESS</div>
-                <div className="text-3xl sm:text-4xl font-bold text-text-primary-v4 mb-1">₹3,999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Enterprise AI proxy fleet with dedicated throughput.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10M requests / month</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited AI providers</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Dedicated low-latency proxy instances</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Enterprise RBAC &amp; audit logging</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 99.99% uptime SLA &amp; dedicated support</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=ai-gateway-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5 text-sm">Get Started</Link>
-            </div>
-          </div>
-          {/* Competitor comparison */}
-          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-sm">
-                <thead className="bg-ink-surface-2 text-text-secondary-v4">
-                  <tr>
-                    <th className="py-3 px-4 text-left font-medium">Provider</th>
-                    <th className="py-3 px-4 text-left font-medium">Pricing</th>
-                    <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  <tr className="bg-signal/5">
-                    <td className="py-3 px-4 font-semibold text-signal">VaultHost AI Gateway</td>
-                    <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹999 Pro / ₹3,999 Business</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">Semantic caching, 15+ models, drop-in OpenAI SDK URL switch, zero regional egress</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 text-text-primary-v4">Portkey</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">₹8,200/mo ($99)</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">High entry cost for startups and indie developers</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 text-text-primary-v4">Helicone</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">₹4,150/mo ($50)</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">Lower request limit before aggressive usage overages</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 text-text-primary-v4">AWS Bedrock Gateway</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">Custom enterprise quote</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">Requires complex IAM setup and vendor lock-in to AWS services</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
+      <ProductPricingSection productId="ai-gateway" />
     </div>
   );
 }

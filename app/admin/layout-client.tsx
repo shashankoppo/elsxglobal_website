@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Logo } from '@/components/ui/logo';
@@ -121,6 +121,55 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<{
+    orders: Array<{ id: string; plan_name?: string; domain?: string; status?: string }>;
+    tickets: Array<{ id: string; subject?: string; status?: string }>;
+    users: Array<{ id: string; email?: string }>;
+  } | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setSearchOpen(true);
+      } else if (e.key === 'Escape') {
+        setSearchOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const q = globalSearch.trim();
+    if (q.length < 2) {
+      setSearchResults(null);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await adminFetch('global-search', { query: q });
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults({
+            orders: data.orders || [],
+            tickets: data.tickets || [],
+            users: data.users || [],
+          });
+          setSearchOpen(true);
+        }
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 260);
+    return () => clearTimeout(timer);
+  }, [globalSearch]);
 
   const showToast = (type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
@@ -217,11 +266,24 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
     window.location.href = '/admin/login/';
   };
 
-  const updateOrderStatus = async (orderId: string, status: string) => {
+  const updateOrderStatus = async (orderId: string, status: string, manualOnly?: boolean) => {
     setActionLoading(orderId);
-    const res = await adminFetch('approve-order', { orderId, newStatus: status });
-    if (res.ok) { showToast('success', status === 'active' ? 'Order approved — service provisioned' : `Order marked as ${status}`); fetchOrders(); fetchStats(); }
-    else { const d = await res.json().catch(() => ({})); showToast('error', d.error || 'Failed'); }
+    const res = await adminFetch('approve-order', { orderId, newStatus: status, manualOnly: Boolean(manualOnly) });
+    if (res.ok) {
+      showToast(
+        'success',
+        status === 'active'
+          ? manualOnly
+            ? 'Order approved — queued for manual server setup'
+            : 'Order approved — automated provisioning triggered'
+          : `Order marked as ${status}`
+      );
+      fetchOrders();
+      fetchStats();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      showToast('error', d.error || 'Failed');
+    }
     setActionLoading(null);
   };
 
@@ -409,12 +471,76 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <input
+                    ref={searchInputRef}
                     type="text"
                     value={globalSearch}
-                    onChange={(e) => setGlobalSearch(e.target.value)}
+                    onFocus={() => setSearchOpen(true)}
+                    onBlur={() => setTimeout(() => setSearchOpen(false), 180)}
+                    onChange={(e) => { setGlobalSearch(e.target.value); setSearchOpen(true); }}
                     placeholder="Search resources (Ctrl+K)"
-                    className="w-48 xl:w-64 pl-8 pr-3 py-1.5 rounded-md bg-muted/50 border border-border text-[13px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary focus:w-56 xl:focus:w-72 transition-all"
+                    className="w-48 xl:w-64 pl-8 pr-7 py-1.5 rounded-md bg-muted/50 border border-border text-[13px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary focus:w-56 xl:focus:w-72 transition-all"
                   />
+                  {searchLoading && (
+                    <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  )}
+                  {searchOpen && globalSearch.trim().length >= 2 && searchResults && (
+                    <div className="absolute right-0 mt-1.5 w-80 max-h-96 overflow-y-auto rounded-lg bg-background border border-border shadow-xl z-50 p-2 space-y-2 text-[12px]">
+                      {searchResults.orders.length === 0 && searchResults.tickets.length === 0 && searchResults.users.length === 0 ? (
+                        <div className="py-4 text-center text-muted-foreground">No matching resources for &ldquo;{globalSearch}&rdquo;</div>
+                      ) : (
+                        <>
+                          {searchResults.orders.length > 0 && (
+                            <div>
+                              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Orders</div>
+                              {searchResults.orders.map((o) => (
+                                <Link
+                                  key={o.id}
+                                  href="/admin/orders"
+                                  onClick={() => { setSearchOpen(false); setSearchQuery(o.domain || o.plan_name || ''); }}
+                                  className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-muted/60 transition-colors"
+                                >
+                                  <span className="truncate font-medium text-foreground">{o.plan_name || 'Order'} {o.domain ? `(${o.domain})` : ''}</span>
+                                  <span className="ml-2 text-[10px] uppercase text-muted-foreground">{o.status}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                          {searchResults.users.length > 0 && (
+                            <div>
+                              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Users</div>
+                              {searchResults.users.map((u) => (
+                                <Link
+                                  key={u.id}
+                                  href="/admin/users"
+                                  onClick={() => setSearchOpen(false)}
+                                  className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-muted/60 transition-colors"
+                                >
+                                  <span className="truncate font-medium text-foreground">{u.email || u.id}</span>
+                                  <span className="ml-2 text-[10px] text-muted-foreground">Customer</span>
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                          {searchResults.tickets.length > 0 && (
+                            <div>
+                              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tickets</div>
+                              {searchResults.tickets.map((t) => (
+                                <Link
+                                  key={t.id}
+                                  href="/admin/tickets"
+                                  onClick={() => setSearchOpen(false)}
+                                  className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-muted/60 transition-colors"
+                                >
+                                  <span className="truncate font-medium text-foreground">{t.subject || 'Support Ticket'}</span>
+                                  <span className="ml-2 text-[10px] uppercase text-muted-foreground">{t.status}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="h-4 w-px bg-border mx-1" />
                 <button onClick={refreshAll} disabled={refreshing} className="p-1.5 rounded-md text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50" title="Refresh data">

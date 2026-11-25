@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { adminFetch } from './admin-fetch';
 import {
-  Loader2, Plus, Eye, Edit3, ToggleLeft, ToggleRight, Trash2, Save, X as XIcon,
+  Loader2, Plus, Eye, Edit3, ToggleLeft, ToggleRight, Trash2, Save, RefreshCw, X as XIcon,
 } from 'lucide-react';
 
 export function PlansTab({ plans, actionLoading, togglePlanActive, deletePlan, showToast, onRefresh }: {
@@ -12,6 +12,7 @@ export function PlansTab({ plans, actionLoading, togglePlanActive, deletePlan, s
 }) {
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const savePlan = async () => {
     if (!editing) return;
@@ -23,17 +24,38 @@ export function PlansTab({ plans, actionLoading, togglePlanActive, deletePlan, s
     setSaving(false);
   };
 
+  const syncEnterpriseCatalog = async () => {
+    setSyncing(true);
+    const res = await adminFetch('sync-catalog-plans', {});
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      showToast('success', data.message || 'Enterprise catalog synced!');
+      onRefresh();
+    } else {
+      showToast('error', data.error || 'Catalog sync failed');
+    }
+    setSyncing(false);
+  };
+
   return (
     <div className="animate-fade-in space-y-4">
-      <div className="flex items-center justify-between pb-4 border-b border-border/50">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-border/50">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Hosting Plans</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Create, edit and manage hosting tiers</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Hosting &amp; Cloud Plans</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">Manage calibrated enterprise plans (3–5% below AWS/GCP/Azure) and custom tiers</p>
         </div>
         {!editing && (
-          <div className="flex gap-2">
-            <Link href="/vaulthost" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted text-foreground hover:bg-muted/80 text-[13px] font-medium"><Eye className="h-4 w-4" />View on Site</Link>
-            <button onClick={() => setEditing({ slug: '', name: '', tier: 'shared', price_monthly: 0, price_annual: 0, features: [], is_active: true, is_popular: false, sort_order: 0, provisioning_type: 'manual' })} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90"><Plus className="h-3.5 w-3.5" />New Plan</button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={syncEnterpriseCatalog}
+              disabled={syncing}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-signal/15 border border-signal/30 text-signal hover:bg-signal/25 text-[12px] font-semibold disabled:opacity-50"
+            >
+              {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              Sync Enterprise Catalog (3–5% &lt; AWS)
+            </button>
+            <Link href="/vaulthost/pricing" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted text-foreground hover:bg-muted/80 text-[13px] font-medium"><Eye className="h-4 w-4" />View on Site</Link>
+            <button onClick={() => setEditing({ id: '', name: '', tier: 'vps', price_monthly: 0, price_annual: 0, features: [], is_active: true, is_popular: false, sort_order: 10 })} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90"><Plus className="h-3.5 w-3.5" />New Plan</button>
           </div>
         )}
       </div>
@@ -49,16 +71,17 @@ export function PlansTab({ plans, actionLoading, togglePlanActive, deletePlan, s
           
           <div className="grid sm:grid-cols-3 gap-4">
             <Field label="Name"><input type="text" value={editing.name as string || ''} onChange={(e) => setEditing({ ...editing, name: e.target.value })} className="input-base text-[13px] py-1.5" /></Field>
-            <Field label="Slug"><input type="text" value={editing.slug as string || ''} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} className="input-base text-[13px] py-1.5" /></Field>
-            <Field label="Tier"><select value={editing.tier as string || 'shared'} onChange={(e) => setEditing({ ...editing, tier: e.target.value })} className="input-base text-[13px] py-1.5"><option value="shared">Shared</option><option value="vps">VPS</option><option value="dedicated">Dedicated</option><option value="cloud">Cloud</option><option value="wordpress">WordPress</option></select></Field>
+            <Field label="Plan ID / Slug"><input type="text" value={editing.id as string || ''} onChange={(e) => setEditing({ ...editing, id: e.target.value })} placeholder="auto-generated if blank" className="input-base text-[13px] py-1.5 font-mono" /></Field>
+            <Field label="Tier"><select value={editing.tier as string || 'vps'} onChange={(e) => setEditing({ ...editing, tier: e.target.value })} className="input-base text-[13px] py-1.5"><option value="shared">Shared</option><option value="vps">VPS</option><option value="dedicated">Dedicated</option><option value="cloud">Cloud</option><option value="wordpress">WordPress</option><option value="email">Email</option><option value="website-builder">Website Builder</option><option value="workers">Workers</option><option value="storage">Storage</option><option value="ai-gateway">AI Gateway</option><option value="inference">Inference</option><option value="containers">Containers</option><option value="pages">Pages</option><option value="database">Database</option><option value="queues">Queues</option><option value="kv">KV</option><option value="tunnel">Tunnel</option><option value="vectorize">Vectorize</option><option value="dns">DNS</option></select></Field>
             <Field label="Provisioning">
               <select value={editing.provisioning_type as string || 'manual'} onChange={(e) => setEditing({ ...editing, provisioning_type: e.target.value })} className="input-base text-[13px] py-1.5">
                 <option value="manual">Manual</option>
                 <option value="proxmox">Proxmox</option>
+                <option value="hestiacp">HestiaCP</option>
                 <option value="cyberpanel">CyberPanel</option>
-                <option value="cpanel">cPanel</option>
-                <option value="guacamole">Guacamole</option>
-                <option value="odoo">Odoo CRM</option>
+                <option value="pterodactyl">Pterodactyl</option>
+                <option value="k3s">K3s</option>
+                <option value="coolify">Coolify</option>
               </select>
             </Field>
             <Field label="Sort Order"><input type="number" value={editing.sort_order as number || 0} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} className="input-base text-[13px] py-1.5" /></Field>

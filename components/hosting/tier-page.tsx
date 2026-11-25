@@ -9,6 +9,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
+import {
+  CanonicalBillingCycle,
+  CYCLE_CONFIG,
+  calculateHourlyRate,
+  getAnnualPricing,
+  isFixedAnnualProductTier,
+} from '@/lib/billing/pricingMath';
 
 interface Plan {
   id: string;
@@ -32,9 +39,73 @@ const TRUST_BADGES = [
   { icon: Headphones, label: '24/7 Support', desc: 'Real humans, anytime' },
 ];
 
+const CYCLE_ORDER: CanonicalBillingCycle[] = ['pay_as_you_go', 'monthly', 'semi_annual', 'annual'];
+
+function computeTierDisplayPrice(plan: Plan, cycle: CanonicalBillingCycle) {
+  const baseMonthly = Number(plan.price_monthly) || 0;
+  const fixedAnnual = isFixedAnnualProductTier(plan.tier);
+
+  if (fixedAnnual) {
+    const fixedAmt = Number(plan.price_annual) || baseMonthly;
+    return {
+      primary: fixedAmt,
+      suffix: '/yr',
+      subline: 'Fixed annual registration rate',
+      savings: 0,
+      comparePrice: fixedAmt,
+    };
+  }
+
+  if (cycle === 'pay_as_you_go') {
+    const hourly = calculateHourlyRate(baseMonthly);
+    return {
+      primary: hourly,
+      suffix: '/hr',
+      subline: `Pay As You Go · ₹${baseMonthly.toLocaleString('en-IN')}/mo cap (730 hrs)`,
+      savings: 0,
+      comparePrice: hourly,
+    };
+  }
+
+  if (cycle === 'semi_annual') {
+    const moEq = Math.round(baseMonthly * (1 - CYCLE_CONFIG.semi_annual.discount));
+    const sixMoTotal = Math.round(baseMonthly * 6 * (1 - CYCLE_CONFIG.semi_annual.discount));
+    const savings = Math.max(0, Math.round(baseMonthly * 6 - sixMoTotal));
+    return {
+      primary: moEq,
+      suffix: '/mo',
+      subline: `₹${sixMoTotal.toLocaleString('en-IN')} billed every 6 months (5% off)`,
+      savings,
+      comparePrice: sixMoTotal,
+    };
+  }
+
+  if (cycle === 'annual') {
+    const { annualMonthlyEquivalent, annualTotal, annualSavings } = getAnnualPricing(
+      baseMonthly,
+      plan.price_annual
+    );
+    return {
+      primary: annualMonthlyEquivalent,
+      suffix: '/mo',
+      subline: `₹${annualTotal.toLocaleString('en-IN')} billed annually (2 months free)`,
+      savings: annualSavings,
+      comparePrice: annualTotal,
+    };
+  }
+
+  return {
+    primary: baseMonthly,
+    suffix: '/mo',
+    subline: 'Standard 1-Month billing cycle',
+    savings: 0,
+    comparePrice: baseMonthly,
+  };
+}
+
 export function TierPageClient({ tier, tierName }: { tier: string; tierName: string }) {
   const { plans, loading } = useRealtimePlans(tier);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<CanonicalBillingCycle>('monthly');
 
   if (loading) {
     return (
@@ -62,34 +133,44 @@ export function TierPageClient({ tier, tierName }: { tier: string; tierName: str
 
   return (
     <div>
-      {/* Billing toggle */}
+      {/* 4-Cycle Billing Selector */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-        <div className="inline-flex items-center gap-3 liquid-glass rounded-full p-1">
-          <button
-            onClick={() => setBillingCycle('monthly')}
-            className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${billingCycle === 'monthly' ? 'bg-signal text-primary-foreground' : 'text-text-muted-v4'}`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setBillingCycle('annual')}
-            className={`px-6 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${billingCycle === 'annual' ? 'bg-signal text-primary-foreground' : 'text-text-muted-v4'}`}
-          >
-            Annual
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-good/20 text-good">2 months free</span>
-          </button>
+        <div className="inline-flex flex-wrap items-center gap-1.5 liquid-glass rounded-2xl p-1.5">
+          {CYCLE_ORDER.map((cycleId) => {
+            const cfg = CYCLE_CONFIG[cycleId];
+            const active = billingCycle === cycleId;
+            return (
+              <button
+                key={cycleId}
+                type="button"
+                onClick={() => setBillingCycle(cycleId)}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  active ? 'bg-signal text-primary-foreground shadow-sm' : 'text-text-muted-v4 hover:text-text-primary-v4'
+                }`}
+              >
+                <span>{cfg.label}</span>
+                {cfg.badge && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      active ? 'bg-black/20 text-white' : 'bg-good/20 text-good'
+                    }`}
+                  >
+                    {cfg.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
         <p className="text-xs text-text-muted-v4">
-          {plans.length} plans available · All prices in INR · GST extra
+          {plans.length} plans available · 3–5% below AWS/GCP/Azure · INR · GST extra
         </p>
       </div>
 
       {/* Plan cards */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.map((plan, index) => {
-          const price = billingCycle === 'annual' ? Number(plan.price_annual) : Number(plan.price_monthly);
-          const monthlyEq = billingCycle === 'annual' ? Math.round(Number(plan.price_annual) / 12) : null;
-          const savings = billingCycle === 'annual' ? Number(plan.price_monthly) * 12 - Number(plan.price_annual) : 0;
+          const pricing = computeTierDisplayPrice(plan, billingCycle);
 
           return (
             <ScrollReveal key={plan.id} animation="fade-up" delay={index * 100}>
@@ -109,17 +190,17 @@ export function TierPageClient({ tier, tierName }: { tier: string; tierName: str
 
                 <div className="mb-6 pb-6 border-b border-hairline/50">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-5xl font-extrabold tracking-tighter text-text-primary-v4">Rs {price.toLocaleString('en-IN')}</span>
-                    <span className="text-sm font-medium text-text-muted-v4">/{billingCycle === 'annual' ? 'yr' : 'mo'}</span>
+                    <span className="text-4xl sm:text-5xl font-extrabold tracking-tighter text-text-primary-v4">
+                      ₹{pricing.primary.toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-sm font-medium text-text-muted-v4">{pricing.suffix}</span>
                   </div>
-                  {monthlyEq && (
-                    <p className="text-sm text-text-secondary-v4 mt-2 font-medium">
-                      Rs {monthlyEq.toLocaleString('en-IN')}/mo billed annually
-                    </p>
-                  )}
-                  {savings > 0 && (
-                    <p className="text-sm text-good mt-1 font-semibold flex items-center gap-1">
-                      Save Rs {savings.toLocaleString('en-IN')}!
+                  <p className="text-xs sm:text-sm text-text-secondary-v4 mt-2 font-medium">
+                    {pricing.subline}
+                  </p>
+                  {pricing.savings > 0 && (
+                    <p className="text-xs sm:text-sm text-good mt-1 font-semibold flex items-center gap-1">
+                      Save ₹{pricing.savings.toLocaleString('en-IN')}!
                     </p>
                   )}
                 </div>
@@ -171,7 +252,7 @@ export function TierPageClient({ tier, tierName }: { tier: string; tierName: str
                 </ul>
 
                 <Link
-                  href={`/vaulthost/checkout?plan=${plan.id}`}
+                  href={`/vaulthost/checkout?plan=${plan.id}&billing=${billingCycle}`}
                   className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all duration-300 group ${plan.is_popular ? 'bg-signal text-primary-foreground hover:bg-primary-hover shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)]' : 'liquid-glass hover:bg-ink-surface-2 hover:border-hairline-2'}`}
                 >
                   Deploy Now
@@ -236,12 +317,16 @@ export function TierPageClient({ tier, tierName }: { tier: string; tierName: str
                     </tr>
                   ))}
                   <tr className="bg-ink-surface-2/10">
-                    <td className="p-4 text-sm font-medium">Price ({billingCycle === 'annual' ? 'yearly' : 'monthly'})</td>
+                    <td className="p-4 text-sm font-medium">
+                      Price ({CYCLE_CONFIG[billingCycle].label})
+                    </td>
                     {plans.map((plan) => {
-                      const price = billingCycle === 'annual' ? Number(plan.price_annual) : Number(plan.price_monthly);
+                      const p = computeTierDisplayPrice(plan, billingCycle);
                       return (
                         <td key={plan.id} className="p-4 text-center">
-                          <span className="text-sm font-bold">Rs {price.toLocaleString('en-IN')}</span>
+                          <span className="text-sm font-bold">
+                            ₹{p.primary.toLocaleString('en-IN')}{p.suffix}
+                          </span>
                         </td>
                       );
                     })}

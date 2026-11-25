@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Zap, Globe, Code2, Database, Clock, Wifi, Terminal, Activity, ArrowRight, Check } from 'lucide-react';
 
 import { WorkersPlayground } from '@/components/vaulthost/interactive/WorkersPlayground';
+import { ProductPricingSection } from '@/components/hosting/ProductPricingSection';
 
 export default function VaultWorkersPage() {
   return (
@@ -136,102 +137,7 @@ export default function VaultWorkersPage() {
         </div>
       </div>
 
-      {/* Pricing */}
-      <section className="py-12 sm:py-16 lg:py-24 border-t border-hairline">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="v4-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4 text-base sm:text-lg">Higher than GoDaddy. Way below AWS.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* Free tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">FREE</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹0 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Get started with edge compute at zero cost for side projects.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 100K requests / day</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10ms CPU limit per request</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Basic KV store access</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Global Anycast across 300+ PoPs</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Community support</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/signup" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Start Free</Link>
-            </div>
-            {/* Pro tier — highlighted */}
-            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
-              <div>
-                <div className="text-signal text-sm font-medium mb-2">PRO</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹699 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Production-ready edge compute for growing web apps and APIs.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited requests (fair use)</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 30s CPU limit per request</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> KV + Storage + D1 native bindings</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Custom domains &amp; SSL</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Priority email &amp; ticket support</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=workers-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-            {/* Business tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">BUSINESS</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹2,499 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Enterprise-grade edge compute with guaranteed 99.999% SLA.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited requests</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> No CPU execution limits</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> All bindings + Private peering</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 99.999% uptime SLA guarantee</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 24/7 dedicated support engineer</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=workers-business" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-          </div>
-          {/* Competitor comparison */}
-          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-sm">
-                <thead className="bg-ink-surface-2 text-text-secondary-v4">
-                  <tr>
-                    <th className="py-3 px-4 text-left font-medium">Provider</th>
-                    <th className="py-3 px-4 text-left font-medium">Pricing</th>
-                    <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  <tr className="bg-signal/5">
-                    <td className="py-3 px-4 font-semibold text-signal">VaultHost Workers</td>
-                    <td className="py-3 px-4 font-medium text-text-primary-v4">₹0 Free / ₹699/mo Pro</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">&lt;5ms latency, zero cold starts, 300+ edge locations in India &amp; global</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 text-text-primary-v4">Cloudflare Workers</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">₹1,750/mo ($20)</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">Paid plan baseline for pro apps with usage multipliers</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 text-text-primary-v4">AWS Lambda@Edge</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">₹4,500+/mo</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">₹35/M requests + CPU duration + outbound data egress fees</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 text-text-primary-v4">Vercel Edge Functions</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">₹1,650/mo ($20/seat)</td>
-                    <td className="py-3 px-4 text-text-secondary-v4">Per-seat license fees + limited CPU execution duration</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
+      <ProductPricingSection productId="workers" />
     </div>
   );
 }

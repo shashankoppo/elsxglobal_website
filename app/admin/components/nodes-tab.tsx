@@ -54,11 +54,13 @@ export function NodesTab({ showToast }: { showToast: (t: 'success' | 'error', m:
   const testConnection = async (id: string) => {
     setTesting(id);
     const res = await adminFetch('test-node-connection', { id });
-    if (res.ok) {
-      showToast('success', 'Connection successful!');
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      showToast('success', data.message || 'Connection successful!');
     } else {
-      showToast('error', 'Connection failed. Check API key/hostname.');
+      showToast('error', data.message || data.error || 'Connection failed. Check IP/hostname/API.');
     }
+    fetchNodes();
     setTesting(null);
   };
 
@@ -73,11 +75,27 @@ export function NodesTab({ showToast }: { showToast: (t: 'success' | 'error', m:
     <div className="animate-fade-in space-y-4">
       <div className="flex items-center justify-between pb-4 border-b border-border/50">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Infrastructure Nodes</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Manage self-hosted servers for dynamic provisioning</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Infrastructure Nodes &amp; Bare-Metal Servers</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">Manage Proxmox clusters, self-hosted services, and manual bare-metal servers</p>
         </div>
         {!editing && (
-          <button onClick={() => setEditing({ name: '', provider_type: 'proxmox', hostname: '', api_key: '', status: 'active' })} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90">
+          <button
+            onClick={() =>
+              setEditing({
+                name: '',
+                provider_type: 'proxmox',
+                hostname: '',
+                ip_address: '',
+                ssh_port: 22,
+                region: 'Mumbai (ap-west-in)',
+                cpu_cores: 32,
+                ram_gb: 128,
+                api_key: '',
+                status: 'online',
+              })
+            }
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90"
+          >
             <Plus className="h-3.5 w-3.5" /> Add Node
           </button>
         )}
@@ -94,36 +112,61 @@ export function NodesTab({ showToast }: { showToast: (t: 'success' | 'error', m:
             </button>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field label="Node Name">
-              <input type="text" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="e.g. EU Proxmox Cluster 1" className="input-base text-[13px] py-1.5" />
+              <input type="text" value={editing.name || ''} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="e.g. Mumbai Proxmox Cluster 1" className="input-base text-[13px] py-1.5" />
             </Field>
             <Field label="Provider Type">
-              <select value={editing.provider_type} onChange={(e) => setEditing({ ...editing, provider_type: e.target.value })} className="input-base text-[13px] py-1.5">
+              <select value={editing.provider_type || 'proxmox'} onChange={(e) => setEditing({ ...editing, provider_type: e.target.value })} className="input-base text-[13px] py-1.5">
                 <option value="proxmox">Proxmox VE</option>
-                <option value="nutanix">Nutanix AHV</option>
+                <option value="baremetal">Bare-Metal / Manual</option>
+                <option value="hestiacp">HestiaCP</option>
                 <option value="cyberpanel">CyberPanel</option>
-                <option value="cpanel">cPanel / WHM</option>
-                <option value="guacamole">Apache Guacamole</option>
+                <option value="pterodactyl">Pterodactyl</option>
+                <option value="k3s">K3s Kubernetes</option>
                 <option value="powerdns">PowerDNS</option>
+                <option value="minio">MinIO Storage</option>
+                <option value="litellm">LiteLLM AI</option>
+                <option value="frp">FRP Tunnel Relay</option>
+                <option value="rabbitmq">RabbitMQ</option>
+                <option value="coolify">Coolify Pages</option>
+                <option value="workerd">Workerd Edge</option>
               </select>
             </Field>
-            <Field label="Hostname / URL">
-              <input type="text" value={editing.hostname} onChange={(e) => setEditing({ ...editing, hostname: e.target.value })} placeholder="https://192.168.1.100:8006" className="input-base text-[13px] py-1.5" />
+            <Field label="Region / Location">
+              <input type="text" value={editing.region || ''} onChange={(e) => setEditing({ ...editing, region: e.target.value })} placeholder="Mumbai (ap-west-in)" className="input-base text-[13px] py-1.5" />
             </Field>
-            <Field label="API Key / Token">
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <input type="password" value={editing.api_key} onChange={(e) => setEditing({ ...editing, api_key: e.target.value })} placeholder="PVEAPIToken=root@pam!token=..." className="input-base text-[13px] py-1.5 pl-9" />
-              </div>
+            <Field label="Hostname / API URL">
+              <input type="text" value={editing.hostname || ''} onChange={(e) => setEditing({ ...editing, hostname: e.target.value })} placeholder="https://192.168.1.100:8006" className="input-base text-[13px] py-1.5 font-mono" />
+            </Field>
+            <Field label="Public IPv4">
+              <input type="text" value={editing.ip_address || ''} onChange={(e) => setEditing({ ...editing, ip_address: e.target.value })} placeholder="203.0.113.10" className="input-base text-[13px] py-1.5 font-mono" />
+            </Field>
+            <Field label="SSH Port">
+              <input type="number" value={editing.ssh_port || 22} onChange={(e) => setEditing({ ...editing, ssh_port: Number(e.target.value) })} className="input-base text-[13px] py-1.5 font-mono" />
+            </Field>
+            <Field label="CPU Cores Capacity">
+              <input type="number" value={editing.cpu_cores || 32} onChange={(e) => setEditing({ ...editing, cpu_cores: Number(e.target.value) })} className="input-base text-[13px] py-1.5 font-mono" />
+            </Field>
+            <Field label="RAM Capacity (GB)">
+              <input type="number" value={editing.ram_gb || 128} onChange={(e) => setEditing({ ...editing, ram_gb: Number(e.target.value) })} className="input-base text-[13px] py-1.5 font-mono" />
             </Field>
             <Field label="Status">
-              <select value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value })} className="input-base text-[13px] py-1.5">
+              <select value={editing.status || 'online'} onChange={(e) => setEditing({ ...editing, status: e.target.value })} className="input-base text-[13px] py-1.5">
+                <option value="online">Online</option>
                 <option value="active">Active</option>
                 <option value="maintenance">Maintenance</option>
                 <option value="offline">Offline</option>
               </select>
             </Field>
+            <div className="sm:col-span-2 lg:col-span-3">
+              <Field label="API Key / Token (Optional for Manual Nodes)">
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <input type="password" value={editing.api_key || ''} onChange={(e) => setEditing({ ...editing, api_key: e.target.value })} placeholder="PVEAPIToken=root@pam!token=..." className="input-base text-[13px] py-1.5 pl-9" />
+                </div>
+              </Field>
+            </div>
           </div>
 
           <div className="mt-6 flex justify-end gap-3">
@@ -144,9 +187,10 @@ export function NodesTab({ showToast }: { showToast: (t: 'success' | 'error', m:
               <table className="w-full text-left">
                 <thead className="bg-muted/20 border-b border-border/50">
                   <tr>
-                    <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Name</th>
+                    <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Name / Region</th>
                     <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Provider</th>
-                    <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Hostname</th>
+                    <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Endpoint / IP</th>
+                    <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Capacity</th>
                     <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</th>
                     <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</th>
                   </tr>
@@ -157,20 +201,24 @@ export function NodesTab({ showToast }: { showToast: (t: 'success' | 'error', m:
                       <td className="px-4 py-2 font-medium text-foreground whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <Server className="h-3.5 w-3.5 text-muted-foreground" />
-                          {node.name}
+                          <div>
+                            <div>{node.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{node.region || 'Global'}</div>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-2 text-muted-foreground capitalize whitespace-nowrap">{node.provider_type}</td>
-                      <td className="px-4 py-2 text-muted-foreground font-mono text-[11px] whitespace-nowrap">{node.hostname}</td>
+                      <td className="px-4 py-2 text-muted-foreground font-mono text-[11px] whitespace-nowrap">{node.ip_address || node.hostname}</td>
+                      <td className="px-4 py-2 text-muted-foreground font-mono text-[11px] whitespace-nowrap">{node.cpu_cores || '—'}c / {node.ram_gb || '—'}GB</td>
                       <td className="px-4 py-2 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${node.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${node.status === 'active' || node.status === 'online' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
                           {node.status}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => testConnection(node.id)} disabled={testing === node.id} className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground" title="Test Connection">
-                            {testing === node.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => testConnection(node.id)} disabled={testing === node.id} className="px-2 py-1 rounded-md bg-muted/50 hover:bg-muted text-foreground text-[11px] inline-flex items-center gap-1" title="Live Health Probe">
+                            {testing === node.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3 text-signal" />} Probe
                           </button>
                           <button onClick={() => setEditing(node)} className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground" title="Edit">
                             <Edit3 className="h-3.5 w-3.5" />

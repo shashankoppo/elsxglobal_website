@@ -53,9 +53,9 @@ export const hostingTiers: HostingTier[] = [
       { question: 'Is SSH access available?', answer: 'Yes, SSH access is included on all shared hosting plans for secure file management.' },
     ],
     seoMeta: {
-      title: 'Shared Hosting India — Fast, Reliable, Affordable | VaultHost',
-      description: 'Enterprise shared hosting with NVMe SSD, free SSL, cPanel, and 24/7 support. Plans from Rs 299/mo. 30-day money-back guarantee.',
-      keywords: ['shared hosting India', 'cheap shared hosting', 'cPanel hosting India', 'best shared hosting'],
+      title: 'Shared Hosting India — Fast, Reliable, Enterprise | VaultHost',
+      description: 'Enterprise shared hosting with NVMe SSD, free SSL, control panel, and 24/7 support. Plans from ₹790/mo. 30-day money-back guarantee.',
+      keywords: ['shared hosting India', 'managed shared hosting', 'cPanel hosting India', 'best shared hosting'],
       canonical: 'https://elsxglobal.com/vaulthost/shared',
     },
   },
@@ -87,7 +87,7 @@ export const hostingTiers: HostingTier[] = [
     ],
     seoMeta: {
       title: 'Managed WordPress Hosting India — Fast & Secure | VaultHost',
-      description: 'Managed WordPress hosting with LiteSpeed caching, staging, daily backups, and free migration. Plans from Rs 349/mo.',
+      description: 'Managed WordPress hosting with LiteSpeed caching, staging, daily backups, and free migration. Plans from ₹1,490/mo.',
       keywords: ['wordpress hosting India', 'managed wordpress', 'wordpress hosting mumbai', 'best wordpress hosting'],
       canonical: 'https://elsxglobal.com/vaulthost/wordpress',
     },
@@ -120,8 +120,8 @@ export const hostingTiers: HostingTier[] = [
     ],
     seoMeta: {
       title: 'VPS Hosting India — NVMe SSD, Root Access, DDoS Protection | VaultHost',
-      description: 'Enterprise VPS hosting with NVMe SSD, full root access, free DDoS protection, and 99.99% SLA. Plans from Rs 1,499/mo.',
-      keywords: ['vps hosting India', 'nvme vps', 'cheap vps India', 'linux vps mumbai', 'root access vps'],
+      description: 'Enterprise VPS hosting with NVMe SSD, full root access, free DDoS protection, and 99.99% SLA priced 3–5% below AWS/GCP. Plans from ₹1,480/mo.',
+      keywords: ['vps hosting India', 'nvme vps', 'enterprise vps India', 'linux vps mumbai', 'root access vps'],
       canonical: 'https://elsxglobal.com/vaulthost/vps',
     },
   },

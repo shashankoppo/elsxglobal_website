@@ -19,6 +19,7 @@ import {
   Gauge,
   X,
 } from 'lucide-react';
+import { TierPageClient } from '@/components/hosting/tier-page';
 
 export default function WordPressHostingPage() {
   const plans = [
@@ -184,7 +185,7 @@ export default function WordPressHostingPage() {
       <PageHeroV4
         eyebrow="Managed WordPress"
         title={<>WordPress Hosting <span className="text-signal">That Scales.</span></>}
-        description="Fully managed WordPress with auto-updates, Litespeed cache, staging, WP CLI, and Cloudflare CDN. 10x faster. Plans from ₹199/mo."
+        description="Fully managed WordPress with auto-updates, Litespeed cache, staging, WP CLI, and Cloudflare CDN. 10x faster. Plans from ₹1,490/mo (3–5% below AWS Lightsail/Managed WP)."
       />
 
       {/* Stats Bar */}
@@ -215,7 +216,7 @@ export default function WordPressHostingPage() {
       <div className="v4-section bg-ink">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
-            <div className="text-center mb-16">
+            <div className="text-center mb-12">
               <span className="v4-readout text-[11px] font-semibold uppercase tracking-widest text-signal px-3 py-1 rounded-full border border-signal/30 bg-signal/5">
                 High-Performance WP Infrastructure
               </span>
@@ -228,55 +229,7 @@ export default function WordPressHostingPage() {
             </div>
           </ScrollReveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {plans.map((plan, idx) => (
-              <ScrollReveal key={plan.name} delay={idx * 0.1}>
-                <div
-                  className={`v4-panel p-6 rounded-2xl flex flex-col h-full relative transition-all ${
-                    plan.popular
-                      ? 'border-signal ring-1 ring-signal/50 bg-ink-surface'
-                      : 'border-hairline bg-ink-surface/60 hover:border-hairline-2'
-                  }`}
-                >
-                  {plan.popular && (
-                    <div className="absolute top-0 right-6 -translate-y-1/2 bg-signal text-ink text-[11px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
-                      Most Popular
-                    </div>
-                  )}
-                  <div className="mb-4">
-                    <h3 className="text-xl font-medium text-text-primary-v4">{plan.name}</h3>
-                    <div className="mt-3 flex items-baseline gap-1">
-                      <span className="text-4xl font-bold text-text-primary-v4">{plan.price}</span>
-                      <span className="text-xs text-text-muted-v4 font-mono">{plan.unit}</span>
-                    </div>
-                    <div className="mt-3 space-y-1 text-xs font-mono text-text-secondary-v4 border-t border-hairline pt-3">
-                      <div className="text-signal font-semibold">{plan.sites}</div>
-                      <div className="text-text-primary-v4">{plan.storage}</div>
-                      <div className="text-text-muted-v4">{plan.traffic}</div>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-3 mb-8 flex-1 border-t border-hairline pt-4">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start text-xs text-text-secondary-v4">
-                        <Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link
-                    href="/portal/signup"
-                    className={`w-full justify-center rounded-btn py-2.5 text-sm font-semibold transition-all ${
-                      plan.popular ? 'v4-btn-primary' : 'v4-btn-secondary'
-                    }`}
-                  >
-                    {plan.ctaText}
-                  </Link>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
+          <TierPageClient tier="wordpress" tierName="Managed WordPress" />
         </div>
       </div>
 

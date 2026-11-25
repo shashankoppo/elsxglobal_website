@@ -5,6 +5,7 @@ import { PanelCard } from '@/components/ui/panel-card';
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
 import Link from 'next/link';
 import { Container, Cpu, Settings, Lock, Network, Maximize, Terminal, Server, Check } from 'lucide-react';
+import { ProductPricingSection } from '@/components/hosting/ProductPricingSection';
 
 export default function VaultContainersPage() {
   return (
@@ -193,100 +194,7 @@ node-pool-abc-3   Ready    <none>   2m    v1.28.0`}
         </div>
       </div>
 
-      {/* Pricing */}
-      <section className="v4-section border-t border-hairline">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="v4-display text-text-primary-v4 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-text-secondary-v4">Higher than GoDaddy. Way below AWS.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* Starter tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">STARTER</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Run 3 managed container nodes with automatic ingress and SSL.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 3 Managed container nodes</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 6 vCPU total compute capacity</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 12GB RAM total memory</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Automatic ingress &amp; TLS certificates</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Docker Compose &amp; Git push to deploy</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=containers-starter" className="v4-btn-secondary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-            {/* Pro tier — highlighted */}
-            <div className="v4-panel rounded-2xl p-6 border-2 border-signal relative flex flex-col justify-between">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-signal text-ink text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
-              <div>
-                <div className="text-signal text-sm font-medium mb-2">PRO</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹4,999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">Production cluster for microservices with autoscaling &amp; load balancing.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 10 Managed container nodes</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 20 vCPU total compute capacity</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 40GB RAM total memory</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Dedicated Anycast Load Balancer</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Horizontal Pod Autoscaling (HPA)</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=containers-pro" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-            {/* Enterprise tier */}
-            <div className="v4-panel rounded-2xl p-6 border border-hairline flex flex-col justify-between">
-              <div>
-                <div className="text-text-muted-v4 text-sm font-medium mb-2">ENTERPRISE</div>
-                <div className="text-3xl font-bold text-text-primary-v4 mb-1">₹14,999 <span className="text-sm font-normal text-text-muted-v4">/mo</span></div>
-                <p className="text-text-secondary-v4 text-sm mb-6">High-density bare-metal cluster with GPU acceleration and private VPC.</p>
-                <ul className="space-y-3 mb-8 text-sm">
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Unlimited container nodes</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Dedicated bare-metal hardware</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> NVIDIA GPU node support</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> Multi-zone high availability cluster</li>
-                  <li className="flex items-center text-text-secondary-v4"><Check className="w-4 h-4 text-signal mr-2.5 flex-shrink-0" /> 24/7 DevOps engineer &amp; 99.99% SLA</li>
-                </ul>
-              </div>
-              <Link href="/vaulthost/checkout?plan=containers-enterprise" className="v4-btn-primary rounded-btn w-full text-center block py-2.5">Get Started</Link>
-            </div>
-          </div>
-          {/* Competitor comparison */}
-          <div className="border border-hairline rounded-2xl overflow-hidden mb-12">
-            <table className="w-full text-sm">
-              <thead className="bg-ink-surface-2 text-text-secondary-v4">
-                <tr>
-                  <th className="py-3 px-4 text-left font-medium">Provider</th>
-                  <th className="py-3 px-4 text-left font-medium">Pricing</th>
-                  <th className="py-3 px-4 text-left font-medium">Comparison / Advantage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                <tr className="bg-signal/5">
-                  <td className="py-3 px-4 font-semibold text-signal">VaultHost Containers</td>
-                  <td className="py-3 px-4 font-medium text-text-primary-v4">₹999 Starter / ₹4,999 Pro / ₹14,999 Ent</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Zero control plane fees, managed K3s, integrated TLS &amp; load balancing, India bare metal</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">AWS ECS / Fargate</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹5,500 - ₹30,000/mo</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Per-second CPU and RAM charges rapidly accumulate under continuous load</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">Google Cloud Run</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹4,500 - ₹22,000/mo</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Cold starts on scale-down and strict per-request execution timeouts</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-text-primary-v4">GoDaddy VPS</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">₹1,200 - ₹6,000/mo</td>
-                  <td className="py-3 px-4 text-text-secondary-v4">Raw unmanaged VM without container orchestration, rolling deploys, or health healing</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      <ProductPricingSection productId="containers" />
     </div>
   );
 }

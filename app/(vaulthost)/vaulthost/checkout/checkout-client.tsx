@@ -11,6 +11,13 @@ import {
 import Link from 'next/link';
 import { CLOUD_PRICING, DOMAIN_PRICING } from '@/lib/data/cloud-pricing';
 import { resolvePlan } from '@/lib/data/all-plans';
+import {
+  calculateCheckoutTotals,
+  calculateCustomComputeMonthly,
+  CYCLE_CONFIG as cycleConfig,
+  normalizeCycle,
+  type CanonicalBillingCycle as BillingCycle,
+} from '@/lib/billing/pricingMath';
 
 interface Plan {
   id: string;
@@ -21,15 +28,6 @@ interface Plan {
   features: string[];
   short_description: string;
 }
-
-type BillingCycle = 'pay_as_you_go' | 'monthly' | 'semi_annual' | 'annual';
-
-const cycleConfig: Record<BillingCycle, { label: string; multiplier: number; discount: number; suffix: string }> = {
-  pay_as_you_go: { label: 'Pay As You Go', multiplier: 1, discount: 0, suffix: 'mo (metered)' },
-  monthly: { label: '1 Month', multiplier: 1, discount: 0, suffix: 'mo' },
-  semi_annual: { label: '6 Months', multiplier: 6, discount: 0.05, suffix: '6 mo' },
-  annual: { label: '12 Months', multiplier: 12, discount: 0.167, suffix: 'yr' },
-};
 
 export function CheckoutClient() {
   const router = useRouter();
@@ -76,45 +74,43 @@ export function CheckoutClient() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [fulfilledImmediately, setFulfilledImmediately] = useState(false);
   const [razorpayLoading, setRazorpayLoading] = useState(false);
   const [dbAddons, setDbAddons] = useState<any[]>([]);
   const [couponCode, setCouponCode] = useState('');
   const [coupon, setCoupon] = useState<{ code: string; discount_type: string; discount_value: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [hostname, setHostname] = useState('');
+  const [sshPublicKey, setSshPublicKey] = useState('');
+  const [includeGst, setIncludeGst] = useState(false);
+  const [useCredits, setUseCredits] = useState(false);
+  const [walletBalanceInr, setWalletBalanceInr] = useState(0);
 
   useEffect(() => {
     const init = async () => {
       const supabase = createClient();
 
-      // Parse billing cycle from query params if specified
+      // Parse billing cycle from query params cleanly via pricingMath
       const rawBilling = searchParams.get('billing');
-      if (rawBilling === 'pay_as_you_go' || rawBilling === 'payg') {
-        setBillingCycle('pay_as_you_go');
-      } else if (rawBilling === 'semi_annual' || rawBilling === '6') {
-        setBillingCycle('semi_annual');
-      } else if (rawBilling === 'annual' || rawBilling === '12') {
-        setBillingCycle('annual');
-      } else if (rawBilling === 'monthly' || rawBilling === '1') {
-        setBillingCycle('monthly');
+      if (rawBilling) {
+        setBillingCycle(normalizeCycle(rawBilling));
       }
 
       if (planId === 'custom') {
         const vcpu = Number(searchParams.get('vcpu') || 4);
         const ram = Number(searchParams.get('ram') || 8);
         const storage = Number(searchParams.get('storage') || 100);
-        
-        // AWS-benchmarked rates: 4% below AWS on-demand (t3/c5 on-demand benchmark)
-        const customPrice = Math.round((vcpu * 1488) + (ram * 211) + (storage * 6.7));
-        
+        const customPrice = calculateCustomComputeMonthly(vcpu, ram, storage);
+
         setPlan({
           id: 'custom',
           name: `Custom Cloud Compute`,
           tier: 'cloud',
           price_monthly: customPrice,
-          price_annual: Math.round(customPrice * 12 * 0.833), // 16.7% discount on annual
+          price_annual: Math.round(customPrice * 12 * 0.833),
           features: [`${vcpu} vCPUs`, `${ram}GB RAM`, `${storage}GB NVMe Storage`, `Auto-scaling enabled`],
-          short_description: 'Custom configured cloud instance',
+          short_description: 'Custom configured cloud instance (3-5% below AWS)',
         });
       } else {
         try {
@@ -127,12 +123,10 @@ export function CheckoutClient() {
           if (planData) {
             setPlan(planData as any);
           } else {
-            const resolved = resolvePlan(planId, searchParams);
-            setPlan(resolved);
+            setPlan(resolvePlan(planId, searchParams));
           }
         } catch {
-          const resolved = resolvePlan(planId, searchParams);
-          setPlan(resolved);
+          setPlan(resolvePlan(planId, searchParams));
         }
       }
 
@@ -144,7 +138,21 @@ export function CheckoutClient() {
       setPaymentSettings(psData);
 
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      const authUser = session?.user || null;
+      setUser(authUser);
+
+      if (authUser) {
+        try {
+          const { data: cb } = await supabase
+            .from('credit_balances')
+            .select('balance_paise')
+            .eq('user_id', authUser.id)
+            .maybeSingle();
+          if (cb?.balance_paise && cb.balance_paise > 0) {
+            setWalletBalanceInr(Math.floor(cb.balance_paise / 100));
+          }
+        } catch {}
+      }
 
       const { data: addonsData, error: addonsError } = await supabase
         .from('hosting_addons')
@@ -162,21 +170,28 @@ export function CheckoutClient() {
   const basePrice = plan ? Number(plan.price_monthly) : 0;
   const cycle = cycleConfig[billingCycle];
   const addonPrices: Record<string, number> = dbAddons.reduce((acc: any, addon: any) => {
-    acc[addon.id] = addon.price_monthly;
+    acc[addon.id] = Number(addon.price_monthly ?? addon.price ?? 0);
     return acc;
   }, {});
   const panelPrice = panel !== 'none' && panel !== 'aapanel' ? (panel === 'cpanel' ? 1500 : panel === 'plesk' ? 800 : 500) : 0;
   const addonTotal = addons.reduce((sum, id) => sum + (addonPrices[id] || 0), 0);
-  const subtotal = (basePrice + panelPrice) * cycle.multiplier * (1 - cycle.discount) + addonTotal * cycle.multiplier;
-  const couponDiscount = coupon
-    ? coupon.discount_type === 'percentage'
-      ? Math.round(subtotal * coupon.discount_value / 100)
-      : Math.min(Math.round(coupon.discount_value), Math.round(subtotal))
-    : 0;
-  const amount = Math.max(0, Math.round(subtotal - couponDiscount));
-  const savings = (billingCycle === 'semi_annual' || billingCycle === 'annual')
-    ? Math.round(basePrice * cycle.multiplier - basePrice * cycle.multiplier * (1 - cycle.discount))
-    : 0;
+
+  const math = calculateCheckoutTotals({
+    baseMonthly: basePrice,
+    panelMonthly: panelPrice,
+    addonMonthlyTotal: addonTotal,
+    billingCycle,
+    planTier: plan?.tier,
+    coupon,
+    availableCreditInr: walletBalanceInr,
+    applyWalletCredit: useCredits,
+    includeGst,
+  });
+
+  const subtotal = math.subtotalBeforeCoupon;
+  const couponDiscount = math.couponDiscount;
+  const amount = math.payableTotal;
+  const savings = math.cycleSavings;
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -211,15 +226,25 @@ export function CheckoutClient() {
 
     const res = await fetch('/api/checkout/create', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          planId: plan.id, planName: plan.name, planTier: plan.tier,
-          billingCycle, amount, domain, os, panel, location, user, addons,
+          planId: plan.id,
+          planName: plan.name,
+          planTier: plan.tier,
+          billingCycle,
+          domain,
+          os,
+          panel,
+          location,
+          hostname: hostname.trim(),
+          ssh_public_key: sshPublicKey.trim(),
+          addons,
           coupon_code: coupon?.code || null,
-          coupon_discount: couponDiscount || 0,
+          include_gst: includeGst,
+          use_credits: useCredits,
           custom_vcpu: plan.id === 'custom' ? Number(searchParams.get('vcpu') || 4) : undefined,
           custom_ram: plan.id === 'custom' ? Number(searchParams.get('ram') || 8) : undefined,
           custom_storage: plan.id === 'custom' ? Number(searchParams.get('storage') || 100) : undefined
@@ -232,9 +257,12 @@ export function CheckoutClient() {
         return null;
       }
 
-      const { id } = await res.json();
-      setOrderId(id);
-    return id;
+      const resJson = await res.json();
+      setOrderId(resJson.id);
+      if (resJson.fulfilledImmediately) {
+        setFulfilledImmediately(true);
+      }
+    return resJson;
   };
 
   const handlePaymentSubmit = async () => {
@@ -246,9 +274,20 @@ export function CheckoutClient() {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       let finalOrderId = orderId;
+      let wasAutoFulfilled = fulfilledImmediately;
+
       if (!finalOrderId) {
-        finalOrderId = await handleCreateOrder();
-        if (!finalOrderId) { setSubmitting(false); return; }
+        const created = await handleCreateOrder();
+        if (!created?.id) { setSubmitting(false); return; }
+        finalOrderId = created.id;
+        wasAutoFulfilled = Boolean(created.fulfilledImmediately);
+      }
+
+      // Free tier, 100% coupon, or paid completely via Wallet Credits
+      if (wasAutoFulfilled || amount === 0) {
+        setConfirmed(true);
+        setSubmitting(false);
+        return;
       }
 
       if (paymentMethod === 'razorpay') {
@@ -446,67 +485,101 @@ export function CheckoutClient() {
               Domain & Server Configuration
             </h2>
             <div className="space-y-5">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Primary Domain</label>
-                <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={domain}
-                    onChange={(e) => setDomain(e.target.value)}
-                    placeholder="example.com"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-background border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
+              <div className={math.isFixedAnnualProduct ? '' : 'grid sm:grid-cols-2 gap-4'}>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Primary Domain</label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value)}
+                      placeholder="example.com"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-background border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
                 </div>
+                {!math.isFixedAnnualProduct && (
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Server Hostname <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
+                    <input
+                      type="text"
+                      value={hostname}
+                      onChange={(e) => setHostname(e.target.value)}
+                      placeholder="node-01.example.com"
+                      className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Operating System</label>
-                <div className="grid sm:grid-cols-2 gap-2">
-                  {osOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      onClick={() => setOs(opt.id)}
-                      className={`p-3 rounded-xl border-2 text-left transition-colors ${os === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
-                    >
-                      <p className="text-sm font-medium">{opt.label}</p>
-                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {!math.isFixedAnnualProduct && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Operating System</label>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      {osOptions.map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setOs(opt.id)}
+                          className={`p-3 rounded-xl border-2 text-left transition-colors ${os === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+                        >
+                          <p className="text-sm font-medium">{opt.label}</p>
+                          <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Control Panel</label>
-                <div className="grid sm:grid-cols-2 gap-2">
-                  {panelOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      onClick={() => setPanel(opt.id)}
-                      className={`p-3 rounded-xl border-2 text-left transition-colors ${panel === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
-                    >
-                      <p className="text-sm font-medium">{opt.label}</p>
-                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">
+                      SSH Public Key <span className="text-xs text-muted-foreground font-normal">(optional — injected via Cloud-Init for passwordless root access)</span>
+                    </label>
+                    <textarea
+                      value={sshPublicKey}
+                      onChange={(e) => setSshPublicKey(e.target.value)}
+                      placeholder="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... user@laptop"
+                      rows={2}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Server Location</label>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {locationOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      onClick={() => setLocation(opt.id)}
-                      className={`p-3 rounded-xl border-2 text-left transition-colors ${location === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
-                    >
-                      <p className="text-sm font-medium">{opt.label}</p>
-                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Control Panel</label>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      {panelOptions.map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setPanel(opt.id)}
+                          className={`p-3 rounded-xl border-2 text-left transition-colors ${panel === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+                        >
+                          <p className="text-sm font-medium">{opt.label}</p>
+                          <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Server Location</label>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {locationOptions.map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setLocation(opt.id)}
+                          className={`p-3 rounded-xl border-2 text-left transition-colors ${location === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+                        >
+                          <p className="text-sm font-medium">{opt.label}</p>
+                          <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="text-sm font-medium mb-4 block text-lg">Optional Add-ons & Licensing</label>
@@ -646,14 +719,33 @@ export function CheckoutClient() {
             )}
 
             {/* Pay button with trust badges */}
-            <button
-              onClick={handlePaymentSubmit}
-              disabled={!paymentMethod || submitting || ((paymentMethod === 'upi_manual' || paymentMethod === 'bank_transfer') && !proofUrl)}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground font-medium disabled:opacity-50"
-            >
-              {razorpayLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-              {razorpayLoading ? 'Opening Razorpay...' : submitting ? 'Processing...' : `Pay Rs ${amount.toLocaleString('en-IN')} Now`}
-            </button>
+            {amount === 0 ? (
+              <button
+                type="button"
+                onClick={handlePaymentSubmit}
+                disabled={submitting}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-good text-black font-semibold disabled:opacity-50"
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {submitting ? 'Activating...' : 'Activate Free / Credit Order Now'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePaymentSubmit}
+                disabled={!paymentMethod || submitting || ((paymentMethod === 'upi_manual' || paymentMethod === 'bank_transfer') && !proofUrl)}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground font-medium disabled:opacity-50"
+              >
+                {razorpayLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                {razorpayLoading
+                  ? 'Opening Razorpay...'
+                  : submitting
+                    ? 'Processing...'
+                    : billingCycle === 'pay_as_you_go' && !math.isFixedAnnualProduct
+                      ? `Authorize Prepaid Cap ₹${amount.toLocaleString('en-IN')} (₹${math.hourlyRate}/hr)`
+                      : `Pay ₹${amount.toLocaleString('en-IN')} Now`}
+              </button>
+            )}
 
             {/* Trust badges */}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
@@ -676,7 +768,7 @@ export function CheckoutClient() {
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <h3 className="font-medium text-sm">{plan.name}</h3>
-                    <p className="text-xs text-muted-foreground capitalize">{plan.tier} hosting</p>
+                    <p className="text-xs text-muted-foreground capitalize">{plan.tier} {math.isFixedAnnualProduct ? 'registration' : 'hosting'}</p>
                   </div>
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
@@ -687,58 +779,73 @@ export function CheckoutClient() {
                 </div>
               </div>
 
-              {/* Billing cycle toggle */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium">Billing Cycle</label>
-                  <span className="text-[11px] text-muted-foreground font-mono">3-5% below AWS/Azure</span>
+              {/* Billing cycle toggle (hidden for fixed annual domain/SSL products) */}
+              {math.isFixedAnnualProduct ? (
+                <div className="mb-4 p-3 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold">Term: 1 Year Registration</p>
+                    <p className="text-[11px] text-muted-foreground">Standard ICANN / Registry annual term</p>
+                  </div>
+                  <span className="text-xs font-mono font-semibold text-primary">1 Year</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {(Object.keys(cycleConfig) as BillingCycle[]).map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setBillingCycle(c)}
-                      className={`p-2.5 rounded-xl border-2 text-center transition-all ${
-                        billingCycle === c
-                          ? 'border-primary bg-primary/10 shadow-sm'
-                          : 'border-border/60 hover:border-border'
-                      }`}
-                    >
-                      <p className="text-xs font-semibold leading-tight">{cycleConfig[c].label}</p>
-                      {cycleConfig[c].discount > 0 ? (
-                        <p className="text-[10px] text-good mt-0.5 font-medium">{Math.round(cycleConfig[c].discount * 100)}% off</p>
-                      ) : c === 'pay_as_you_go' ? (
-                        <p className="text-[10px] text-primary mt-0.5 font-medium">Hourly Metered</p>
-                      ) : (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">On-Demand</p>
-                      )}
-                    </button>
-                  ))}
+              ) : (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium">Billing Cycle</label>
+                    <span className="text-[11px] text-muted-foreground font-mono">3-5% below AWS/Azure</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {(Object.keys(cycleConfig) as BillingCycle[]).map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setBillingCycle(c)}
+                        className={`p-2.5 rounded-xl border-2 text-center transition-all ${
+                          billingCycle === c
+                            ? 'border-primary bg-primary/10 shadow-sm'
+                            : 'border-border/60 hover:border-border'
+                        }`}
+                      >
+                        <p className="text-xs font-semibold leading-tight">{cycleConfig[c].label}</p>
+                        {cycleConfig[c].discount > 0 ? (
+                          <p className="text-[10px] text-good mt-0.5 font-medium">{Math.round(cycleConfig[c].discount * 100)}% off</p>
+                        ) : c === 'pay_as_you_go' ? (
+                          <p className="text-[10px] text-primary mt-0.5 font-medium">Hourly Metered</p>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">On-Demand</p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {billingCycle === 'pay_as_you_go' && (
+                    <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+                      Pay As You Go authorizes a 30-day prepaid cap (₹{math.subtotalBeforeCoupon.toLocaleString('en-IN')}). Usage meters at <span className="font-mono text-foreground">₹{math.hourlyRate}/hr</span>; unused balance stays in your wallet.
+                    </p>
+                  )}
                 </div>
-              </div>
+              )}
 
               {/* Price breakdown */}
               <div className="space-y-2 mb-4 pb-4 border-b border-border">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Base ({cycle.label})</span>
+                  <span className="text-muted-foreground">Base ({math.isFixedAnnualProduct ? '1 Year' : cycle.label})</span>
                   <span>
-                    {billingCycle === 'pay_as_you_go'
-                      ? `₹${(basePrice / 730).toFixed(2)}/hr (est. ₹${basePrice.toLocaleString('en-IN')}/mo)`
-                      : `₹${Math.round(basePrice * cycle.multiplier * (1 - cycle.discount)).toLocaleString('en-IN')}`
+                    {billingCycle === 'pay_as_you_go' && !math.isFixedAnnualProduct
+                      ? `₹${math.hourlyRate}/hr (cap ₹${math.baseTermAmount.toLocaleString('en-IN')})`
+                      : `₹${math.baseTermAmount.toLocaleString('en-IN')}`
                     }
                   </span>
                 </div>
-                {panelPrice > 0 && (
+                {panelPrice > 0 && !math.isFixedAnnualProduct && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground capitalize">{panel} panel</span>
-                    <span>₹{(panelPrice * cycle.multiplier).toLocaleString('en-IN')}</span>
+                    <span>₹{math.panelTermAmount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 {addons.map((id) => (
                   <div key={id} className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground capitalize">{id} addon</span>
-                    <span>₹{(addonPrices[id] * cycle.multiplier).toLocaleString('en-IN')}</span>
+                    <span className="text-muted-foreground capitalize">{dbAddons.find(a => a.id === id)?.name || id}</span>
+                    <span>₹{((addonPrices[id] || 0) * math.multiplier).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
                 {savings > 0 && (
@@ -752,6 +859,32 @@ export function CheckoutClient() {
                     <span className="text-good inline-flex items-center gap-1"><Tag className="h-3 w-3" />Coupon ({coupon.code})</span>
                     <span className="text-good">- ₹{couponDiscount.toLocaleString('en-IN')}</span>
                   </div>
+                )}
+                {math.taxAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">IGST / GST (18%)</span>
+                    <span>+ ₹{math.taxAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {math.creditApplied > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-good">Wallet Credit Applied</span>
+                    <span className="text-good">- ₹{math.creditApplied.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Tax & Wallet Options */}
+              <div className="space-y-2 mb-4">
+                <label className="flex items-center justify-between text-xs cursor-pointer p-2 rounded-lg bg-muted/20">
+                  <span className="text-muted-foreground">Include 18% GST Tax Invoice</span>
+                  <input type="checkbox" checked={includeGst} onChange={(e) => setIncludeGst(e.target.checked)} className="rounded" />
+                </label>
+                {walletBalanceInr > 0 && (
+                  <label className="flex items-center justify-between text-xs cursor-pointer p-2 rounded-lg bg-good/5 border border-good/20">
+                    <span className="text-good font-medium">Apply Wallet Credit (₹{walletBalanceInr.toLocaleString('en-IN')} avail)</span>
+                    <input type="checkbox" checked={useCredits} onChange={(e) => setUseCredits(e.target.checked)} className="rounded" />
+                  </label>
                 )}
               </div>
 
@@ -767,6 +900,7 @@ export function CheckoutClient() {
                     className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <button
+                    type="button"
                     onClick={applyCoupon}
                     disabled={couponLoading || !couponCode.trim() || !!coupon}
                     className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50 shrink-0"
@@ -775,21 +909,25 @@ export function CheckoutClient() {
                   </button>
                 </div>
                 {couponError && <p className="text-xs text-destructive mt-1">{couponError}</p>}
-                {coupon && <p className="text-xs text-good mt-1">✓ Coupon applied — {coupon.discount_type === 'percentage' ? `${coupon.discount_value}% off` : `Rs ${coupon.discount_value} off`}</p>}
+                {coupon && <p className="text-xs text-good mt-1">✓ Coupon applied — {coupon.discount_type === 'percentage' ? `${coupon.discount_value}% off` : `₹${coupon.discount_value} off`}</p>}
               </div>
 
               {/* Total */}
               <div className="flex items-center justify-between mb-4">
-                <span className="font-semibold">Total</span>
+                <span className="font-semibold">Total Payable</span>
                 <div className="text-right">
                   <p className="text-2xl font-bold">
-                    {billingCycle === 'pay_as_you_go'
-                      ? `₹${(amount / 730).toFixed(2)}/hr`
+                    {billingCycle === 'pay_as_you_go' && !math.isFixedAnnualProduct
+                      ? `₹${math.hourlyRate}/hr`
                       : `₹${amount.toLocaleString('en-IN')}`
                     }
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {billingCycle === 'pay_as_you_go' ? 'billed per hour active' : `per ${cycle.suffix}`}
+                    {billingCycle === 'pay_as_you_go' && !math.isFixedAnnualProduct
+                      ? `prepaid cap ₹${amount.toLocaleString('en-IN')}/mo`
+                      : math.isFixedAnnualProduct
+                        ? 'for 1 year registration'
+                        : `per ${cycle.suffix}`}
                   </p>
                 </div>
               </div>

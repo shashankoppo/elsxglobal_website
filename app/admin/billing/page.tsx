@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { PanelCard } from '@/components/ui/panel-card';
+import { adminFetch } from '../components/admin-fetch';
 import {
   TrendingUp, Users, CreditCard, RefreshCw, AlertTriangle,
   Download, Plus, Search, Filter, ChevronDown, IndianRupee,
@@ -380,7 +381,8 @@ export default function AdminBillingPage() {
   const [balances, setBalances] = useState<CustomerCreditBalance[]>(INITIAL_BALANCES);
   const [resellers, setResellers] = useState<ResellerItem[]>(INITIAL_RESELLERS);
   const [failedPayments, setFailedPayments] = useState<FailedPaymentItem[]>(INITIAL_FAILED_PAYMENTS);
-  const [upcomingRenewals] = useState<RenewalItem[]>(INITIAL_UPCOMING_RENEWALS);
+  const [upcomingRenewals, setUpcomingRenewals] = useState<RenewalItem[]>(INITIAL_UPCOMING_RENEWALS);
+  const [liveInvoices, setLiveInvoices] = useState<any[]>([]);
 
   // Subscriptions Filter & Search
   const [subStatusFilter, setSubStatusFilter] = useState<string>('all');
@@ -427,8 +429,15 @@ export default function AdminBillingPage() {
   const refreshBillingData = async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch Subscriptions
-      const subRes = await fetch('/api/admin/billing/subscriptions?limit=50');
+      const [subRes, credRes, invRes, svcRes, txRes] = await Promise.all([
+        fetch('/api/admin/billing/subscriptions?limit=50'),
+        fetch('/api/admin/billing/credits?limit=50'),
+        adminFetch('get-invoices'),
+        adminFetch('list-services'),
+        adminFetch('get-transactions'),
+      ]);
+
+      // 1. Live Subscriptions
       if (subRes.ok) {
         const json = await subRes.json();
         if (json.subscriptions && json.subscriptions.length > 0) {
@@ -451,8 +460,7 @@ export default function AdminBillingPage() {
         }
       }
 
-      // 2. Fetch Credits
-      const credRes = await fetch('/api/admin/billing/credits?limit=50');
+      // 2. Live Credits
       if (credRes.ok) {
         const json = await credRes.json();
         if (json.ledger && json.ledger.length > 0) {
@@ -481,6 +489,54 @@ export default function AdminBillingPage() {
           setBalances(mappedBalances);
         }
       }
+
+      // 3. Live Invoices for GST-R1 Compliance & Unpaid monitoring
+      if (invRes.ok) {
+        const invJson = await invRes.json();
+        const rows = invJson.data || [];
+        if (rows.length > 0) {
+          setLiveInvoices(rows);
+          setNextInvoiceNum(rows.length + 483);
+        }
+      }
+
+      // 4. Live Upcoming Renewals from Active Hosting Services
+      if (svcRes.ok) {
+        const svcJson = await svcRes.json();
+        const svcs = (svcJson.data || []).filter((s: any) => s.status === 'active' && (s.next_renewal_at || s.renewal_date));
+        if (svcs.length > 0) {
+          setUpcomingRenewals(
+            svcs.slice(0, 12).map((s: any) => ({
+              id: s.id,
+              customerEmail: s.domain || s.hostname || `tenant-${String(s.user_id || '').slice(0, 6)}@vaulthost.cloud`,
+              planName: s.plan_name || 'Managed Compute',
+              renewalDate: String(s.next_renewal_at || s.renewal_date).slice(0, 10),
+              amountPaise: Math.round((Number(s.price_monthly || s.amount || 999) || 999) * 100),
+              autoRenew: true,
+            }))
+          );
+        }
+      }
+
+      // 5. Live Failed / Pending Transactions
+      if (txRes.ok) {
+        const txJson = await txRes.json();
+        const failed = (txJson.data || []).filter((t: any) => ['failed', 'rejected', 'overdue'].includes(String(t.status || '').toLowerCase()));
+        if (failed.length > 0) {
+          setFailedPayments(
+            failed.slice(0, 10).map((t: any) => ({
+              id: t.id,
+              customerEmail: t.customer_email || `user-${String(t.user_id || '').slice(0, 6)}`,
+              amountPaise: Math.round(Number(t.amount_inr || t.amount || 0) * 100),
+              reason: t.notes || t.gateway_error || `Status: ${t.status}`,
+              date: String(t.created_at || '').slice(0, 10),
+              invoiceId: t.invoice_id || t.order_id || '—',
+              gateway: t.gateway || t.payment_method || 'razorpay',
+            }))
+          );
+        }
+      }
+
       showToast('Billing data synced with live control plane');
     } catch (e) {
       console.warn('Using baseline billing state:', e);
@@ -745,6 +801,29 @@ export default function AdminBillingPage() {
       'Cess Amount',
     ];
 
+    const liveRows = liveInvoices
+      .filter((inv) => !taxPeriod || String(inv.created_at || '').startsWith(taxPeriod))
+      .map((inv) => {
+        const totalInr = Number(inv.total_inr ?? inv.amount ?? 0);
+        const subtotalInr = Number(inv.subtotal_inr ?? (totalInr / 1.18));
+        const invDate = inv.created_at ? new Date(inv.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '';
+        return [
+          inv.gst_number || 'URP',
+          `"${String(inv.customer_name || inv.billing_name || 'VaultHost Customer').replace(/"/g, '""')}"`,
+          inv.invoice_number || `${invoiceSeriesPrefix}-${String(inv.id).slice(0, 8)}`,
+          invDate,
+          totalInr.toFixed(2),
+          inv.place_of_supply || '27-Maharashtra',
+          'N',
+          '',
+          inv.gst_number ? 'Regular' : 'B2C Small',
+          '',
+          Number(inv.tax_inr || inv.tax || 0) > 0 ? '18.00' : '0.00',
+          subtotalInr.toFixed(2),
+          '0.00',
+        ];
+      });
+
     const sampleGstRows = [
       ['27AAACG0182E1Z8', 'CloudOps Solutions India Pvt Ltd', `${invoiceSeriesPrefix}/2026-27/0478`, '01-11-2026', '10618.82', '27-Maharashtra', 'N', '', 'Regular', '', '18.00', '8999.00', '0.00'],
       ['29AABCN4421P1Z4', 'Nexus Edge Technologies', `${invoiceSeriesPrefix}/2026-27/0479`, '04-11-2026', '28910.00', '29-Karnataka', 'N', '', 'Regular', '', '18.00', '24500.00', '0.00'],
@@ -753,7 +832,8 @@ export default function AdminBillingPage() {
       ['27AABTZ7721K1ZM', 'MediScan Diagnostic Ltd', `${invoiceSeriesPrefix}/2026-27/0482`, '10-11-2026', '4956.00', '27-Maharashtra', 'N', '', 'Regular', '', '18.00', '4200.00', '0.00'],
     ];
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...sampleGstRows.map(e => e.join(','))].join('\n');
+    const exportRows = liveRows.length > 0 ? liveRows : sampleGstRows;
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...exportRows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -761,7 +841,7 @@ export default function AdminBillingPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`GST-R1 export generated for period ${taxPeriod}`);
+    showToast(`GST-R1 export generated (${exportRows.length} rows) for ${taxPeriod}`);
   };
 
   const getStatusBadge = (status: SubscriptionItem['status']) => {

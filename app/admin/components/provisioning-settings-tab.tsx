@@ -14,14 +14,34 @@ import {
   Eye,
   EyeOff,
   Save,
+  Activity,
+  CheckCircle2,
+  XCircle,
+  Terminal,
+  ChevronDown,
+  ChevronUp,
+  Box,
+  Zap,
 } from 'lucide-react';
 import { ToggleSwitch } from './payments-settings-tab';
+
+interface BackendTestResult {
+  ok: boolean;
+  configured: boolean;
+  reachable: boolean;
+  statusCode?: number;
+  latencyMs?: number;
+  message?: string;
+}
 
 export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success' | 'error', m: string) => void }) {
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSecret, setShowSecret] = useState<Record<string, boolean>>({});
+  const [testingBackend, setTestingBackend] = useState<string | null>(null);
+  const [backendStatus, setBackendStatus] = useState<Record<string, BackendTestResult>>({});
+  const [showGuideDrawer, setShowGuideDrawer] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -49,6 +69,54 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
     setSaving(false);
   };
 
+  const testBackend = async (backend: string) => {
+    setTestingBackend(backend);
+    try {
+      const res = await adminFetch('test-backend-service', { backend });
+      const data = await res.json().catch(() => ({ ok: false, configured: false, reachable: false, message: 'Probe error' }));
+      setBackendStatus((prev) => ({ ...prev, [backend]: data }));
+      if (data.reachable) {
+        showToast('success', `${backend.toUpperCase()} reachable (${data.latencyMs ?? 0}ms)`);
+      } else {
+        showToast('error', data.message || `${backend.toUpperCase()} unreachable`);
+      }
+    } catch {
+      showToast('error', `Failed to probe ${backend}`);
+    }
+    setTestingBackend(null);
+  };
+
+  const renderTestButton = (backend: string) => {
+    const status = backendStatus[backend];
+    const isTesting = testingBackend === backend;
+    return (
+      <div className="flex items-center gap-2">
+        {status && (
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium ${
+              status.reachable
+                ? 'bg-emerald-500/10 text-emerald-600'
+                : 'bg-red-500/10 text-red-600'
+            }`}
+            title={status.message || ''}
+          >
+            {status.reachable ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+            {status.reachable ? `Online · ${status.latencyMs ?? 0}ms` : status.configured ? `Offline (${status.statusCode || 'ERR'})` : 'Not configured'}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => testBackend(backend)}
+          disabled={isTesting}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted hover:bg-muted/80 text-[11px] font-medium text-foreground transition-colors disabled:opacity-50"
+        >
+          {isTesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Activity className="h-3 w-3" />}
+          Test Connection
+        </button>
+      </div>
+    );
+  };
+
   const toggleSecret = (key: string) => {
     setShowSecret(prev => ({ ...prev, [key]: !prev[key] }));
   };
@@ -63,24 +131,72 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
   return (
     <div className="max-w-3xl space-y-4 pb-12 animate-fade-in">
-      <div className="flex items-center justify-between pb-4 border-b border-border/50">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border/50">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Provisioning Engine</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Configure connections to your hypervisors, backends, and control panels.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Provisioning Engine &amp; Self-Hosted Backends</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">Configure connections, run live latency probes, or deploy stacks manually via CLI.</p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90 disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-          Save Changes
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGuideDrawer(!showGuideDrawer)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/80 text-[12px] font-medium text-foreground"
+          >
+            <Terminal className="h-3.5 w-3.5" />
+            Manual Setup CLI Guide
+            {showGuideDrawer ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90 disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Save Changes
+          </button>
+        </div>
       </div>
+
+      {showGuideDrawer && (
+        <div className="rounded-lg bg-muted/20 border border-border p-4 space-y-3 text-[12px]">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <Terminal className="h-4 w-4 text-primary" />
+              Manual Self-Hosted Setup CLI &amp; Docker Compose Reference
+            </h3>
+            <span className="text-[11px] font-mono text-muted-foreground">deploy/ &amp; deploy/ansible/</span>
+          </div>
+          <p className="text-muted-foreground">
+            Run any of the standalone Compose stacks on bare-metal or Proxmox LXC nodes, then save credentials below and click <strong>Test Connection</strong>.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3 font-mono text-[11px]">
+            <div className="rounded bg-background border border-border p-3 space-y-1">
+              <div className="font-semibold text-foreground font-sans">1. Docker Compose Stacks (Single/Multi-Node)</div>
+              <pre className="overflow-x-auto text-muted-foreground whitespace-pre-wrap">{`cd deploy && cp .env.example .env
+docker compose -f docker-compose.dns.yml up -d
+docker compose -f docker-compose.storage.yml up -d
+docker compose -f docker-compose.ai-gateway.yml up -d
+docker compose -f docker-compose.tunnel.yml up -d
+docker compose -f docker-compose.rabbitmq.yml up -d
+docker compose -f docker-compose.workers.yml up -d
+docker compose -f docker-compose.pages.yml up -d`}</pre>
+            </div>
+            <div className="rounded bg-background border border-border p-3 space-y-1">
+              <div className="font-semibold text-foreground font-sans">2. Ansible Proxmox LXC Automation</div>
+              <pre className="overflow-x-auto text-muted-foreground whitespace-pre-wrap">{`cd deploy/ansible
+ansible-galaxy install geerlingguy.docker community.general community.docker
+ansible-playbook -i inventory.yml create-lxcs.yml
+ansible-playbook -i inventory.yml deploy-services.yml
+# Ops CLI on server:
+./scripts/manage.sh status && ./scripts/manage.sh health`}</pre>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pterodactyl Config */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-3">
             <Globe className="h-4 w-4 text-muted-foreground" />
             <div>
@@ -88,7 +204,10 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
               <p className="text-[11px] text-muted-foreground">{settings.pterodactyl_enabled ? 'Active for Game/Node hosting' : 'Disabled'}</p>
             </div>
           </div>
-          <ToggleSwitch checked={settings.pterodactyl_enabled} onChange={(v: boolean) => setSettings({ ...settings, pterodactyl_enabled: v })} />
+          <div className="flex items-center gap-3">
+            {renderTestButton('pterodactyl')}
+            <ToggleSwitch checked={settings.pterodactyl_enabled} onChange={(v: boolean) => setSettings({ ...settings, pterodactyl_enabled: v })} />
+          </div>
         </div>
         
         {settings.pterodactyl_enabled && (
@@ -110,7 +229,7 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
       {/* Proxmox Config */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-3">
             <Server className="h-4 w-4 text-muted-foreground" />
             <div>
@@ -118,7 +237,10 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
               <p className="text-[11px] text-muted-foreground">{settings.proxmox_enabled ? 'Active for Cloud/VPS hosting' : 'Disabled'}</p>
             </div>
           </div>
-          <ToggleSwitch checked={settings.proxmox_enabled} onChange={(v: boolean) => setSettings({ ...settings, proxmox_enabled: v })} />
+          <div className="flex items-center gap-3">
+            {renderTestButton('proxmox')}
+            <ToggleSwitch checked={settings.proxmox_enabled} onChange={(v: boolean) => setSettings({ ...settings, proxmox_enabled: v })} />
+          </div>
         </div>
 
         {settings.proxmox_enabled && (
@@ -150,7 +272,7 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
       {/* HestiaCP Config */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-3">
             <Globe className="h-4 w-4 text-muted-foreground" />
             <div>
@@ -158,7 +280,10 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
               <p className="text-[11px] text-muted-foreground">{settings.hestiacp_enabled ? 'Active for Shared Hosting / Email' : 'Disabled'}</p>
             </div>
           </div>
-          <ToggleSwitch checked={settings.hestiacp_enabled} onChange={(v: boolean) => setSettings({ ...settings, hestiacp_enabled: v })} />
+          <div className="flex items-center gap-3">
+            {renderTestButton('hestiacp')}
+            <ToggleSwitch checked={settings.hestiacp_enabled} onChange={(v: boolean) => setSettings({ ...settings, hestiacp_enabled: v })} />
+          </div>
         </div>
         
         {settings.hestiacp_enabled && (
@@ -186,7 +311,7 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
       {/* CyberPanel Config */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-3">
             <Globe className="h-4 w-4 text-muted-foreground" />
             <div>
@@ -194,7 +319,10 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
               <p className="text-[11px] text-muted-foreground">{settings.cyberpanel_enabled ? 'Active for Shared Hosting / Email' : 'Disabled'}</p>
             </div>
           </div>
-          <ToggleSwitch checked={settings.cyberpanel_enabled} onChange={(v: boolean) => setSettings({ ...settings, cyberpanel_enabled: v })} />
+          <div className="flex items-center gap-3">
+            {renderTestButton('cyberpanel')}
+            <ToggleSwitch checked={settings.cyberpanel_enabled} onChange={(v: boolean) => setSettings({ ...settings, cyberpanel_enabled: v })} />
+          </div>
         </div>
         
         {settings.cyberpanel_enabled && (
@@ -222,12 +350,15 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
       {/* DNS Backend (PowerDNS) */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <Globe className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <h3 className="font-medium text-[13px]">DNS Backend (PowerDNS)</h3>
-            <p className="text-[11px] text-muted-foreground">Authoritative DNS cluster and automated zone provisioning.</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="font-medium text-[13px]">DNS Backend (PowerDNS)</h3>
+              <p className="text-[11px] text-muted-foreground">Authoritative DNS cluster and automated zone provisioning.</p>
+            </div>
           </div>
+          {renderTestButton('powerdns')}
         </div>
         <div className="space-y-3 mt-3 pt-3 border-t border-border/50">
           <div>
@@ -260,12 +391,15 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
       {/* Object Storage (MinIO) */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <HardDrive className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <h3 className="font-medium text-[13px]">Object Storage (MinIO)</h3>
-            <p className="text-[11px] text-muted-foreground">S3-compatible distributed blob storage backend.</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3">
+            <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="font-medium text-[13px]">Object Storage (MinIO)</h3>
+              <p className="text-[11px] text-muted-foreground">S3-compatible distributed blob storage backend.</p>
+            </div>
           </div>
+          {renderTestButton('minio')}
         </div>
         <div className="space-y-3 mt-3 pt-3 border-t border-border/50">
           <div>
@@ -310,12 +444,15 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
       {/* AI Gateway (LiteLLM) */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <Cpu className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <h3 className="font-medium text-[13px]">AI Gateway (LiteLLM)</h3>
-            <p className="text-[11px] text-muted-foreground">Universal LLM routing, token metering, and load balancing proxy.</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3">
+            <Cpu className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="font-medium text-[13px]">AI Gateway (LiteLLM)</h3>
+              <p className="text-[11px] text-muted-foreground">Universal LLM routing, token metering, and load balancing proxy.</p>
+            </div>
           </div>
+          {renderTestButton('litellm')}
         </div>
         <div className="space-y-3 mt-3 pt-3 border-t border-border/50">
           <div>
@@ -348,12 +485,15 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
       {/* Tunnels (FRP) */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <Share2 className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <h3 className="font-medium text-[13px]">Tunnels (FRP Reverse Proxy)</h3>
-            <p className="text-[11px] text-muted-foreground">Fast reverse proxy and zero-trust edge tunnels.</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3">
+            <Share2 className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="font-medium text-[13px]">Tunnels (FRP Reverse Proxy)</h3>
+              <p className="text-[11px] text-muted-foreground">Fast reverse proxy and zero-trust edge tunnels.</p>
+            </div>
           </div>
+          {renderTestButton('frp')}
         </div>
         <div className="space-y-3 mt-3 pt-3 border-t border-border/50">
           <div className="grid sm:grid-cols-2 gap-3">
@@ -398,12 +538,15 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
       {/* Queues (RabbitMQ) */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <Layers className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <h3 className="font-medium text-[13px]">Queues (RabbitMQ)</h3>
-            <p className="text-[11px] text-muted-foreground">AMQP message broker and worker task distribution.</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3">
+            <Layers className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="font-medium text-[13px]">Queues (RabbitMQ)</h3>
+              <p className="text-[11px] text-muted-foreground">AMQP message broker and worker task distribution.</p>
+            </div>
           </div>
+          {renderTestButton('rabbitmq')}
         </div>
         <div className="space-y-3 mt-3 pt-3 border-t border-border/50">
           <div className="grid sm:grid-cols-2 gap-3">
@@ -460,12 +603,15 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
 
       {/* Pages/CI-CD (Coolify) */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <Code2 className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <h3 className="font-medium text-[13px]">Pages / CI-CD (Coolify)</h3>
-            <p className="text-[11px] text-muted-foreground">Self-hosted Heroku/Netlify alternative for automated application deployments.</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3">
+            <Code2 className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="font-medium text-[13px]">Pages / CI-CD (Coolify)</h3>
+              <p className="text-[11px] text-muted-foreground">Self-hosted Heroku/Netlify alternative for automated application deployments.</p>
+            </div>
           </div>
+          {renderTestButton('coolify')}
         </div>
         <div className="space-y-3 mt-3 pt-3 border-t border-border/50">
           <div>
@@ -496,9 +642,76 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
         </div>
       </div>
 
+      {/* Kubernetes (K3s) */}
+      <div className="rounded-lg bg-background border border-border shadow-sm p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3">
+            <Box className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="font-medium text-[13px]">Containers (K3s Kubernetes)</h3>
+              <p className="text-[11px] text-muted-foreground">Control plane API for multi-tenant VaultContainers namespaces.</p>
+            </div>
+          </div>
+          {renderTestButton('k3s')}
+        </div>
+        <div className="space-y-3 mt-3 pt-3 border-t border-border/50">
+          <div>
+            <label className="text-[13px] font-medium mb-1 block text-muted-foreground">K3s API URL</label>
+            <input
+              type="text"
+              value={settings.k3s_api_url || ''}
+              onChange={(e) => setSettings({ ...settings, k3s_api_url: e.target.value })}
+              placeholder="https://k3s.vaulthost.cloud:6443"
+              className="input-base text-[13px] py-1.5"
+            />
+          </div>
+          <div>
+            <label className="text-[13px] font-medium mb-1 block text-muted-foreground">K3s ServiceAccount Bearer Token</label>
+            <div className="relative">
+              <input
+                type={showSecret['k3s'] ? 'text' : 'password'}
+                value={settings.k3s_bearer_token || ''}
+                onChange={(e) => setSettings({ ...settings, k3s_bearer_token: e.target.value })}
+                placeholder="eyJhbGciOiJSUzI1NiIs..."
+                className="input-base font-mono text-[13px] py-1.5 pr-10"
+              />
+              <button onClick={() => toggleSecret('k3s')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {showSecret['k3s'] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edge Isolates (Workerd) */}
+      <div className="rounded-lg bg-background border border-border shadow-sm p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3">
+            <Zap className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="font-medium text-[13px]">Edge Workers (Cloudflare Workerd)</h3>
+              <p className="text-[11px] text-muted-foreground">V8 isolate deployment API for serverless edge workers.</p>
+            </div>
+          </div>
+          {renderTestButton('workerd')}
+        </div>
+        <div className="space-y-3 mt-3 pt-3 border-t border-border/50">
+          <div>
+            <label className="text-[13px] font-medium mb-1 block text-muted-foreground">Workerd Management API URL</label>
+            <input
+              type="text"
+              value={settings.workerd_api_url || ''}
+              onChange={(e) => setSettings({ ...settings, workerd_api_url: e.target.value })}
+              placeholder="http://workers.vaulthost.cloud:8787"
+              className="input-base text-[13px] py-1.5"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Domain Registrars (NameSilo, ResellerClub, Namecheap) */}
       <div className="rounded-lg bg-background border border-border shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-3">
             <Globe className="h-4 w-4 text-muted-foreground" />
             <div>
@@ -506,7 +719,10 @@ export function ProvisioningSettingsTab({ showToast }: { showToast: (t: 'success
               <p className="text-[11px] text-muted-foreground">{settings.domains_enabled ? 'Active for Domain Purchasing' : 'Disabled'}</p>
             </div>
           </div>
-          <ToggleSwitch checked={settings.domains_enabled} onChange={(v: boolean) => setSettings({ ...settings, domains_enabled: v })} />
+          <div className="flex items-center gap-3">
+            {renderTestButton('namecheap')}
+            <ToggleSwitch checked={settings.domains_enabled} onChange={(v: boolean) => setSettings({ ...settings, domains_enabled: v })} />
+          </div>
         </div>
         
         {settings.domains_enabled && (

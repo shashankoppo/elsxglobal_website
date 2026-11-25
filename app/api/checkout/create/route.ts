@@ -3,6 +3,11 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkoutSchema } from '@/lib/billing/checkoutSchema';
+import {
+  calculateCheckoutTotals,
+  calculateCustomComputeMonthly,
+  normalizeCycle,
+} from '@/lib/billing/pricingMath';
 
 export async function POST(req: Request) {
   try {
@@ -10,19 +15,38 @@ export async function POST(req: Request) {
     const parseResult = checkoutSchema.safeParse(rawBody);
 
     if (!parseResult.success) {
-      return NextResponse.json({ 
-        error: 'Validation failed', 
-        details: parseResult.error.flatten().fieldErrors 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: parseResult.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
     }
 
-    const { 
-      planId, planName, planTier, billingCycle, domain, os, panel, location, addons,
-      custom_vcpu, custom_ram, custom_storage
+    const {
+      planId,
+      planName,
+      planTier,
+      billingCycle,
+      domain,
+      os,
+      panel,
+      location,
+      hostname,
+      ssh_public_key,
+      coupon_code,
+      include_gst,
+      use_credits,
+      addons,
+      custom_vcpu,
+      custom_ram,
+      custom_storage,
     } = parseResult.data;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const authHeader = req.headers.get('Authorization');
 
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -31,76 +55,205 @@ export async function POST(req: Request) {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
-        headers: authHeader ? { Authorization: authHeader } : undefined
-      }
+        headers: authHeader ? { Authorization: authHeader } : undefined,
+      },
     });
 
     // Verify user from the auth token, not from the request body
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !authUser) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { data: dbAddons } = await supabase.from('hosting_addons').select('*');
-    const addonMap = new Map(dbAddons?.map(a => [a.id, a.price_monthly]) || []);
-    
-    let basePrice = 0;
+    const supabaseDb = supabaseServiceKey
+      ? createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } })
+      : supabase;
+
+    // Load active add-ons
+    const { data: dbAddons } = await supabaseDb.from('hosting_addons').select('*');
+    const addonMap = new Map(
+      (dbAddons || []).map((a: any) => [
+        a.id,
+        Number(a.price_monthly ?? a.price ?? 0),
+      ])
+    );
+
+    // Resolve authoritative plan base price
+    let baseMonthly = 0;
+    let resolvedTier = planTier;
+    let dbPlanExists = false;
     if (planId === 'custom') {
-      const vcpu = Math.max(1, Number(custom_vcpu || 4));
-      const ram = Math.max(1, Number(custom_ram || 8));
-      const storage = Math.max(10, Number(custom_storage || 100));
-      // Enterprise rate 3-5% lower than AWS on-demand: vCPU ₹1,488, RAM ₹211, NVMe ₹6.70/GB
-      basePrice = Math.round((vcpu * 1488) + (ram * 211) + (storage * 6.7));
+      baseMonthly = calculateCustomComputeMonthly(
+        Number(custom_vcpu || 4),
+        Number(custom_ram || 8),
+        Number(custom_storage || 100)
+      );
+      resolvedTier = 'cloud';
     } else {
-      const { data: planData } = await supabase.from('hosting_plans').select('price_monthly').eq('id', planId).single();
-      if (planData && planData.price_monthly) {
-        basePrice = Number(planData.price_monthly);
+      const { data: planData } = await supabaseDb
+        .from('hosting_plans')
+        .select('id, price_monthly, tier')
+        .eq('id', planId)
+        .maybeSingle();
+
+      if (planData && planData.price_monthly !== undefined && planData.price_monthly !== null) {
+        dbPlanExists = true;
+        baseMonthly = Number(planData.price_monthly);
+        if (planData.tier) resolvedTier = planData.tier;
       } else {
         const { resolvePlan } = await import('@/lib/data/all-plans');
-        basePrice = resolvePlan(planId).price_monthly;
+        const resolved = resolvePlan(planId);
+        baseMonthly = Number(resolved.price_monthly);
+        resolvedTier = resolved.tier || resolvedTier;
       }
     }
 
-    const normalizedCycle = billingCycle === 'payg' ? 'pay_as_you_go' : billingCycle;
-    const cycleMultiplier = normalizedCycle === 'annual' ? 12 : normalizedCycle === 'semi_annual' ? 6 : 1;
-    const cycleDiscount = normalizedCycle === 'annual' ? 0.167 : normalizedCycle === 'semi_annual' ? 0.05 : 0;
-    const panelPrice = panel === 'cpanel' ? 1500 : panel === 'plesk' ? 800 : panel === 'directadmin' ? 500 : 0;
-    const addonTotal = addons.reduce((sum: number, id: string) => sum + (addonMap.get(id) || 0), 0);
-    
-    const calculatedAmount = Math.round(
-      (basePrice + panelPrice) * cycleMultiplier * (1 - cycleDiscount) + (addonTotal * cycleMultiplier)
+    // Validate coupon server-side if supplied
+    let validCoupon: { id: string; code: string; discount_type: string; discount_value: number; current_uses: number } | null = null;
+    if (coupon_code && coupon_code.trim()) {
+      const nowIso = new Date().toISOString();
+      const { data: couponRow } = await supabaseDb
+        .from('hosting_coupons')
+        .select('id, code, discount_type, discount_value, max_uses, current_uses, valid_until, is_active')
+        .eq('code', coupon_code.trim().toUpperCase())
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (
+        couponRow &&
+        (!couponRow.valid_until || couponRow.valid_until >= nowIso) &&
+        (!couponRow.max_uses || (couponRow.current_uses || 0) < couponRow.max_uses)
+      ) {
+        validCoupon = couponRow;
+      }
+    }
+
+    // Check available wallet credit if user requested credit deduction
+    let availableCreditInr = 0;
+    if (use_credits) {
+      const { data: creditBal } = await supabaseDb
+        .from('credit_balances')
+        .select('balance_paise')
+        .eq('user_id', authUser.id)
+        .maybeSingle();
+      if (creditBal?.balance_paise && creditBal.balance_paise > 0) {
+        availableCreditInr = Math.floor(creditBal.balance_paise / 100);
+      }
+    }
+
+    const normalizedCycle = normalizeCycle(billingCycle);
+    const panelMonthly =
+      panel === 'cpanel' ? 1500 : panel === 'plesk' ? 800 : panel === 'directadmin' ? 500 : 0;
+    const addonMonthlyTotal = addons.reduce(
+      (sum: number, id: string) => sum + (addonMap.get(id) || 0),
+      0
     );
 
-    const { data, error } = await supabase
+    const math = calculateCheckoutTotals({
+      baseMonthly,
+      panelMonthly,
+      addonMonthlyTotal,
+      billingCycle: normalizedCycle,
+      planTier: resolvedTier,
+      coupon: validCoupon,
+      availableCreditInr,
+      applyWalletCredit: use_credits,
+      includeGst: include_gst,
+    });
+
+    const isZeroPayable = math.payableTotal === 0;
+
+    const { data, error } = await supabaseDb
       .from('hosting_orders')
       .insert({
-        plan_id: planId === 'custom' ? null : planId,
+        plan_id: dbPlanExists ? planId : null,
         plan_name: planName,
-        plan_tier: planTier,
-        billing_cycle: billingCycle,
-        total: calculatedAmount,
-        subtotal: calculatedAmount,
-        domain: domain,
+        plan_tier: resolvedTier,
+        billing_cycle: normalizedCycle,
+        subtotal: math.subtotalBeforeCoupon,
+        discount_amount: math.couponDiscount + math.creditApplied,
+        tax_amount: math.taxAmount,
+        total: math.payableTotal,
+        domain: domain || null,
+        os_selection: os || 'ubuntu-22.04',
+        panel_selection: panel || 'none',
+        server_location: location || 'pune',
+        user_email: authUser.email,
         notes: JSON.stringify({
-          os_selection: os,
-          panel_selection: panel,
-          server_location: location,
-          addons: addons,
+          os_selection: os || 'ubuntu-22.04',
+          panel_selection: panel || 'none',
+          server_location: location || 'pune',
+          addons,
           user_email: authUser.email,
+          hostname: hostname || null,
+          ssh_public_key: ssh_public_key || null,
+          custom_vcpu: planId === 'custom' ? Number(custom_vcpu || 4) : undefined,
+          custom_ram: planId === 'custom' ? Number(custom_ram || 8) : undefined,
+          custom_storage: planId === 'custom' ? Number(custom_storage || 100) : undefined,
+          coupon_code: validCoupon?.code || null,
+          coupon_discount: math.couponDiscount,
+          credit_applied: math.creditApplied,
+          hourly_rate: math.hourlyRate,
+          billing_mode: normalizedCycle === 'pay_as_you_go' ? 'hourly_metered' : 'commitment',
         }),
         status: 'pending_payment',
         user_id: authUser.id,
       })
-      .select('id')
+      .select('id, total, subtotal, discount_amount, tax_amount')
       .single();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ id: data.id });
+    // Increment coupon usage atomically
+    if (validCoupon) {
+      await supabaseDb
+        .from('hosting_coupons')
+        .update({ current_uses: (validCoupon.current_uses || 0) + 1 })
+        .eq('id', validCoupon.id);
+    }
+
+    // Deduct wallet credits if applied
+    if (math.creditApplied > 0) {
+      const deductPaise = math.creditApplied * 100;
+      const newBalancePaise = Math.max(0, availableCreditInr * 100 - deductPaise);
+      await supabaseDb
+        .from('credit_balances')
+        .update({ balance_paise: newBalancePaise, updated_at: new Date().toISOString() })
+        .eq('user_id', authUser.id);
+      await supabaseDb.from('credit_ledger').insert({
+        user_id: authUser.id,
+        amount_paise: -deductPaise,
+        balance_after_paise: newBalancePaise,
+        type: 'usage_deduction',
+        description: `Applied to order ${data.id} (${planName})`,
+        reference_id: data.id,
+      });
+    }
+
+    // If order total is ₹0 (free tier, 100% coupon, or paid fully with wallet credits), fulfill immediately
+    if (isZeroPayable) {
+      const { fulfillOrder } = await import('@/lib/billing/orderFulfillment');
+      await fulfillOrder(
+        data.id,
+        math.creditApplied > 0 ? 'wallet_credits' : 'free_tier',
+        `free-${Date.now()}`
+      );
+    }
+
+    return NextResponse.json({
+      id: data.id,
+      total: data.total,
+      subtotal: data.subtotal,
+      discount_amount: data.discount_amount,
+      tax_amount: data.tax_amount,
+      fulfilledImmediately: isZeroPayable,
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

@@ -13,7 +13,7 @@ interface ComparisonRow {
 const rows: ComparisonRow[] = [
   {
     label: 'Compute Price (4 vCPU / 8GB)',
-    vaulthost: '₹5,850/mo (3-5% below AWS)',
+    vaulthost: '₹5,850/mo (Flat INR)',
     aws: '₹6,100/mo (t3.xlarge)',
     azure: '₹5,980/mo (D4s v5)',
   },

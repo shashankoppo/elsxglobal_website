@@ -4,6 +4,8 @@
  * Add new articles here; the route auto-generates pages for each entry.
  */
 
+import { CONTACT } from '@/lib/contact';
+
 export interface KBArticle {
   slug: string;
   title: string;
@@ -476,7 +478,7 @@ During checkout you can select:
 
 - Open a support ticket from your portal
 - Browse our knowledge base for detailed guides
-- Chat with us on WhatsApp at +91-72475-58873`,
+- Chat with us on WhatsApp at ${CONTACT.phone.primary}`,
   },
   {
     slug: 'vps-setup-guide',

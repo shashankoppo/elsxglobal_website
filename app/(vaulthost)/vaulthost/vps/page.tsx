@@ -77,7 +77,7 @@ export default function VpsHostingPage() {
             Next-Gen VPS Hosting on <span className="text-signal">Pure NVMe &amp; AMD EPYC</span>
           </>
         }
-        description="Deploy high-frequency cloud servers in seconds. Exactly 3% to 5% below AWS & Google Cloud on raw compute with 100% free unmetered egress. Dedicated vCPU, PCIe 4.0 NVMe storage, and 10Gbps redundant network uplinks."
+        description="Deploy high-frequency cloud servers in seconds with transparent INR billing and 100% free unmetered egress. Dedicated vCPU, PCIe 4.0 NVMe storage, and 10Gbps redundant network uplinks."
       >
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
           <Link

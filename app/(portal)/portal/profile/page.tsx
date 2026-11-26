@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 import { User, Shield, Key, Save, Lock, Smartphone, CheckCircle2, AlertTriangle, Copy, Trash2, Plus, Loader2 } from 'lucide-react';
+import { CONTACT } from '@/lib/contact';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -247,7 +248,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-text-secondary-v4 mb-1">Phone Number</label>
-                  <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 9876543210" className="w-full bg-ink-surface border border-hairline rounded-md px-4 py-2 text-text-primary-v4 focus:border-signal focus:outline-none" />
+                  <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={CONTACT.phone.primary} className="w-full bg-ink-surface border border-hairline rounded-md px-4 py-2 text-text-primary-v4 focus:border-signal focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-secondary-v4 mb-1">Country</label>

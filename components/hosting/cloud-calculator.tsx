@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Server, Cpu, Database, HardDrive, ArrowRight, Activity, Cloud, Zap, ShieldCheck } from 'lucide-react';
+import { Server, Cpu, Database, HardDrive, ArrowRight, Activity, Zap, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { calculateCustomComputeMonthly, calculateHourlyRate } from '@/lib/billing/pricingMath';
@@ -14,18 +14,14 @@ export function CloudCalculator() {
   const [storage, setStorage] = useState(100);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
 
-  // Enterprise VaultHost Base Rate (configured 3.8% - 4.5% below AWS on-demand)
+  // Enterprise VaultHost Base Rate
   const vhMonthlyBase = calculateCustomComputeMonthly(vcpu, ram, storage);
   
-  // Real AWS & Azure comparison on-demand in ap-south-1 (Mumbai)
-  const awsPrice = Math.round((vcpu * 1550) + (ram * 220) + (storage * 7.0));
-  const azurePrice = Math.round((vcpu * 1520) + (ram * 215) + (storage * 6.9));
-
   // Cycle calculation
   let displayPrice = vhMonthlyBase;
   let priceSuffix = '/mo';
   let billingParam = 'monthly';
-  let cycleNote = 'Standard 1-Month Commitment (4% lower than AWS)';
+  let cycleNote = 'Standard 1-Month Commitment · Flat INR pricing';
 
   if (billingCycle === 'payg') {
     displayPrice = calculateHourlyRate(vhMonthlyBase);
@@ -36,16 +32,13 @@ export function CloudCalculator() {
     displayPrice = Math.round(vhMonthlyBase * 0.95);
     priceSuffix = '/mo';
     billingParam = 'semi_annual';
-    cycleNote = '6-Month Commitment: Save 5% (~9% total below AWS)';
+    cycleNote = '6-Month Commitment: Save 5% on monthly compute';
   } else if (billingCycle === 'annual') {
     displayPrice = Math.round(vhMonthlyBase * 0.833);
     priceSuffix = '/mo';
     billingParam = 'annual';
-    cycleNote = '12-Month Commitment: 2 Months Free (~20% total below AWS)';
+    cycleNote = '12-Month Commitment: 2 Months Free (~16.7% savings)';
   }
-
-  const rawSavingsPct = Math.round(((awsPrice - (billingCycle === 'payg' ? vhMonthlyBase : displayPrice)) / awsPrice) * 100);
-  const savingsPct = Math.max(4, rawSavingsPct);
 
   return (
     <div className="liquid-glass-card rounded-3xl p-6 md:p-8 mb-16 relative overflow-hidden">
@@ -56,7 +49,7 @@ export function CloudCalculator() {
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-signal/10 border border-signal/20 mb-3">
           <Zap className="h-3.5 w-3.5 text-signal" />
           <span className="text-xs font-semibold text-signal uppercase tracking-wider">
-            Hyperscaler Benchmark: Exactly 3–5% Lesser Than AWS &amp; Azure
+            India-First Enterprise Compute · Zero Egress Fees
           </span>
         </div>
         <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
@@ -64,7 +57,7 @@ export function CloudCalculator() {
           Interactive Cloud Compute Calculator
         </h2>
         <p className="text-muted-foreground text-sm max-w-xl mx-auto">
-          Configure vCPU, RAM, and NVMe storage. Enjoy predictable pricing 3–5% below AWS/Azure with zero egress fees and flexible billing cycles.
+          Configure vCPU, RAM, and NVMe storage. Enjoy predictable INR pricing with zero egress fees and flexible billing cycles.
         </p>
 
         {/* 4-Way Billing Cycle Switcher */}
@@ -178,7 +171,7 @@ export function CloudCalculator() {
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium text-muted-foreground">Estimated Cost</span>
               <span className="px-2.5 py-1 rounded-full bg-good/10 text-good text-xs font-bold border border-good/20">
-                {savingsPct}% Lower vs AWS
+                ₹0 Egress Included
               </span>
             </div>
             
@@ -192,17 +185,17 @@ export function CloudCalculator() {
               {cycleNote}
             </p>
 
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between items-center text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground"><Cloud className="h-4 w-4" /> AWS Equivalent (t3/c5 on-demand)</span>
-                <span className="font-mono text-text-secondary-v4 line-through">₹{awsPrice.toLocaleString('en-IN')}/mo</span>
+            <div className="space-y-2.5 mb-6 text-sm text-text-secondary-v4">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Compute &amp; Memory</span>
+                <span className="font-mono">{vcpu} vCPU · {ram} GB DDR5</span>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground"><Cloud className="h-4 w-4" /> Azure Equivalent (D-series)</span>
-                <span className="font-mono text-text-secondary-v4 line-through">₹{azurePrice.toLocaleString('en-IN')}/mo</span>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">NVMe Storage</span>
+                <span className="font-mono">{storage} GB PCIe 4.0</span>
               </div>
-              <div className="text-[11px] text-text-muted-v4 pt-1 border-t border-hairline/50">
-                Plus: AWS/Azure bill up to ₹7.50/GB for egress. VaultHost includes unmetered bandwidth with ₹0 egress fees.
+              <div className="text-[11px] text-text-muted-v4 pt-2 border-t border-hairline/50">
+                Predictable INR billing with unmetered bandwidth, DDoS shield, and ₹0 outbound egress fees.
               </div>
             </div>
 

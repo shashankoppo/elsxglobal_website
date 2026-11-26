@@ -185,7 +185,7 @@ export default function WordPressHostingPage() {
       <PageHeroV4
         eyebrow="Managed WordPress"
         title={<>WordPress Hosting <span className="text-signal">That Scales.</span></>}
-        description="Fully managed WordPress with auto-updates, Litespeed cache, staging, WP CLI, and Cloudflare CDN. 10x faster. Plans from ₹1,490/mo (3–5% below AWS Lightsail/Managed WP)."
+        description="Fully managed WordPress with auto-updates, Litespeed cache, staging, WP CLI, and Cloudflare CDN. 10x faster. Plans from ₹1,490/mo with transparent INR billing."
       />
 
       {/* Stats Bar */}

@@ -42,7 +42,7 @@ export function PlansTab({ plans, actionLoading, togglePlanActive, deletePlan, s
       <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-border/50">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Hosting &amp; Cloud Plans</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Manage calibrated enterprise plans (3–5% below AWS/GCP/Azure) and custom tiers</p>
+          <p className="text-[13px] text-muted-foreground mt-1">Manage enterprise hosting plans and custom tiers</p>
         </div>
         {!editing && (
           <div className="flex flex-wrap gap-2">
@@ -52,7 +52,7 @@ export function PlansTab({ plans, actionLoading, togglePlanActive, deletePlan, s
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-signal/15 border border-signal/30 text-signal hover:bg-signal/25 text-[12px] font-semibold disabled:opacity-50"
             >
               {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              Sync Enterprise Catalog (3–5% &lt; AWS)
+              Sync Enterprise Catalog
             </button>
             <Link href="/vaulthost/pricing" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted text-foreground hover:bg-muted/80 text-[13px] font-medium"><Eye className="h-4 w-4" />View on Site</Link>
             <button onClick={() => setEditing({ id: '', name: '', tier: 'vps', price_monthly: 0, price_annual: 0, features: [], is_active: true, is_popular: false, sort_order: 10 })} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90"><Plus className="h-3.5 w-3.5" />New Plan</button>

@@ -23,7 +23,7 @@ interface ProductPricingSectionProps {
 export function ProductPricingSection({
   productId,
   title = 'Simple, Transparent Pricing',
-  subtitle = '3–5% lower than AWS, Google Cloud & Azure · Pay As You Go or 1 / 6 / 12-Month Cycles',
+  subtitle = 'Transparent INR Pricing · Zero Egress Fees · Pay As You Go or 1 / 6 / 12-Month Cycles',
   hideComparison = false,
 }: ProductPricingSectionProps) {
   const [billingCycle, setBillingCycle] = useState<CanonicalBillingCycle>('monthly');
@@ -186,7 +186,7 @@ export function ProductPricingSection({
                       ₹{product.tiers[1].monthlyPrice.toLocaleString('en-IN')}/mo
                     </td>
                     <td className="py-3 px-5 text-text-secondary-v4">
-                      Zero egress fees · 3–5% below hyperscalers · Indian PoPs
+                      Zero egress fees · Predictable INR billing · Indian PoPs
                     </td>
                   </tr>
                 )}

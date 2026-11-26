@@ -1267,7 +1267,7 @@ export async function POST(request: Request) {
       return NextResponse.json(result);
     }
 
-    // Sync calibrated 3-5% below AWS catalog plans into PostgreSQL hosting_plans
+    // Sync enterprise catalog plans into PostgreSQL hosting_plans
     if (action === 'sync-catalog-plans') {
       const records: any[] = [];
       let sortIdx = 1;

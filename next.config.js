@@ -1,14 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    // ESLint is enforced in CI (npm run lint). Skip during Docker build
-    // to avoid any <a>-vs-Link or rule-version discrepancy blocking deploys.
-    ignoreDuringBuilds: true,
+    // ESLint is enforced in CI (npm run lint). ESLint errors must not be
+    // ignored during builds — they catch real bugs.
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    // TypeScript is enforced in CI (npm run typecheck). Skip during Docker build
-    // so a Coolify deploy is never blocked by type errors that CI already catches.
-    ignoreBuildErrors: true,
+    // TypeScript is enforced in CI (npm run typecheck). TypeScript errors must
+    // not be ignored during builds — they catch real bugs.
+    ignoreBuildErrors: false,
   },
   images: {
     // Re-enabled Next.js image optimization for better performance

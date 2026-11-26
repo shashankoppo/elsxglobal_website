@@ -1,8 +1,9 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getPendingApprovals, approveStaffRequest, rejectStaffRequest } from '@/lib/action-gateway/gateway';
 import { ActionActor } from '@/lib/action-gateway/types';
+import { CONTACT } from '@/lib/contact';
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
       id: 'staff_master_admin',
       type: 'user',
       tenantId: 'global',
-      email: 'admin@elsxglobal.com',
+      email: CONTACT.email.general,
       roles: ['super_admin'],
     };
 

@@ -120,7 +120,7 @@ export const hostingTiers: HostingTier[] = [
     ],
     seoMeta: {
       title: 'VPS Hosting India — NVMe SSD, Root Access, DDoS Protection | VaultHost',
-      description: 'Enterprise VPS hosting with NVMe SSD, full root access, free DDoS protection, and 99.99% SLA priced 3–5% below AWS/GCP. Plans from ₹1,480/mo.',
+      description: 'Enterprise VPS hosting with NVMe SSD, full root access, free DDoS protection, and 99.99% SLA with transparent INR billing. Plans from ₹1,480/mo.',
       keywords: ['vps hosting India', 'nvme vps', 'enterprise vps India', 'linux vps mumbai', 'root access vps'],
       canonical: 'https://elsxglobal.com/vaulthost/vps',
     },

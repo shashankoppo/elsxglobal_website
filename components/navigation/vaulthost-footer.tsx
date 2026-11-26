@@ -6,6 +6,7 @@ import { VaultHostLogo } from '@/components/ui/logo';
 import { VAULTHOST_MENU } from '@/lib/nav-config';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { CONTACT } from '@/lib/contact';
 
 function FooterLink({ href, label }: { href: string; label: string }) {
   const isExternal = href.startsWith('http');
@@ -103,11 +104,11 @@ export function VaultHostFooter() {
               </div>
               <div className="flex items-center gap-2 text-xs text-text-muted-v4">
                 <Phone className="h-3.5 w-3.5 shrink-0" />
-                <a href="tel:+918001234567" className="hover:text-signal transition-colors">+91 800 123 4567</a>
+                <a href={`tel:${CONTACT.phone.primary.replace(/\s+/g, '')}`} className="hover:text-signal transition-colors">{CONTACT.phone.primary}</a>
               </div>
               <div className="flex items-center gap-2 text-xs text-text-muted-v4">
                 <Mail className="h-3.5 w-3.5 shrink-0" />
-                <a href="mailto:support@vaulthost.com" className="hover:text-signal transition-colors">support@vaulthost.com</a>
+                <a href={`mailto:${CONTACT.email.support}`} className="hover:text-signal transition-colors">{CONTACT.email.support}</a>
               </div>
             </div>
 

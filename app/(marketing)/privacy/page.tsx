@@ -1,11 +1,16 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { PageHeroV4 } from '@/components/ui/page-hero-v4';
 import { Shield } from 'lucide-react';
+import { CONTACT } from '@/lib/contact';
+import { buildMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy',
-  description: 'How ELSxGlobal collects, uses, and protects your personal information.',
-  alternates: { canonical: '/privacy' },
+  ...buildMetadata({
+    title: 'Privacy Policy',
+    description: 'How ELSxGlobal collects, uses, and protects your personal information under DPDP Act 2023 and GDPR.',
+    path: '/privacy',
+    keywords: ['ELSxGlobal privacy policy', 'data protection', 'DPDP Act', 'VaultHost privacy'],
+  }),
   robots: { index: true, follow: true },
 };
 
@@ -32,7 +37,7 @@ const SECTIONS = [
   },
   {
     title: '6. Your Rights',
-    body: 'Under applicable data protection laws (including the DPDP Act, 2023 and GDPR where applicable), you have the right to access, correct, delete, or export your personal data, withdraw consent for processing, and object to certain types of processing. Contact privacy@elsxglobal.com to exercise these rights.',
+    body: `Under applicable data protection laws (including the DPDP Act, 2023 and GDPR where applicable), you have the right to access, correct, delete, or export your personal data, withdraw consent for processing, and object to certain types of processing. Contact ${CONTACT.email.privacy} to exercise these rights.`,
   },
   {
     title: '7. Data Retention',
@@ -52,7 +57,7 @@ const SECTIONS = [
   },
   {
     title: '11. Contact Us',
-    body: 'For privacy questions or requests, contact us at privacy@elsxglobal.com or +91 72475 58873. Our Data Protection Officer can be reached at EvolucentSphere Pvt. Ltd., Jabalpur, Madhya Pradesh, India.',
+    body: `For privacy questions or requests, contact us at ${CONTACT.email.privacy} or ${CONTACT.phone.primary}. Our Data Protection Officer can be reached at EvolucentSphere Pvt. Ltd., Jabalpur, Madhya Pradesh, India.`,
   },
 ];
 

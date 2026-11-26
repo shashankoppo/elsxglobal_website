@@ -163,7 +163,7 @@ export function TierPageClient({ tier, tierName }: { tier: string; tierName: str
           })}
         </div>
         <p className="text-xs text-text-muted-v4">
-          {plans.length} plans available · 3–5% below AWS/GCP/Azure · INR · GST extra
+          {plans.length} plans available · Transparent INR billing · Zero egress fees · GST extra
         </p>
       </div>
 

@@ -5,6 +5,7 @@ import { PanelCard } from '@/components/ui/panel-card';
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
 import Link from 'next/link';
 import { MapPin, Phone, Users, Briefcase, ArrowRight } from 'lucide-react';
+import { CONTACT } from '@/lib/contact';
 
 export default function PuneOfficePage() {
   return (
@@ -59,7 +60,7 @@ export default function PuneOfficePage() {
                 <Phone className="w-5 h-5 text-signal shrink-0 mt-1" />
                 <div>
                   <p className="font-medium text-text-primary-v4">Contact</p>
-                  <p className="text-text-secondary-v4 text-sm mt-1">+91 20-XXXX-XXXX</p>
+                  <p className="text-text-secondary-v4 text-sm mt-1">{CONTACT.phone.primary}</p>
                 </div>
               </div>
 

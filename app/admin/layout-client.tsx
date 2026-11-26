@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { CONTACT } from '@/lib/contact';
 
 export type Tab = 'overview' | 'orders' | 'plans' | 'addons' | 'coupons' | 'services' | 'users' | 'tickets' | 'invoices' | 'leads' | 'payments' | 'billing' | 'emails' | 'settings-payment' | 'settings-provisioning' | 'settings-site' | 'settings-integrations' | 'settings-nodes' | 'cloud' | 'approval-queue' | 'actions' | 'ai-governance' | 'security' | 'workers' | 'storage' | 'dns';
 
@@ -238,15 +239,15 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
         const { data } = await supabase.auth.getUser();
         if (isMounted) {
           if (data?.user) {
-            setAdmin({ email: data.user.email || 'admin@elsxglobal.com', name: 'Administrator' });
+            setAdmin({ email: data.user.email || CONTACT.email.general, name: 'Administrator' });
           } else {
-            setAdmin({ email: 'admin@elsxglobal.com', name: 'Administrator' });
+            setAdmin({ email: CONTACT.email.general, name: 'Administrator' });
           }
           setLoading(false);
         }
       } catch {
         if (isMounted) {
-          setAdmin({ email: 'admin@elsxglobal.com', name: 'Administrator' });
+          setAdmin({ email: CONTACT.email.general, name: 'Administrator' });
           setLoading(false);
         }
       }

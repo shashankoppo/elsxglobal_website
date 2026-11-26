@@ -3,6 +3,7 @@ import {
   ShieldCheck, Lock, Database, Cloud, Eye, Zap, Cpu,
   type LucideIcon,
 } from 'lucide-react';
+import { CONTACT } from '@/lib/contact';
 
 export interface VerticalData {
   slug: string;
@@ -281,7 +282,7 @@ export const hyperLocalData: Record<string, {
       address: 'Hinjawadi, Pune',
       city: 'Pune',
       state: 'Maharashtra',
-      phone: '+91-72475-58873',
+      phone: CONTACT.phone.primary,
       latitude: '18.5912',
       longitude: '73.7389',
     },
@@ -308,7 +309,7 @@ export const hyperLocalData: Record<string, {
       address: 'DLF Cyber City, Gurgaon',
       city: 'Gurgaon',
       state: 'Haryana',
-      phone: '+91-72475-58873',
+      phone: CONTACT.phone.primary,
       latitude: '28.4949',
       longitude: '77.0890',
     },
@@ -335,7 +336,7 @@ export const hyperLocalData: Record<string, {
       address: 'Sector 62, Noida',
       city: 'Noida',
       state: 'Uttar Pradesh',
-      phone: '+91-72475-58873',
+      phone: CONTACT.phone.primary,
       latitude: '28.6258',
       longitude: '77.3715',
     },

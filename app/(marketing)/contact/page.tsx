@@ -8,9 +8,10 @@ import { PanelCard } from '@/components/ui/panel-card';
 import { SectionLabelV4 } from '@/components/ui/section-label-v4';
 import { motion } from 'framer-motion';
 import { useScrollReveal, fadeUp, stagger } from '@/lib/animations';
+import { CONTACT } from '@/lib/contact';
 
 const CONTACT_INFO = [
-  { icon: Mail, label: 'Email', value: 'contact@elsxglobal.cloud', href: 'mailto:contact@elsxglobal.cloud' },
+  { icon: Mail, label: 'Email', value: CONTACT.email.general, href: `mailto:${CONTACT.email.general}` },
   { icon: MessageSquare, label: 'Response Time', value: 'Within 4 business hours', href: '#' },
   { icon: MapPin, label: 'HQ', value: 'Jabalpur, Madhya Pradesh, India', href: '#' },
   { icon: MessageSquare, label: 'Live Chat', value: 'Available 24/7', href: '#' },
@@ -75,7 +76,7 @@ export default function ContactPage() {
             },
             body: JSON.stringify({
               template: 'contact-form',
-              to: 'contact@elsxglobal.cloud',
+              to: CONTACT.email.general,
               name: form.name,
               email: form.email,
               company: form.company,

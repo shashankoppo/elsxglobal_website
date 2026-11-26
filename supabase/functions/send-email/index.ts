@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     if (!isServiceRole) {
       if (isContactForm) {
         // Force contact form emails strictly to official contact address
-        targetRecipient = "contact@elsxglobal.cloud";
+        targetRecipient = "contact@evolucentsphere.com";
       } else {
         if (!token) {
           return json({ error: "Authentication required" }, 401);
@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const adminEmail = "admin@elsxglobal.cloud";
+    const adminEmail = "contact@evolucentsphere.com";
     const fromEmail = "noreply@elsxglobal.cloud";
     const resendKey = Deno.env.get("RESEND_API_KEY");
 

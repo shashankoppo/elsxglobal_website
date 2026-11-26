@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import {
   ENTERPRISE_MENU, VAULTHOST_MENU, INDUSTRIES_MENU, COMPANY_MENU,
 } from '@/lib/nav-config';
+import { CONTACT } from '@/lib/contact';
 
 function FooterLink({ href, label }: { href: string; label: string }) {
   const isExternal = href.startsWith('http');
@@ -166,11 +167,11 @@ export function EnterpriseFooterV4() {
               </div>
               <div className="flex items-center gap-2 text-xs text-text-muted-v4">
                 <Phone className="h-3.5 w-3.5 shrink-0" />
-                <span>+91 72475 58873</span>
+                <span>{CONTACT.phone.primary}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-text-muted-v4">
                 <Mail className="h-3.5 w-3.5 shrink-0" />
-                <a href="mailto:contact@elsxglobal.cloud" className="hover:text-signal transition-colors">contact@elsxglobal.cloud</a>
+                <a href={`mailto:${CONTACT.email.general}`} className="hover:text-signal transition-colors">{CONTACT.email.general}</a>
               </div>
             </div>
           </div>

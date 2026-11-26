@@ -1,0 +1,44 @@
+name: Quality Gates
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run typecheck
+
+  claim-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node tools/claim-lint.mjs --report --json > claim-lint-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: claim-lint-report
+          path: claim-lint-report.json
+
+  contact-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node tools/contact-guard.mjs
+
+  route-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node tools/route-audit.mjs --json > route-audit-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: route-audit-report
+          path: route-audit-report.json

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { CONTACT } from '@/lib/contact';
 
 export const dynamic = 'force-static';
 
@@ -12,7 +13,7 @@ export async function GET() {
       contact: {
         name: 'VaultHost Developer Platform',
         url: 'https://elsxglobal.com/docs/api',
-        email: 'api@vaulthost.cloud',
+        email: CONTACT.email.general,
       },
       license: {
         name: 'Proprietary Enterprise License',

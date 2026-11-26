@@ -1,15 +1,15 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-const DEFAULT_SERVICE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI'
-
 export function createClient() {
   const cookieStore = cookies()
 
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://api-gw:8000'
   const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const key = rawKey && !rawKey.includes('placeholder') ? rawKey : DEFAULT_SERVICE_KEY
+  if (!rawKey) {
+    console.error('CRITICAL: No valid Supabase key found in environment variables')
+  }
+  const key = rawKey && !rawKey.includes('placeholder') ? rawKey : 'placeholder'
 
   return createServerClient(
     url,
@@ -40,9 +40,9 @@ export function createClient() {
           }
           return all;
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach(({ name, value, options }: { name: string; value: string; options: CookieOptions }) =>
               cookieStore.set(name, value, options)
             );
           } catch {

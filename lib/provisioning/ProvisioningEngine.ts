@@ -6,6 +6,7 @@ import { ProxmoxAdapter } from './proxmox';
 import { HestiaCPAdapter } from './hestiacp';
 import { CyberPanelAdapter } from './cyberpanel';
 import { resolvePlan } from '@/lib/data/all-plans';
+import { CONTACT } from '@/lib/contact';
 
 export interface ServiceMetrics {
   cpuPercent: number;
@@ -219,7 +220,7 @@ export class ProvisioningEngine {
       disk,
       vcpu,
       os: osTemplate,
-      email: orderNotes.user_email || 'client@vaulthost.com',
+      email: orderNotes.user_email || CONTACT.email.general,
       domain: service.domain || order.domain,
       hostname,
       ssh_key: sshKey,

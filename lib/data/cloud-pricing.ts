@@ -1,6 +1,6 @@
 // lib/data/cloud-pricing.ts
 // Single source of truth for all VaultHost product pricing
-// Competitive: Higher than GoDaddy/Namecheap, lower than AWS/Azure/GCP
+// Positioning: India-first enterprise cloud with transparent INR billing and zero egress fees
 
 export interface PricingTier {
   id: string;           // plan ID — matches hosting_plans table
@@ -60,7 +60,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 1630,
         annualPrice: 1358,
         highlighted: true,
-        description: 'Production-ready edge compute for growing web apps and APIs. Exactly 4% below Cloudflare Workers Paid ($20).',
+        description: 'Production-ready edge compute for growing web apps and APIs.',
         features: [
           'Unlimited requests (fair use)',
           '30s CPU limit per request',
@@ -77,7 +77,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         name: 'Business',
         monthlyPrice: 4890,
         annualPrice: 4075,
-        description: 'Enterprise-grade edge compute with guaranteed 99.999% SLA. 4% below AWS CloudFront Functions / Edge.',
+        description: 'Enterprise-grade edge compute with guaranteed 99.999% SLA.',
         features: [
           'Unlimited requests',
           'No CPU execution limits',
@@ -96,7 +96,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
     productId: 'storage',
     productName: 'VaultStorage',
     tagline: 'S3-compatible object storage with ZERO data egress fees.',
-    billingNote: 'Predictable storage pricing, no hidden transfer charges (3-5% below AWS S3 + 100% free egress)',
+    billingNote: 'Predictable INR storage pricing with 100% free outbound egress',
     vsCompetitors: [
       { name: 'AWS S3', price: '₹15,000+/mo for 1TB', note: '₹8/GB storage + ₹7/GB egress penalties' },
       { name: 'Google Cloud Storage', price: '₹14,000+/mo for 1TB', note: '₹8.5/GB + expensive outbound egress' },
@@ -127,7 +127,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 1850,
         annualPrice: 1541,
         highlighted: true,
-        description: 'Reliable, high-throughput storage for production applications. 5% below raw AWS S3 with ₹0 egress fees.',
+        description: 'Reliable, high-throughput S3 storage for production applications with ₹0 egress fees.',
         features: [
           '1TB NVMe object storage',
           'Zero data egress fees forever',
@@ -144,7 +144,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         name: 'Business',
         monthlyPrice: 8900,
         annualPrice: 7416,
-        description: 'Multi-terabyte distributed storage with enterprise lifecycle rules. Save 40-70% total vs AWS S3 with egress.',
+        description: 'Multi-terabyte distributed storage with enterprise lifecycle rules and ₹0 egress.',
         features: [
           '5TB NVMe object storage',
           'Zero data egress fees forever',
@@ -194,7 +194,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 2490,
         annualPrice: 2075,
         highlighted: true,
-        description: 'Semantic caching, automated model fallback, and rate limits. 4% below Portkey / Helicone.',
+        description: 'Semantic caching, automated model fallback, and custom rate limits.',
         features: [
           '1M requests / month',
           'Unlimited AI providers',
@@ -230,7 +230,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
     productId: 'inference',
     productName: 'VaultInference',
     tagline: 'Serverless AI inference for open-source models with sub-second time-to-first-token.',
-    billingNote: 'Pay-per-token with generous monthly credits (3-5% below AWS Bedrock)',
+    billingNote: 'Pay-per-token with generous monthly credits and transparent INR billing',
     vsCompetitors: [
       { name: 'AWS Bedrock', price: '₹2.60 - ₹28 / 1M tokens', note: 'Expensive on-demand GPU markups' },
       { name: 'Azure OpenAI', price: '₹12.50 - ₹50 / 1M tokens', note: 'Proprietary model lock-in' },
@@ -297,7 +297,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
     productId: 'containers',
     productName: 'VaultContainers',
     tagline: 'Managed K3s Kubernetes & Docker container fleet without control plane tax.',
-    billingNote: 'Fixed monthly compute capacity with auto-healing (3-5% below AWS EKS)',
+    billingNote: 'Fixed monthly compute capacity with auto-healing and ₹0 control plane fees',
     vsCompetitors: [
       { name: 'AWS ECS / EKS', price: '₹10,500 - ₹35,000/mo', note: '$73/mo cluster fee + compute + NAT gateways' },
       { name: 'Google GKE', price: '₹9,800 - ₹28,000/mo', note: 'Cluster management fee + pod execution' },
@@ -310,7 +310,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         name: 'Starter',
         monthlyPrice: 9790,
         annualPrice: 8158,
-        description: 'Run 3 managed container nodes with automatic ingress and SSL. 4.2% below AWS EKS base.',
+        description: 'Run 3 managed container nodes with automatic ingress and SSL.',
         features: [
           '3 Managed container nodes',
           '6 vCPU total compute capacity',
@@ -364,7 +364,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
     productId: 'pages',
     productName: 'VaultPages',
     tagline: 'Deploy full-stack Next.js, Nuxt, Astro, and static sites with global edge caching.',
-    billingNote: 'Simple monthly plan with unlimited team members (4% below Vercel Pro)',
+    billingNote: 'Simple monthly INR plan with unlimited team members',
     vsCompetitors: [
       { name: 'Vercel Pro', price: '₹1,700/mo ($20/seat)', note: 'Charges per user + steep bandwidth fees' },
       { name: 'Netlify Pro', price: '₹1,650/mo ($19/seat)', note: 'Strict concurrent build minutes' },
@@ -395,7 +395,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 1630,
         annualPrice: 1358,
         highlighted: true,
-        description: 'Unlimited builds with edge SSR rendering for commercial web apps. 4% below Vercel Pro.',
+        description: 'Unlimited builds with edge SSR rendering for commercial web apps.',
         features: [
           'Unlimited builds / month',
           '1TB edge bandwidth / month',
@@ -462,7 +462,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 5280,
         annualPrice: 4399,
         highlighted: true,
-        description: 'Production edge database with automatic read replicas and 10GB storage. 4% below AWS RDS Postgres.',
+        description: 'Production edge database with automatic read replicas and 10GB storage.',
         features: [
           '10GB distributed storage',
           '25M row reads / month',
@@ -479,7 +479,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         name: 'Business',
         monthlyPrice: 14200,
         annualPrice: 11830,
-        description: '100GB multi-region relational SQL database for high-concurrency apps. 4% below AWS RDS db.r5.large.',
+        description: '100GB multi-region relational SQL database for high-concurrency apps.',
         features: [
           '100GB distributed storage',
           'Unlimited row reads (fair use)',
@@ -498,7 +498,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
     productId: 'queues',
     productName: 'VaultQueues',
     tagline: 'Guaranteed message delivery and asynchronous job processing at edge scale.',
-    billingNote: 'Monthly operations volume with zero idle server cost (4% below AWS SQS + RabbitMQ)',
+    billingNote: 'Monthly operations volume with zero idle server cost',
     vsCompetitors: [
       { name: 'AWS SQS', price: '₹2,500+/mo for 50M ops', note: '₹35/M requests + extra data transfer taxes' },
       { name: 'Cloudflare Queues', price: '₹1,750 base + ops', note: 'Tied exclusively to Workers ecosystem' },
@@ -529,7 +529,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 1630,
         annualPrice: 1358,
         highlighted: true,
-        description: 'High-throughput queues with dead-letter topics and delay delivery. 4% below AWS SQS.',
+        description: 'High-throughput queues with dead-letter topics and delay delivery.',
         features: [
           '50M operations / month',
           'Delay & priority queuing up to 14 days',
@@ -565,7 +565,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
     productId: 'kv',
     productName: 'VaultKV',
     tagline: 'Ultra-low latency global key-value store with sub-millisecond read times.',
-    billingNote: 'Monthly operations and storage tiering (4% below Redis Cloud)',
+    billingNote: 'Monthly operations and storage tiering with transparent INR billing',
     vsCompetitors: [
       { name: 'Cloudflare Workers KV', price: '₹1,250/mo ($5 base + ops)', note: 'Frequent overage charges' },
       { name: 'Upstash Redis', price: '₹1,280 - ₹3,300/mo', note: 'Per-command rate limits' },
@@ -596,7 +596,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 1220,
         annualPrice: 1016,
         highlighted: true,
-        description: 'High-read scale for active session storage, feature flags, and APIs. 4.7% below Redis Cloud.',
+        description: 'High-read scale for active session storage, feature flags, and APIs.',
         features: [
           '10M reads / month',
           '1M writes / month',
@@ -632,7 +632,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
     productId: 'tunnel',
     productName: 'VaultTunnel',
     tagline: 'Secure zero-trust tunnels to expose local servers without public IP addresses.',
-    billingNote: 'Fixed monthly fee per active tunnel pool (5% below Ngrok Pro)',
+    billingNote: 'Fixed monthly INR fee per active tunnel pool',
     vsCompetitors: [
       { name: 'ngrok Pro', price: '₹2,100/mo ($25)', note: 'Per user license, high team cost' },
       { name: 'Cloudflare Zero Trust', price: '₹5,000+/mo', note: 'Requires full enterprise account onboarding' },
@@ -663,7 +663,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 1990,
         annualPrice: 1658,
         highlighted: true,
-        description: 'Custom domain names, TCP/UDP tunneling, and basic auth security. 5% below Ngrok Pro.',
+        description: 'Custom domain names, TCP/UDP tunneling, and basic auth security.',
         features: [
           '10 Active tunnels',
           '1TB data transfer / month',
@@ -699,7 +699,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
     productId: 'vectorize',
     productName: 'VaultVectorize',
     tagline: 'High-speed vector database for embeddings, semantic search, and AI RAG pipelines.',
-    billingNote: 'Monthly index capacity with unlimited search requests (4% below Pinecone)',
+    billingNote: 'Monthly index capacity with unlimited search requests',
     vsCompetitors: [
       { name: 'Pinecone Starter', price: '₹5,900/mo ($70)', note: 'High base fee, cold pods on idle' },
       { name: 'Weaviate Cloud', price: '₹5,800/mo', note: 'Expensive minimum cluster provisioning' },
@@ -730,7 +730,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 5650,
         annualPrice: 4708,
         highlighted: true,
-        description: 'High-scale vector store for production AI search and RAG applications. 4.2% below Pinecone.',
+        description: 'High-scale vector store for production AI search and RAG applications.',
         features: [
           '2M vectors stored',
           'Up to 1536 query dimensions',
@@ -766,7 +766,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
     productId: 'dns',
     productName: 'VaultDNS',
     tagline: 'Ultra-fast Anycast authoritative DNS network with instant propagation.',
-    billingNote: 'Zone management and monthly query volume (4% below AWS Route 53)',
+    billingNote: 'Zone management and monthly query volume with transparent INR billing',
     vsCompetitors: [
       { name: 'AWS Route 53', price: '₹1,550/mo (50 zones + queries)', note: 'Uncapped query surprise billing' },
       { name: 'Cloudflare Business DNS', price: '₹16,600/mo ($200)', note: 'Expensive enterprise jump' },
@@ -797,7 +797,7 @@ export const CLOUD_PRICING: Record<string, ProductPricing> = {
         monthlyPrice: 1490,
         annualPrice: 1241,
         highlighted: true,
-        description: 'High-query authoritative DNS with DNSSEC and health check routing. 4% below AWS Route 53.',
+        description: 'High-query authoritative DNS with DNSSEC and health check routing.',
         features: [
           '10M queries / month',
           'Up to 50 DNS zones',

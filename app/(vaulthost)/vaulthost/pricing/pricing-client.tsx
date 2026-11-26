@@ -39,20 +39,20 @@ export function PricingPageClient() {
       if (data && data.length > 0) {
         setPlans(data);
       } else {
-        // Authoritative enterprise plans 3-5% lower than AWS/Azure/GCP
+        // Authoritative enterprise plans with transparent INR pricing
         setPlans([
           { id: 'shared-starter', name: 'Shared Starter', tier: 'shared', price_monthly: 790, price_annual: 7900, features: ['1 Website', '10GB NVMe Storage', 'Free Wildcard SSL', '24/7 Support'], is_popular: false, short_description: 'Fast NVMe hosting for blogs and small sites.' },
           { id: 'shared-pro', name: 'Shared Professional', tier: 'shared', price_monthly: 1490, price_annual: 14900, features: ['Unlimited Websites', '50GB NVMe Storage', 'Free Wildcard SSL', 'Daily Backups', 'Free Migration'], is_popular: true, short_description: 'For growing businesses and portfolios.' },
           { id: 'shared-business', name: 'Shared Business', tier: 'shared', price_monthly: 2790, price_annual: 27900, features: ['Unlimited Websites', '100GB NVMe Storage', 'Premium EV SSL', 'Daily Backups', 'Priority Support'], is_popular: false, short_description: 'High performance for eCommerce and agencies.' },
           
-          { id: 'vps-1', name: 'VPS Essential (2 vCPU / 4GB)', tier: 'vps', price_monthly: 2960, price_annual: 29472, features: ['2 vCPU Cores (AMD EPYC)', '4GB DDR5 RAM', '80GB NVMe Storage', 'Full Root SSH', 'DDoS Protection'], is_popular: false, short_description: 'Production cloud server. 4.2% below AWS t3.medium.' },
-          { id: 'vps-2', name: 'VPS Advanced (4 vCPU / 8GB)', tier: 'vps', price_monthly: 5850, price_annual: 58260, features: ['4 vCPU Cores (AMD EPYC)', '8GB DDR5 RAM', '160GB NVMe Storage', 'Full Root SSH', 'Automated Snapshots'], is_popular: true, short_description: 'High-frequency compute. 4.1% below AWS t3.large.' },
+          { id: 'vps-1', name: 'VPS Essential (2 vCPU / 4GB)', tier: 'vps', price_monthly: 2960, price_annual: 29472, features: ['2 vCPU Cores (AMD EPYC)', '4GB DDR5 RAM', '80GB NVMe Storage', 'Full Root SSH', 'DDoS Protection'], is_popular: false, short_description: 'Balanced cloud compute for production web applications and APIs.' },
+          { id: 'vps-2', name: 'VPS Advanced (4 vCPU / 8GB)', tier: 'vps', price_monthly: 5850, price_annual: 58260, features: ['4 vCPU Cores (AMD EPYC)', '8GB DDR5 RAM', '160GB NVMe Storage', 'Full Root SSH', 'Automated Snapshots'], is_popular: true, short_description: 'High-frequency compute instance for APIs, databases, and microservices.' },
           
           { id: 'cloud-compute', name: 'Cloud Compute High Availability', tier: 'cloud', price_monthly: 4890, price_annual: 48900, features: ['Auto-scaling Cluster', 'Integrated Load Balancing', 'N+1 Multi-Zone Redundancy', 'Full REST API Automation', 'Automated Backups'], is_popular: true, short_description: 'Enterprise-grade cloud infrastructure for mission-critical apps.' },
           
-          { id: 'dedicated-metal', name: 'Bare Metal Dedicated Server', tier: 'dedicated', price_monthly: 59990, price_annual: 599900, features: ['16 Cores / 32 Threads Intel Xeon', '64GB ECC RAM', '2x 1TB NVMe RAID-1', '10Gbps Uplink', 'Unmetered Bandwidth', 'IPMI/KVM Root Console'], is_popular: false, short_description: 'Dedicated physical hardware. 4% below AWS c5.metal.' },
+          { id: 'dedicated-metal', name: 'Bare Metal Dedicated Server', tier: 'dedicated', price_monthly: 59990, price_annual: 599900, features: ['16 Cores / 32 Threads Intel Xeon', '64GB ECC RAM', '2x 1TB NVMe RAID-1', '10Gbps Uplink', 'Unmetered Bandwidth', 'IPMI/KVM Root Console'], is_popular: false, short_description: 'Uncompromised dedicated physical hardware with zero virtualization overhead.' },
           
-          { id: 'wp-managed', name: 'Managed WordPress Pro', tier: 'wordpress', price_monthly: 2490, price_annual: 24900, features: ['LiteSpeed Cache (3x Faster)', '1-Click Staging', 'Automated Updates', 'Malware Scan', '1-Click Restore'], is_popular: true, short_description: 'Fully managed WordPress with LiteSpeed. 4% below AWS Lightsail WP.' },
+          { id: 'wp-managed', name: 'Managed WordPress Pro', tier: 'wordpress', price_monthly: 2490, price_annual: 24900, features: ['LiteSpeed Cache (3x Faster)', '1-Click Staging', 'Automated Updates', 'Malware Scan', '1-Click Restore'], is_popular: true, short_description: 'Fully managed WordPress with LiteSpeed caching and zero maintenance.' },
         ]);
       }
       setLoading(false);
@@ -89,7 +89,7 @@ export function PricingPageClient() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-signal/10 border border-signal/20 mb-4">
             <TrendingDown className="h-3.5 w-3.5 text-signal" />
             <span className="text-xs font-semibold text-signal uppercase tracking-wider">
-              Exactly 3% to 5% Below AWS, Google Cloud &amp; Azure + Zero Egress Fees
+              India-First Enterprise Cloud · Transparent INR Billing &amp; Zero Egress Fees
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">

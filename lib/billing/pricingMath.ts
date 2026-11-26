@@ -4,7 +4,7 @@
  * Single source of truth for:
  * - Hourly Pay-As-You-Go (730 hrs/mo — AWS/GCP/Azure standard)
  * - 1 Month, 6 Months (5% off), 12 Months (~16.7% off / 2 Months Free)
- * - Custom Compute AWS-benchmarked pricing (3-5% below AWS on-demand)
+ * - Custom Compute enterprise INR pricing
  * - Fixed-term products (domains / SSL billed annually, not multiplied x12)
  * - Coupons, GST/Tax breakdown, and Prepaid Wallet Credits
  */
@@ -83,8 +83,7 @@ export function calculateHourlyRate(monthlyPrice: number): number {
 }
 
 /**
- * AWS-benchmarked custom compute formula (3.8% - 4.5% below AWS ap-south-1 on-demand + EBS gp3):
- * AWS ~₹1,550/vCPU, ~₹220/GB RAM, ~₹7.00/GB EBS gp3
+ * Custom compute pricing formula:
  * VaultHost: ₹1,488/vCPU, ₹211/GB RAM, ₹6.70/GB NVMe Gen4 + ₹0 egress
  */
 export function calculateCustomComputeMonthly(vcpu: number, ramGb: number, storageGb: number): number {

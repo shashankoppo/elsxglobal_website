@@ -1,11 +1,16 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { PageHeroV4 } from '@/components/ui/page-hero-v4';
 import { FileText } from 'lucide-react';
+import { CONTACT } from '@/lib/contact';
+import { buildMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service',
-  description: 'The terms and conditions governing your use of ELSxGlobal and VaultHost services.',
-  alternates: { canonical: '/terms' },
+  ...buildMetadata({
+    title: 'Terms of Service',
+    description: 'The terms and conditions governing your use of ELSxGlobal enterprise services and VaultHost hosting.',
+    path: '/terms',
+    keywords: ['ELSxGlobal terms of service', 'VaultHost SLA terms', 'enterprise service terms'],
+  }),
   robots: { index: true, follow: true },
 };
 
@@ -68,7 +73,7 @@ const SECTIONS = [
   },
   {
     title: '15. Contact',
-    body: 'For questions about these terms, contact legal@elsxglobal.com or +91 72475 58873. EvolucentSphere Pvt. Ltd., Jabalpur, Madhya Pradesh, India.',
+    body: `For questions about these terms, contact ${CONTACT.email.general} or ${CONTACT.phone.primary}. EvolucentSphere Pvt. Ltd., Jabalpur, Madhya Pradesh, India.`,
   },
 ];
 

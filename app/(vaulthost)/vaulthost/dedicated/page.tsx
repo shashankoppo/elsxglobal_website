@@ -104,7 +104,7 @@ export default function DedicatedHostingPage() {
   const [enableBgp, setEnableBgp] = useState(false); // Bring your own ASN / IP
   const [billingCycle, setBillingCycle] = useState<CanonicalBillingCycle>('monthly');
 
-  // Calculate customized monthly quote (benchmarked 3–5% below AWS bare metal)
+  // Calculate customized monthly quote with transparent INR billing
   const calculatedTotal =
     selectedRig.price +
     (extraRam / 64) * 3200 +

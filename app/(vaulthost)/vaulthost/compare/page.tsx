@@ -32,7 +32,7 @@ export default function ComparePage() {
   const comparisonData: ComparisonRow[] = [
     {
       criterion: 'Entry Cloud Compute (1-2 vCPU)',
-      vaulthost: { text: '₹1,480 /mo (4.5% < AWS)' },
+      vaulthost: { text: '₹1,480 /mo (Flat INR + ₹0 egress)' },
       aws: { text: '₹1,550 /mo (t3.small)' },
       azure: { text: '₹1,520 /mo (B1ms)' },
       gcp: { text: '₹1,540 /mo (e2-small)' },

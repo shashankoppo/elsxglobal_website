@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase';
 import { Logo } from '@/components/ui/logo';
 import { Download, ArrowLeft, Printer } from 'lucide-react';
 import Link from 'next/link';
+import { CONTACT } from '@/lib/contact';
 
 export default function InvoicePage() {
   const params = useParams();
@@ -108,7 +109,7 @@ export default function InvoicePage() {
             </div>
             <h2 className="text-gray-800 font-semibold text-sm">ELSxGlobal — VaultHost Cloud Infrastructure</h2>
             <p className="text-gray-500 text-sm">Enterprise Data Centers · Mumbai · Pune · Delhi NCR</p>
-            <p className="text-gray-500 text-sm">billing@elsxglobal.cloud</p>
+            <p className="text-gray-500 text-sm">{CONTACT.email.general}</p>
           </div>
           <div className="text-right">
             <h1 className="text-4xl font-light text-gray-300 mb-2 tracking-widest uppercase">Invoice</h1>

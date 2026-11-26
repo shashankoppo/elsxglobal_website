@@ -9,6 +9,7 @@ import {
   Eye, EyeOff, ArrowRight, Building2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { CONTACT } from '@/lib/contact';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -179,7 +180,7 @@ export default function AdminSetupPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="admin@elsxglobal.com"
+                  placeholder={CONTACT.email.general}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-background border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>

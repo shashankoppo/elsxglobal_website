@@ -4,8 +4,8 @@ import { PricingPageClient } from './pricing-client';
 
 export const metadata: Metadata = createMetadata({
   title: "Pricing — India's Enterprise Cloud & Hosting Plans | VaultHost by ELSxGlobal",
-  description: "Enterprise cloud & hosting pricing benchmarked 3–5% below AWS, Google Cloud & Azure with zero egress fees. Shared from ₹790/mo, VPS from ₹1,480/mo, PAYG hourly & 1/6/12-month billing.",
-  keywords: ['hosting pricing India', 'VPS pricing Mumbai', 'cloud hosting pricing', 'dedicated server pricing India', 'AWS vs VaultHost pricing', 'Azure vs VaultHost', 'enterprise cloud India', 'enterprise hosting pricing'],
+  description: "Enterprise cloud & hosting pricing with transparent INR billing and zero egress fees. Shared from ₹790/mo, VPS from ₹1,480/mo, PAYG hourly & 1/6/12-month billing.",
+  keywords: ['hosting pricing India', 'VPS pricing Mumbai', 'cloud hosting pricing', 'dedicated server pricing India', 'enterprise cloud India', 'enterprise hosting pricing', 'zero egress cloud India'],
   canonical: 'https://elsxglobal.com/vaulthost/pricing',
   breadcrumb: [
     { name: 'Home', url: 'https://elsxglobal.com/' },
@@ -13,7 +13,7 @@ export const metadata: Metadata = createMetadata({
     { name: 'Pricing', url: 'https://elsxglobal.com/vaulthost/pricing' },
   ],
   faq: [
-    { question: 'How does VaultHost pricing compare to AWS and Azure?', answer: 'VaultHost compute is benchmarked 3–5% below AWS ap-south-1, Google Cloud, and Azure base rates while bundling NVMe storage, DDoS mitigation, and zero outbound egress fees.' },
+    { question: 'How is VaultHost pricing structured?', answer: 'VaultHost offers transparent, predictable INR pricing with bundled NVMe storage, DDoS mitigation, Indian data center PoPs, and zero outbound egress fees.' },
     { question: 'What is included in the monthly price?', answer: 'All VaultHost plans include NVMe/SSD storage, generous unmetered/high-cap bandwidth, DDoS protection, SSL certificate, and 24/7 engineering support. No surprise egress bills.' },
     { question: 'What billing cycles do you support?', answer: 'Choose Pay As You Go (hourly metered at monthly/730), 1 Month, 6 Months (5% off), or 12 Months (~16.7% off / 2 months free).' },
     { question: 'Can I upgrade my plan later?', answer: 'Yes, you can upgrade at any time. We prorate the difference and apply it immediately with minimal or zero downtime.' },

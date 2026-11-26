@@ -110,7 +110,7 @@ export function CheckoutClient() {
           price_monthly: customPrice,
           price_annual: Math.round(customPrice * 12 * 0.833),
           features: [`${vcpu} vCPUs`, `${ram}GB RAM`, `${storage}GB NVMe Storage`, `Auto-scaling enabled`],
-          short_description: 'Custom configured cloud instance (3-5% below AWS)',
+          short_description: 'Custom configured cloud instance with transparent INR pricing',
         });
       } else {
         try {
@@ -792,7 +792,7 @@ export function CheckoutClient() {
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium">Billing Cycle</label>
-                    <span className="text-[11px] text-muted-foreground font-mono">3-5% below AWS/Azure</span>
+                    <span className="text-[11px] text-muted-foreground font-mono">Transparent INR · ₹0 egress</span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {(Object.keys(cycleConfig) as BillingCycle[]).map((c) => (

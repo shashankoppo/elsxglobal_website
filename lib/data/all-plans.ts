@@ -14,7 +14,7 @@ export interface Plan {
  * Static catalog of all core hosting plans (VPS, Shared, WordPress, Email, Website Builder, Dedicated).
  */
 export const CORE_HOSTING_PLANS: Record<string, Plan> = {
-  // --- VPS Plans (Enterprise compute 3-5% lower than AWS EC2 / Azure VMs) ---
+  // --- VPS Plans (Enterprise KVM Compute) ---
   'nano': {
     id: 'nano',
     name: 'VPS Nano',
@@ -22,7 +22,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 1480,
     price_annual: 1228,
     features: ['1 vCPU Core (AMD EPYC)', '2 GB DDR5 RAM', '40 GB NVMe Storage', '1 TB Bandwidth', '1 IPv4 & /64 IPv6', 'Full Root Access'],
-    short_description: 'Entry-level high-performance virtual private server on AMD EPYC. 4.5% below AWS t3.small.',
+    short_description: 'Entry-level high-performance virtual private server on AMD EPYC.',
   },
   'vps-nano': {
     id: 'vps-nano',
@@ -31,7 +31,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 1480,
     price_annual: 1228,
     features: ['1 vCPU Core (AMD EPYC)', '2 GB DDR5 RAM', '40 GB NVMe Storage', '1 TB Bandwidth', '1 IPv4 & /64 IPv6', 'Full Root Access'],
-    short_description: 'Entry-level high-performance virtual private server on AMD EPYC. 4.5% below AWS t3.small.',
+    short_description: 'Entry-level high-performance virtual private server on AMD EPYC.',
   },
   'standard': {
     id: 'standard',
@@ -40,7 +40,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 2960,
     price_annual: 2456,
     features: ['2 vCPU Cores', '4 GB DDR5 RAM', '80 GB NVMe Storage', '3 TB Bandwidth', '1 IPv4 & /64 IPv6', 'Free Automated Backups'],
-    short_description: 'Balanced cloud compute for production web applications and APIs. 4.2% below AWS t3.medium.',
+    short_description: 'Balanced cloud compute for production web applications and APIs.',
   },
   'vps-standard': {
     id: 'vps-standard',
@@ -49,7 +49,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 2960,
     price_annual: 2456,
     features: ['2 vCPU Cores', '4 GB DDR5 RAM', '80 GB NVMe Storage', '3 TB Bandwidth', '1 IPv4 & /64 IPv6', 'Free Automated Backups'],
-    short_description: 'Balanced cloud compute for production web applications and APIs. 4.2% below AWS t3.medium.',
+    short_description: 'Balanced cloud compute for production web applications and APIs.',
   },
   'pro': {
     id: 'pro',
@@ -58,7 +58,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 5850,
     price_annual: 4855,
     features: ['4 vCPU Cores', '8 GB DDR5 RAM', '160 GB NVMe Storage', '6 TB Bandwidth', '1 IPv4 & /64 IPv6', 'DDoS Protection & Snapshots'],
-    short_description: 'High-frequency compute instance for databases, microservices, and high-traffic sites. 4.1% below AWS t3.large.',
+    short_description: 'High-frequency compute instance for databases, microservices, and high-traffic sites.',
   },
   'vps-pro': {
     id: 'vps-pro',
@@ -67,7 +67,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 5850,
     price_annual: 4855,
     features: ['4 vCPU Cores', '8 GB DDR5 RAM', '160 GB NVMe Storage', '6 TB Bandwidth', '1 IPv4 & /64 IPv6', 'DDoS Protection & Snapshots'],
-    short_description: 'High-frequency compute instance for databases, microservices, and high-traffic sites. 4.1% below AWS t3.large.',
+    short_description: 'High-frequency compute instance for databases, microservices, and high-traffic sites.',
   },
   'elite': {
     id: 'elite',
@@ -76,7 +76,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 11700,
     price_annual: 9711,
     features: ['8 vCPU Cores', '16 GB DDR5 RAM', '320 GB NVMe Storage', '10 TB Bandwidth', 'Dedicated IPv4', '24/7 Priority Support'],
-    short_description: 'Heavy compute power with dedicated vCPU guarantees on AMD EPYC 9004. 4.1% below AWS t3.xlarge.',
+    short_description: 'Heavy compute power with dedicated vCPU guarantees on AMD EPYC 9004.',
   },
   'vps-elite': {
     id: 'vps-elite',
@@ -85,7 +85,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 11700,
     price_annual: 9711,
     features: ['8 vCPU Cores', '16 GB DDR5 RAM', '320 GB NVMe Storage', '10 TB Bandwidth', 'Dedicated IPv4', '24/7 Priority Support'],
-    short_description: 'Heavy compute power with dedicated vCPU guarantees on AMD EPYC 9004. 4.1% below AWS t3.xlarge.',
+    short_description: 'Heavy compute power with dedicated vCPU guarantees on AMD EPYC 9004.',
   },
   'ultra': {
     id: 'ultra',
@@ -94,7 +94,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 23800,
     price_annual: 19754,
     features: ['16 vCPU Cores', '32 GB DDR5 RAM', '640 GB NVMe Storage', '15 TB Bandwidth', 'Dedicated IPv4', '99.99% SLA'],
-    short_description: 'Enterprise virtual server for heavy analytics, CI/CD clusters, and large backends. 4.0% below AWS c5.4xlarge.',
+    short_description: 'Enterprise virtual server for heavy analytics, CI/CD clusters, and large backends.',
   },
   'vps-ultra': {
     id: 'vps-ultra',
@@ -103,7 +103,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 23800,
     price_annual: 19754,
     features: ['16 vCPU Cores', '32 GB DDR5 RAM', '640 GB NVMe Storage', '15 TB Bandwidth', 'Dedicated IPv4', '99.99% SLA'],
-    short_description: 'Enterprise virtual server for heavy analytics, CI/CD clusters, and large backends. 4.0% below AWS c5.4xlarge.',
+    short_description: 'Enterprise virtual server for heavy analytics, CI/CD clusters, and large backends.',
   },
   'beast': {
     id: 'beast',
@@ -112,7 +112,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 48300,
     price_annual: 40089,
     features: ['32 vCPU Cores', '64 GB DDR5 RAM', '1.2 TB NVMe Storage', '20 TB Bandwidth', 'Dedicated IPv4', 'Dedicated Hardware Queue'],
-    short_description: 'Maximum density cloud compute instance for massive production enterprise workloads. 4.2% below AWS c5.9xlarge.',
+    short_description: 'Maximum density cloud compute instance for massive production enterprise workloads.',
   },
   'vps-beast': {
     id: 'vps-beast',
@@ -121,7 +121,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 48300,
     price_annual: 40089,
     features: ['32 vCPU Cores', '64 GB DDR5 RAM', '1.2 TB NVMe Storage', '20 TB Bandwidth', 'Dedicated IPv4', 'Dedicated Hardware Queue'],
-    short_description: 'Maximum density cloud compute instance for massive production enterprise workloads. 4.2% below AWS c5.9xlarge.',
+    short_description: 'Maximum density cloud compute instance for massive production enterprise workloads.',
   },
   'vps-1': {
     id: 'vps-1',
@@ -130,7 +130,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 2960,
     price_annual: 2456,
     features: ['2 vCPU Cores', '4 GB RAM', '80 GB NVMe Storage', 'Root Access', 'DDoS Protection'],
-    short_description: 'Scalable virtual servers for developers. 4.2% below AWS t3.medium.',
+    short_description: 'Scalable virtual servers for developers.',
   },
   'vps-2': {
     id: 'vps-2',
@@ -139,7 +139,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 5850,
     price_annual: 4855,
     features: ['4 vCPU Cores', '8 GB RAM', '160 GB NVMe Storage', 'Root Access', 'DDoS Protection'],
-    short_description: 'More power for demanding applications. 4.1% below AWS t3.large.',
+    short_description: 'More power for demanding applications.',
   },
 
   // --- Shared Hosting Plans ---
@@ -171,7 +171,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     short_description: 'Maximum shared resources and NVMe I/O throughput for demanding eCommerce portals.',
   },
 
-  // --- Managed WordPress Plans (3-5% below AWS Lightsail WordPress bundles) ---
+  // --- Managed WordPress Plans ---
   'wp-managed': {
     id: 'wp-managed',
     name: 'Managed WordPress',
@@ -188,7 +188,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 1490,
     price_annual: 1239,
     features: ['1 WordPress Site', '25 GB NVMe Storage', 'LiteSpeed Caching', 'Free SSL & CDN', 'Auto-Updates'],
-    short_description: 'Fast, secure WordPress hosting for solo creators and blogs. 4% below AWS Lightsail WP.',
+    short_description: 'Fast, secure WordPress hosting for solo creators and blogs.',
   },
   'wp-business': {
     id: 'wp-business',
@@ -285,7 +285,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     short_description: 'Advanced website builder for businesses, agencies, and high-volume sellers.',
   },
 
-  // --- Cloud & Dedicated Bare Metal (3-5% below AWS c5.metal / EC2) ---
+  // --- Cloud & Dedicated Bare Metal ---
   'cloud-compute': {
     id: 'cloud-compute',
     name: 'Cloud Compute High Availability',
@@ -302,7 +302,7 @@ export const CORE_HOSTING_PLANS: Record<string, Plan> = {
     price_monthly: 59990,
     price_annual: 49990,
     features: ['16 Cores / 32 Threads Intel Xeon', '64 GB ECC DDR4 RAM', '2x 1 TB NVMe RAID-1', '10 Gbps Redundant Uplink', 'Unmetered Bandwidth', 'IPMI/KVM Root Console'],
-    short_description: 'Uncompromised dedicated physical hardware with zero virtualization overhead. 4% below AWS c5.metal.',
+    short_description: 'Uncompromised dedicated physical hardware with zero virtualization overhead.',
   },
 
   // --- Managed SaaS & Cloud Services ---
@@ -428,10 +428,10 @@ export function resolvePlan(planId: string, searchParams?: { get: (name: string)
     const vcpu = Number(searchParams?.get('vcpu') || 4);
     const ram = Number(searchParams?.get('ram') || 8);
     const storage = Number(searchParams?.get('storage') || 100);
-    // Enterprise compute rates (3-5% lower than AWS EC2 on-demand + EBS gp3)
-    const vcpuCost = vcpu * 1488; // AWS is ~₹1,550/mo per vCPU
-    const ramCost = ram * 211;   // AWS is ~₹220/mo per GB
-    const storageCost = storage * 6.7; // AWS EBS gp3 is ~₹7.00/GB
+    // Enterprise compute rates (transparent INR pricing)
+    const vcpuCost = vcpu * 1488;
+    const ramCost = ram * 211;
+    const storageCost = storage * 6.7;
     const customPrice = Math.round(vcpuCost + ramCost + storageCost);
 
     return {
@@ -440,7 +440,7 @@ export function resolvePlan(planId: string, searchParams?: { get: (name: string)
       tier: 'cloud',
       price_monthly: customPrice,
       price_annual: Math.round(customPrice * 12 * 0.833), // 16.7% discount (2 mo free)
-      features: [`${vcpu} vCPUs (AMD EPYC)`, `${ram} GB DDR5 RAM`, `${storage} GB NVMe PCIe 4.0 Storage`, 'Automated Cloud-Init Bootstrapping', 'Anycast Edge Routing', '3-5% Below AWS On-Demand'],
+      features: [`${vcpu} vCPUs (AMD EPYC)`, `${ram} GB DDR5 RAM`, `${storage} GB NVMe PCIe 4.0 Storage`, 'Automated Cloud-Init Bootstrapping', 'Anycast Edge Routing', 'Zero Egress Fees'],
       short_description: 'Custom configured cloud virtual server instance.',
     };
   }

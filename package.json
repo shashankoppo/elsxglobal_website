@@ -19,7 +19,7 @@
     "@auth/core": "^0.41.3",
     "@hookform/resolvers": "^3.9.0",
     "@netlify/plugin-nextjs": "^5.15.1",
-    "@next/swc-wasm-nodejs": "13.5.1",
+    "@next/swc-wasm-nodejs": "13.5.9",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
     "@radix-ui/react-aspect-ratio": "^1.1.0",
@@ -61,7 +61,7 @@
     "framer-motion": "^12.42.2",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.446.0",
-    "next": "13.5.1",
+    "next": "13.5.9",
     "next-themes": "^0.3.0",
     "pg": "^8.23.0",
     "postgres": "^3.4.9",
@@ -86,10 +86,11 @@
     "autoprefixer": "10.4.15",
     "drizzle-kit": "^0.31.10",
     "eslint": "8.49.0",
-    "eslint-config-next": "13.5.1",
+    "eslint-config-next": "13.5.9",
     "postcss": "8.4.30",
     "tailwindcss": "3.3.3",
     "typescript": "^5.3.3",
+    "vite": "^8.4.0",
     "vitest": "^5.1.0"
   }
 }

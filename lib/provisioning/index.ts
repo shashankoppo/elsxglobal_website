@@ -22,6 +22,7 @@ import { ProxmoxAdapter } from './proxmox';
 import { HestiaCPAdapter } from './hestiacp';
 import { CyberPanelAdapter } from './cyberpanel';
 import { createClient } from '@supabase/supabase-js';
+import { CONTACT } from '@/lib/contact';
 
 export { ProvisioningEngine, type ServiceMetrics } from './ProvisioningEngine';
 
@@ -115,7 +116,7 @@ export async function provisionService(serviceId: string) {
     disk,
     vcpu,
     os: orderNotes.os_selection || order.os_selection,
-    email: orderNotes.user_email || 'client@vaulthost.com',
+    email: orderNotes.user_email || CONTACT.email.general,
     domain: service.domain || order.domain,
     plan_name: service.plan_name,
   });

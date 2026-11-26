@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { CONTACT } from '@/lib/contact';
 
 const BASE_URL = 'https://elsxglobal.com';
 const PARENT_URL = 'https://evolucentsphere.com';
@@ -18,9 +19,9 @@ export const parentOrganization = {
   ],
   contactPoint: {
     '@type': 'ContactPoint',
-    telephone: '+91-72475-58873',
+    telephone: CONTACT.phone.primary,
     contactType: 'customer service',
-    email: 'contact@evolucentsphere.com',
+    email: CONTACT.email.general,
     areaServed: 'Worldwide',
     availableLanguage: ['English', 'Hindi'],
   },
@@ -64,14 +65,14 @@ export const defaultOrganization = {
   contactPoint: [
     {
       '@type': 'ContactPoint',
-      telephone: '+91-72475-58873',
+      telephone: CONTACT.phone.primary,
       contactType: 'sales',
       areaServed: 'India',
       availableLanguage: ['English', 'Hindi'],
     },
     {
       '@type': 'ContactPoint',
-      telephone: '+91-87704-22622',
+      telephone: CONTACT.phone.secondary,
       contactType: 'technical support',
       areaServed: 'Worldwide',
       availableLanguage: ['English'],
@@ -254,8 +255,8 @@ export function createMetadata(config: SEOPageConfig): Metadata {
       'geo.placename': 'Jabalpur, Madhya Pradesh, India',
       'geo.position': '23.1815;79.9557',
       'ICBM': '23.1815, 79.9557',
-      'og:phone_number': '+91-72475-58873',
-      'og:email': 'contact@elsxglobal.cloud',
+      'og:phone_number': CONTACT.phone.primary,
+      'og:email': CONTACT.email.general,
       'og:street-address': 'Jabalpur, Madhya Pradesh',
       'og:locality': 'Jabalpur',
       'og:region': 'Madhya Pradesh',
@@ -264,8 +265,8 @@ export function createMetadata(config: SEOPageConfig): Metadata {
       'business:contact_data:locality': 'Jabalpur',
       'business:contact_data:region': 'Madhya Pradesh',
       'business:contact_data:country_name': 'India',
-      'business:contact_data:phone_number': '+91-72475-58873',
-      'business:contact_data:email': 'contact@elsxglobal.cloud',
+      'business:contact_data:phone_number': CONTACT.phone.primary,
+      'business:contact_data:email': CONTACT.email.general,
     },
     ...(config.type === 'article' && {
       verification: {
@@ -273,7 +274,7 @@ export function createMetadata(config: SEOPageConfig): Metadata {
         yandex: 'your-yandex-verification',
         yahoo: 'your-yahoo-verification',
         other: {
-          me: ['contact@elsxglobal.com'],
+          me: [CONTACT.email.general],
         },
       },
     }),
@@ -693,9 +694,9 @@ export const parentCompanyInfo = {
   valuation: '₹120Cr',
   targetValuation: '₹500Cr by 2026',
   employees: '201-500',
-  email: 'contact@evolucentsphere.com',
-  phone1: '+91 72475 58873',
-  phone2: '+91 87704 22622',
+  email: CONTACT.email.general,
+  phone1: CONTACT.phone.primary,
+  phone2: CONTACT.phone.secondary,
   description: 'India\'s premier technology conglomerate delivering AI-driven BPO, KPO, IT services, software development, and strategic consultancy to enterprises worldwide. Founded in 2009, EvolucentSphere has grown into a multi-division ecosystem serving clients across India, UAE, USA, UK, Singapore, and beyond.',
   divisions: ecosystemDivisions,
 };

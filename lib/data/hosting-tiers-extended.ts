@@ -3,6 +3,7 @@ import {
   HardDrive, ShieldCheck, Zap, Database, Layers, Monitor, Lock,
   type LucideIcon,
 } from 'lucide-react';
+import { CONTACT } from '@/lib/contact';
 
 export interface HostingSubTierData {
   slug: string;
@@ -828,7 +829,7 @@ export const legalData: Record<string, {
       { heading: '2. How We Use Your Data', content: 'We use your data to: (a) provide and maintain services; (b) process payments; (c) provide technical support; (d) send service notifications; (e) improve our services. We never sell your data to third parties.' },
       { heading: '3. Data Retention', content: 'Account data is retained while your account is active and for 7 years after closure for tax/legal compliance. Server logs are retained for 90 days. Backup data is retained per your plan retention policy. Support tickets are retained for 3 years.' },
       { heading: '4. Subprocessors', content: 'Our subprocessors include: Razorpay (payments), Cloudflare (CDN/WAF), Google Cloud (object storage backups), and our data center partners (Mumbai, Singapore, Dubai). A full subprocessor list with DPA links is available on request.' },
-      { heading: '5. Your Rights', content: 'You have the right to: (a) access your data; (b) correct inaccurate data; (c) request deletion (subject to legal retention); (d) export your data; (e) object to processing. Contact privacy@elsxglobal.com to exercise these rights.' },
+      { heading: '5. Your Rights', content: `You have the right to: (a) access your data; (b) correct inaccurate data; (c) request deletion (subject to legal retention); (d) export your data; (e) object to processing. Contact ${CONTACT.email.privacy} to exercise these rights.` },
       { heading: '6. Security Measures', content: 'We protect your data with: AES-256 encryption at rest, TLS 1.3 in transit, role-based access control, 2FA for all admin access, regular security audits, and SOC 2 Type II certified data centers.' },
     ],
   },

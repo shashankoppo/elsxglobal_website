@@ -1,11 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const DEFAULT_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzMyMDAwMDAwLCJleHAiOjIwNDc1NjQ4MDB9.u46bXnr3d1siODG_oAQx9izfi2MwZjNSzvHHeq-lbAY'
-const DEFAULT_SERVICE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3MzIwMDAwMDAsImV4cCI6MjA0NzU2NDgwMH0.cch63X_YwGR7pgYfqc_D2ui-AqrzU4dNYApYKAydJhI'
-
 /**
  * Fast JWT cookie parser that extracts user identity directly from
  * session cookie without network calls (immunity to network/PostgREST outages).
@@ -89,65 +84,72 @@ export async function middleware(request: NextRequest) {
     process.env.SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     'http://api-gw:8000'
+  const rawAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder')
-      ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      : DEFAULT_ANON_KEY
-
-  const supabase = createServerClient(
-    supabaseUrl,
-    anonKey,
-    {
-      cookieOptions: {
-        name: 'elsxglobal-auth-token',
-      },
-      cookies: {
-        getAll() {
-          const all = request.cookies.getAll()
-          const hasAuthToken = all.some((c) => c.name.startsWith('elsxglobal-auth-token'))
-          if (!hasAuthToken) {
-            const legacy = all.filter(
-              (c) =>
-                c.name.startsWith('sb-elsxglobal-auth-token') ||
-                c.name.startsWith('sb-api-gw-auth-token')
-            )
-            if (legacy.length > 0) {
-              return [
-                ...all,
-                ...legacy.map((c) => ({
-                  name: c.name.replace(/^sb-(elsxglobal|api-gw)-auth-token/, 'elsxglobal-auth-token'),
-                  value: c.value,
-                })),
-              ]
-            }
-          }
-          return all
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  let user: any = null
-  try {
-    const { data: authData } = await supabase.auth.getUser()
-    if (authData?.user) {
-      user = authData.user
-    }
-  } catch {
-    // Fall back to direct cookie decoding
+    rawAnonKey && !rawAnonKey.includes('placeholder') ? rawAnonKey : undefined
+  if (!anonKey) {
+    console.error('CRITICAL: NEXT_PUBLIC_SUPABASE_ANON_KEY is not set')
+    // Allow the request to pass through without Supabase client
+    // The route handlers will enforce auth independently
   }
 
+  let user: any = null
+  if (anonKey) {
+    const supabase = createServerClient(
+      supabaseUrl,
+      anonKey,
+      {
+        cookieOptions: {
+          name: 'elsxglobal-auth-token',
+        },
+        cookies: {
+          getAll() {
+            const all = request.cookies.getAll()
+            const hasAuthToken = all.some((c) => c.name.startsWith('elsxglobal-auth-token'))
+            if (!hasAuthToken) {
+              const legacy = all.filter(
+                (c) =>
+                  c.name.startsWith('sb-elsxglobal-auth-token') ||
+                  c.name.startsWith('sb-api-gw-auth-token')
+              )
+              if (legacy.length > 0) {
+                return [
+                  ...all,
+                  ...legacy.map((c) => ({
+                    name: c.name.replace(/^sb-(elsxglobal|api-gw)-auth-token/, 'elsxglobal-auth-token'),
+                    value: c.value,
+                  })),
+                ]
+              }
+            }
+            return all
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+            supabaseResponse = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
+    try {
+      const { data: authData } = await supabase.auth.getUser()
+      if (authData?.user) {
+        user = authData.user
+      }
+    } catch {
+      // Fall back to direct cookie decoding
+    }
+  }
+
+  // Cookie-based fallback still works
   if (!user) {
     user = extractUserFromCookies(request.cookies.getAll())
   }
@@ -192,45 +194,7 @@ export async function middleware(request: NextRequest) {
       user.app_metadata?.claims_admin === true
 
     if (!isMasterAdmin) {
-      const serviceKey =
-        process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')
-          ? process.env.SUPABASE_SERVICE_ROLE_KEY
-          : DEFAULT_SERVICE_KEY
-
-      const supabaseAdmin = createServerClient(
-        supabaseUrl,
-        serviceKey,
-        {
-          cookieOptions: {
-            name: 'elsxglobal-auth-token',
-          },
-          cookies: {
-            getAll() {
-              return request.cookies.getAll()
-            },
-            setAll() {},
-          },
-        }
-      )
-
-      let isAllowed = false
-      try {
-        const { data: adminUser } = await supabaseAdmin
-          .from('admin_users')
-          .select('id, is_active')
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        if (adminUser?.is_active) {
-          isAllowed = true
-        }
-      } catch {
-        // PostgREST/network fail-safe
-      }
-
-      if (!isAllowed) {
-        return NextResponse.redirect(new URL('/admin/login', request.url))
-      }
+      return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }
 
@@ -267,46 +231,10 @@ export async function middleware(request: NextRequest) {
         user.app_metadata?.claims_admin === true
 
       if (!isMasterAdmin) {
-        const serviceKey =
-          process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')
-            ? process.env.SUPABASE_SERVICE_ROLE_KEY
-            : DEFAULT_SERVICE_KEY
-
-        const supabaseAdmin = createServerClient(
-          supabaseUrl,
-          serviceKey,
-          {
-            cookieOptions: {
-              name: 'elsxglobal-auth-token',
-            },
-            cookies: {
-              getAll() {
-                return request.cookies.getAll()
-              },
-              setAll() {},
-            },
-          }
+        return NextResponse.json(
+          { error: 'Forbidden: Admin privileges required' },
+          { status: 403 }
         )
-
-        let isAllowed = false
-        try {
-          const { data: adminUser } = await supabaseAdmin
-            .from('admin_users')
-            .select('id, is_active')
-            .eq('user_id', user.id)
-            .maybeSingle()
-
-          if (adminUser?.is_active) {
-            isAllowed = true
-          }
-        } catch {}
-
-        if (!isAllowed) {
-          return NextResponse.json(
-            { error: 'Forbidden: Admin privileges required' },
-            { status: 403 }
-          )
-        }
       }
     }
   }

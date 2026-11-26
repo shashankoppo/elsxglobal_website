@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { buildPublicRedirectUrl } from '@/lib/http/origin'
 
 /**
  * Fast JWT cookie parser that extracts user identity directly from
@@ -165,14 +166,16 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/portal/reset-password')
 
   if (isPortalRoute && !isPortalLoginRoute && !user) {
-    const redirectUrl = new URL('/portal/login', request.url)
+    const redirectUrl = buildPublicRedirectUrl('/portal/login', request.headers, request.url, '/portal/login')
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
   if (isPortalLoginRoute && user) {
     const target = request.nextUrl.searchParams.get('redirect') || '/portal'
-    return NextResponse.redirect(new URL(target, request.url))
+    return NextResponse.redirect(
+      buildPublicRedirectUrl(target, request.headers, request.url, '/portal')
+    )
   }
 
   // 2. Admin UI routes protection
@@ -184,7 +187,9 @@ export async function middleware(request: NextRequest) {
 
   if (isAdminRoute && !isAdminPublicRoute) {
     if (!user) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
+      return NextResponse.redirect(
+        buildPublicRedirectUrl('/admin/login', request.headers, request.url, '/admin/login')
+      )
     }
 
     const isMasterAdmin =
@@ -194,7 +199,9 @@ export async function middleware(request: NextRequest) {
       user.app_metadata?.claims_admin === true
 
     if (!isMasterAdmin) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
+      return NextResponse.redirect(
+        buildPublicRedirectUrl('/admin/login', request.headers, request.url, '/admin/login')
+      )
     }
   }
 
@@ -206,7 +213,9 @@ export async function middleware(request: NextRequest) {
       user.user_metadata?.role === 'superadmin'
 
     if (isMasterAdmin) {
-      return NextResponse.redirect(new URL('/admin/overview/', request.url))
+      return NextResponse.redirect(
+        buildPublicRedirectUrl('/admin/overview/', request.headers, request.url, '/admin/overview/')
+      )
     }
   }
 

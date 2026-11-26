@@ -242,7 +242,12 @@ async function getAppliedMigrations() {
  * where initdb didn't run, GoTrue (auth), PostgREST, and Storage will authenticate.
  */
 async function ensureServiceRoles() {
-  const password = process.env.POSTGRES_PASSWORD;
+  let password = process.env.POSTGRES_PASSWORD;
+  if (!password && DATABASE_URL) {
+    try {
+      password = decodeURIComponent(new URL(DATABASE_URL).password || '');
+    } catch {}
+  }
   if (!password) return;
 
   const sanitizedPassword = password.replace(/'/g, "''");

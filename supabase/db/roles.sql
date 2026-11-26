@@ -1,6 +1,6 @@
 -- Official Supabase roles initialization
 -- Ensures all roles exist (creates if missing) and sets passwords using POSTGRES_PASSWORD
-\set pgpass `echo "${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}"`
+\set pgpass `printf '%s' "${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}"`
 
 -- Create all roles if they don't exist yet
 DO $$

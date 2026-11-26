@@ -22,6 +22,12 @@ const ALLOWED_TABLES = new Set([
   'leads',
   'payment_transactions',
   'transactions',
+  'credit_balances',
+  'credit_ledger',
+  'subscriptions',
+  'resellers',
+  'reseller_customers',
+  'tax_records',
 ]);
 
 function assertSafeIdentifier(name: string): string {
@@ -219,5 +225,107 @@ export async function pgDeleteById(table: string, id: string, idColumn = 'id'): 
   const c = assertSafeIdentifier(idColumn);
   await withPgClient(async (client) => {
     await client.query(`DELETE FROM public.${t} WHERE ${c} = $1`, [id]);
+  });
+}
+
+export async function pgFindOneByColumn(
+  table: string,
+  column: string,
+  value: string | number
+): Promise<Record<string, any> | null> {
+  if (!ALLOWED_TABLES.has(table)) throw new Error(`Table not allowed: ${table}`);
+  const t = assertSafeIdentifier(table);
+  const c = assertSafeIdentifier(column);
+  return withPgClient(async (client) => {
+    const res = await client.query(`SELECT * FROM public.${t} WHERE ${c} = $1 LIMIT 1`, [value]);
+    return res.rows?.[0] || null;
+  });
+}
+
+export async function pgInsertRow(
+  table: string,
+  row: Record<string, any>
+): Promise<Record<string, any> | null> {
+  if (!ALLOWED_TABLES.has(table)) throw new Error(`Table not allowed: ${table}`);
+  const t = assertSafeIdentifier(table);
+
+  return withPgClient(async (client) => {
+    const colRes = await client.query(
+      `SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`,
+      [table]
+    );
+    const columnTypes = new Map<string, string>(
+      (colRes.rows || []).map((r: any) => [String(r.column_name), String(r.data_type)])
+    );
+
+    const validEntries = Object.entries(row).filter(
+      ([k, v]) => columnTypes.has(k) && v !== undefined
+    );
+    if (validEntries.length === 0) return null;
+
+    const colsSql = validEntries.map(([k]) => assertSafeIdentifier(k)).join(', ');
+    const placeholders = validEntries.map((_, idx) => `$${idx + 1}`).join(', ');
+    const values = validEntries.map(([k, v]) => {
+      const dt = columnTypes.get(k);
+      if ((dt === 'jsonb' || dt === 'json') && typeof v !== 'string' && v !== null) {
+        return JSON.stringify(v);
+      }
+      return v;
+    });
+
+    const sql = `
+      INSERT INTO public.${t} (${colsSql})
+      VALUES (${placeholders})
+      RETURNING *;
+    `;
+    const res = await client.query(sql, values);
+    return res.rows?.[0] || null;
+  });
+}
+
+export async function pgUpdateWhere(
+  table: string,
+  patch: Record<string, any>,
+  whereColumn: string,
+  whereValue: string | number
+): Promise<Record<string, any> | null> {
+  if (!ALLOWED_TABLES.has(table)) throw new Error(`Table not allowed: ${table}`);
+  const t = assertSafeIdentifier(table);
+  const wc = assertSafeIdentifier(whereColumn);
+
+  return withPgClient(async (client) => {
+    const colRes = await client.query(
+      `SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`,
+      [table]
+    );
+    const columnTypes = new Map<string, string>(
+      (colRes.rows || []).map((r: any) => [String(r.column_name), String(r.data_type)])
+    );
+
+    const validEntries = Object.entries(patch).filter(
+      ([k, v]) => columnTypes.has(k) && v !== undefined
+    );
+    if (validEntries.length === 0) return null;
+
+    const setSql = validEntries
+      .map(([k], idx) => `${assertSafeIdentifier(k)} = $${idx + 1}`)
+      .join(', ');
+    const values = validEntries.map(([k, v]) => {
+      const dt = columnTypes.get(k);
+      if ((dt === 'jsonb' || dt === 'json') && typeof v !== 'string' && v !== null) {
+        return JSON.stringify(v);
+      }
+      return v;
+    });
+    values.push(whereValue);
+
+    const sql = `
+      UPDATE public.${t}
+      SET ${setSql}
+      WHERE ${wc} = $${values.length}
+      RETURNING *;
+    `;
+    const res = await client.query(sql, values);
+    return res.rows?.[0] || null;
   });
 }

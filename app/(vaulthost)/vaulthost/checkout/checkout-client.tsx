@@ -209,9 +209,17 @@ export function CheckoutClient() {
     if (data.valid_until && data.valid_until < now) { setCouponError('This coupon has expired.'); setCouponLoading(false); return; }
     if (data.max_uses && data.current_uses >= data.max_uses) { setCouponError('This coupon has reached its usage limit.'); setCouponLoading(false); return; }
     setCoupon(data);
+    setOrderId(null);
+    setFulfilledImmediately(false);
     setCouponError(null);
     setCouponLoading(false);
   };
+
+  const addonsKey = addons.join(',');
+  useEffect(() => {
+    setOrderId(null);
+    setFulfilledImmediately(false);
+  }, [planId, billingCycle, panel, includeGst, useCredits, coupon?.code, addonsKey]);
 
   const handleCreateOrder = async () => {
     if (!user) {

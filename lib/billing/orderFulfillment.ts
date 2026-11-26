@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { ProvisioningEngine } from '@/lib/provisioning/ProvisioningEngine';
 import { CORE_HOSTING_PLANS } from '@/lib/data/all-plans';
+import {
+  pgFindOneByColumn,
+  pgInsertRow,
+  pgUpdateWhere,
+} from '@/lib/db/pgFallback';
 
 export interface FulfillmentResult {
   success: boolean;
@@ -24,8 +29,11 @@ export async function fulfillOrder(
   transactionId: string,
   opts: FulfillOptions = {}
 ): Promise<FulfillmentResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    'http://api-gw:8000';
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
     console.error('Fulfillment Error: Missing Supabase credentials');
@@ -35,23 +43,37 @@ export async function fulfillOrder(
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // 1. Fetch the order
-    const { data: order, error: orderError } = await supabaseAdmin
-      .from('hosting_orders')
-      .select('*')
-      .eq('id', orderId)
-      .maybeSingle();
+    // 1. Fetch the order (with direct PG fallback)
+    let order: any = null;
+    try {
+      const { data, error: orderError } = await supabaseAdmin
+        .from('hosting_orders')
+        .select('*')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (!orderError && data) order = data;
+    } catch {}
+    if (!order) {
+      order = await pgFindOneByColumn('hosting_orders', 'id', orderId).catch(() => null);
+    }
 
-    if (orderError || !order) {
+    if (!order) {
       return { success: false, error: 'Order not found' };
     }
 
     // Check if service already exists for this order to ensure idempotency
-    const { data: existingService } = await supabaseAdmin
-      .from('hosting_services')
-      .select('id')
-      .eq('order_id', orderId)
-      .maybeSingle();
+    let existingService: any = null;
+    try {
+      const { data: svcData, error: svcCheckErr } = await supabaseAdmin
+        .from('hosting_services')
+        .select('id')
+        .eq('order_id', orderId)
+        .maybeSingle();
+      if (!svcCheckErr && svcData) existingService = svcData;
+    } catch {}
+    if (!existingService) {
+      existingService = await pgFindOneByColumn('hosting_services', 'order_id', orderId).catch(() => null);
+    }
 
     if (
       existingService &&
@@ -90,20 +112,24 @@ export async function fulfillOrder(
       specsJson = { features: planFeatures };
     }
 
-    // 3. Update Order Status
+    // 3. Update Order Status (with direct PG fallback)
+    const orderStatusPatch = {
+      status: opts.manualOnly ? 'active' : 'provisioning',
+      payment_status: 'paid',
+      payment_method: paymentMethod,
+      transaction_id: transactionId,
+      updated_at: new Date().toISOString(),
+    };
     const { error: updateError } = await supabaseAdmin
       .from('hosting_orders')
-      .update({
-        status: opts.manualOnly ? 'active' : 'provisioning',
-        payment_status: 'paid',
-        payment_method: paymentMethod,
-        transaction_id: transactionId,
-        updated_at: new Date().toISOString(),
-      })
+      .update(orderStatusPatch)
       .eq('id', orderId);
 
     if (updateError) {
-      throw new Error(`Failed to update order status: ${updateError.message}`);
+      const pgUpdated = await pgUpdateWhere('hosting_orders', orderStatusPatch, 'id', orderId).catch(() => null);
+      if (!pgUpdated) {
+        throw new Error(`Failed to update order status: ${updateError.message}`);
+      }
     }
 
     // 4. Provision or fetch Service Record
@@ -119,71 +145,90 @@ export async function fulfillOrder(
     let serviceId = existingService?.id;
 
     if (!serviceId) {
+      const svcPayload = {
+        user_id: order.user_id,
+        order_id: orderId,
+        plan_name: order.plan_name,
+        tier: order.plan_tier || 'cloud',
+        billing_cycle: order.billing_cycle,
+        status: opts.manualOnly ? 'active' : 'pending_provisioning',
+        renewal_date: renewalDate.toISOString(),
+        domain: order.domain || null,
+        hostname: config.hostname || order.domain || null,
+        os_template: config.os_selection || order.os_selection || 'ubuntu-22.04',
+        ssh_public_key: config.ssh_public_key || null,
+        location: config.server_location || order.server_location || 'pune',
+        provisioning_mode: opts.manualOnly ? 'manual' : 'auto',
+        setup_status: opts.manualOnly ? 'awaiting_credentials' : 'provisioning',
+        specs_json: specsJson,
+        ssh_port: 22,
+        control_panel_url: null,
+      };
       const { data: service, error: svcError } = await supabaseAdmin
         .from('hosting_services')
-        .insert({
-          user_id: order.user_id,
-          order_id: orderId,
-          plan_name: order.plan_name,
-          tier: order.plan_tier || 'cloud',
-          billing_cycle: order.billing_cycle,
-          status: opts.manualOnly ? 'active' : 'pending_provisioning',
-          renewal_date: renewalDate.toISOString(),
-          domain: order.domain || null,
-          hostname: config.hostname || order.domain || null,
-          os_template: config.os_selection || order.os_selection || 'ubuntu-22.04',
-          ssh_public_key: config.ssh_public_key || null,
-          location: config.server_location || order.server_location || 'pune',
-          provisioning_mode: opts.manualOnly ? 'manual' : 'auto',
-          setup_status: opts.manualOnly ? 'awaiting_credentials' : 'provisioning',
-          specs_json: specsJson,
-          ssh_port: 22,
-          control_panel_url: null,
-        })
+        .insert(svcPayload)
         .select('id')
         .single();
 
-      if (svcError) {
-        console.error('Service provision DB error:', svcError.message);
+      if (svcError || !service) {
+        const pgService = await pgInsertRow('hosting_services', svcPayload).catch(() => null);
+        if (pgService?.id) {
+          serviceId = pgService.id;
+        } else if (svcError) {
+          console.error('Service provision DB error:', svcError.message);
+        }
       } else {
-        serviceId = service?.id;
+        serviceId = service.id;
       }
     }
 
     // 5. Generate Invoice if not already present for this order
-    const { data: existingInvoice } = await supabaseAdmin
-      .from('hosting_invoices')
-      .select('id')
-      .eq('order_id', orderId)
-      .maybeSingle();
+    let existingInvoice: any = null;
+    try {
+      const { data: invData, error: invCheckErr } = await supabaseAdmin
+        .from('hosting_invoices')
+        .select('id')
+        .eq('order_id', orderId)
+        .maybeSingle();
+      if (!invCheckErr && invData) existingInvoice = invData;
+    } catch {}
+    if (!existingInvoice) {
+      existingInvoice = await pgFindOneByColumn('hosting_invoices', 'order_id', orderId).catch(() => null);
+    }
 
     let invoiceId: string | undefined = existingInvoice?.id;
     if (!existingInvoice) {
       const invoiceNumber = 'INV-' + Date.now().toString().slice(-8);
+      const invoicePayload = {
+        user_id: order.user_id,
+        order_id: orderId,
+        invoice_number: invoiceNumber,
+        amount: order.subtotal ?? order.total,
+        tax_amount: order.tax_amount || 0,
+        total: order.total,
+        currency: order.currency || 'INR',
+        status: 'paid',
+        payment_method: paymentMethod,
+        transaction_id: transactionId,
+        due_date: new Date().toISOString(),
+        paid_date: new Date().toISOString(),
+        paid_at: new Date().toISOString(),
+      };
       const { data: createdInvoice, error: invoiceError } = await supabaseAdmin
         .from('hosting_invoices')
-        .insert({
-          user_id: order.user_id,
-          order_id: orderId,
-          invoice_number: invoiceNumber,
-          amount: order.subtotal ?? order.total,
-          tax_amount: order.tax_amount || 0,
-          total: order.total,
-          currency: order.currency || 'INR',
-          status: 'paid',
-          payment_method: paymentMethod,
-          transaction_id: transactionId,
-          due_date: new Date().toISOString(),
-          paid_date: new Date().toISOString(),
-          paid_at: new Date().toISOString(),
-        })
+        .insert(invoicePayload)
         .select('id')
         .maybeSingle();
 
-      if (invoiceError) {
-        console.error('Failed to create invoice:', invoiceError.message);
+      if (invoiceError || !createdInvoice) {
+        const pgInvoice = await pgInsertRow('hosting_invoices', invoicePayload).catch(() => null);
+        if (pgInvoice?.id) {
+          invoiceId = pgInvoice.id;
+        } else if (invoiceError) {
+          console.error('Failed to create invoice:', invoiceError.message);
+        }
       } else {
-        invoiceId = createdInvoice?.id;
+        invoiceId = createdInvoice.id;
       }
     }
 
@@ -199,8 +244,11 @@ export async function fulfillOrder(
     // 7. Send confirmation email (non-blocking)
     const userEmail = config?.user_email || order.user_email || null;
     if (userEmail) {
-      const supabasePublicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const supabasePublicUrl =
+        process.env.SUPABASE_URL ||
+        process.env.NEXT_PUBLIC_SUPABASE_URL ||
+        'http://api-gw:8000';
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.ANON_KEY;
       if (supabasePublicUrl && supabaseAnonKey) {
         fetch(`${supabasePublicUrl}/functions/v1/send-email`, {
           method: 'POST',

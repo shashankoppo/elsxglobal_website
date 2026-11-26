@@ -4,11 +4,15 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { fulfillOrder } from '@/lib/billing/orderFulfillment';
+import { pgFindOneByColumn, pgGetSingleRow } from '@/lib/db/pgFallback';
 
 export async function POST(req: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl =
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      'http://api-gw:8000';
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
@@ -26,7 +30,18 @@ export async function POST(req: Request) {
 
     let key_secret = process.env.RAZORPAY_KEY_SECRET;
 
-    const { data: settings } = await supabaseAdmin.from('payment_settings').select('razorpay_key_secret').eq('id', 1).single();
+    let settings: any = null;
+    try {
+      const { data: sData, error: sErr } = await supabaseAdmin
+        .from('payment_settings')
+        .select('razorpay_key_secret')
+        .eq('id', 1)
+        .maybeSingle();
+      if (!sErr && sData) settings = sData;
+    } catch {}
+    if (!settings) {
+      settings = await pgGetSingleRow('payment_settings', 1).catch(() => null);
+    }
     if (settings?.razorpay_key_secret) {
       key_secret = settings.razorpay_key_secret;
     }
@@ -49,14 +64,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    // Verify order exists and matches razorpay_order_id
-    const { data: order, error: orderErr } = await supabaseAdmin
-      .from('hosting_orders')
-      .select('id, user_id, status, razorpay_order_id')
-      .eq('id', orderId)
-      .maybeSingle();
+    // Verify order exists (with direct PG fallback by id and razorpay_order_id)
+    let order: any = null;
+    try {
+      const { data: oData, error: orderErr } = await supabaseAdmin
+        .from('hosting_orders')
+        .select('id, user_id, status, razorpay_order_id')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (!orderErr && oData) order = oData;
+    } catch {}
+    if (!order) {
+      order = await pgFindOneByColumn('hosting_orders', 'id', orderId).catch(() => null);
+    }
+    if (!order && razorpay_order_id) {
+      order = await pgFindOneByColumn('hosting_orders', 'razorpay_order_id', razorpay_order_id).catch(() => null);
+    }
 
-    if (orderErr || !order) {
+    if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
@@ -65,7 +90,7 @@ export async function POST(req: Request) {
     }
 
     // Hand off to the centralized fulfillment engine
-    const result = await fulfillOrder(orderId, 'razorpay', razorpay_payment_id);
+    const result = await fulfillOrder(order.id, 'razorpay', razorpay_payment_id);
 
     if (!result.success) {
       return NextResponse.json({ error: result.error || 'Fulfillment Failed' }, { status: 500 });

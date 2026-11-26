@@ -4,6 +4,11 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { fulfillOrder } from '@/lib/billing/orderFulfillment';
 import { createClient } from '@supabase/supabase-js';
+import {
+  pgFindOneByColumn,
+  pgGetSingleRow,
+  pgUpdateWhere,
+} from '@/lib/db/pgFallback';
 
 export async function POST(req: Request) {
   try {
@@ -17,23 +22,33 @@ export async function POST(req: Request) {
     // Get webhook secret from env or DB
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
     
-    // Also try to get from DB payment_settings
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Also try to get from DB payment_settings (with PG fallback)
+    const supabaseUrl =
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      'http://api-gw:8000';
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
     let secret = webhookSecret;
     
+    let settings: any = null;
     if (supabaseUrl && supabaseServiceKey) {
-      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: { persistSession: false },
-      });
-      const { data: settings } = await supabaseAdmin
-        .from('payment_settings')
-        .select('razorpay_webhook_secret')
-        .eq('id', 1)
-        .single();
-      if (settings?.razorpay_webhook_secret) {
-        secret = settings.razorpay_webhook_secret;
-      }
+      try {
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: { persistSession: false },
+        });
+        const { data: sData, error: sErr } = await supabaseAdmin
+          .from('payment_settings')
+          .select('razorpay_webhook_secret')
+          .eq('id', 1)
+          .maybeSingle();
+        if (!sErr && sData) settings = sData;
+      } catch {}
+    }
+    if (!settings) {
+      settings = await pgGetSingleRow('payment_settings', 1).catch(() => null);
+    }
+    if (settings?.razorpay_webhook_secret) {
+      secret = settings.razorpay_webhook_secret;
     }
 
     if (!secret) {
@@ -59,6 +74,13 @@ export async function POST(req: Request) {
     const event = JSON.parse(rawBody);
     console.log(`Razorpay webhook event: ${event.event}`);
 
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ error: 'Server config error' }, { status: 500 });
+    }
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+    });
+
     if (event.event === 'payment.captured') {
       const payment = event.payload?.payment?.entity;
       if (!payment) {
@@ -68,68 +90,48 @@ export async function POST(req: Request) {
       const razorpay_payment_id = payment.id;
       const razorpay_order_id = payment.order_id;
       
-      // Find our internal order by Razorpay order ID
-      const supabaseUrl2 = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseServiceKey2 = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (!supabaseUrl2 || !supabaseServiceKey2) {
-        return NextResponse.json({ error: 'Server config error' }, { status: 500 });
-      }
-      const supabaseAdmin = createClient(supabaseUrl2, supabaseServiceKey2, {
-        auth: { persistSession: false },
-      });
-      
-      // Find the order that has this Razorpay order ID as transaction_id or in notes
-      // We look for orders that are still pending_payment (not yet fulfilled)
-      const { data: orders } = await supabaseAdmin
-        .from('hosting_orders')
-        .select('id, status, transaction_id')
-        .eq('status', 'pending_payment')
-        .limit(100);
-      
-      // Try to find by transaction_id match or by looking at notes
-      // Also search in recently pending orders (within last 24h) that match the payment amount
-      let targetOrderId: string | null = null;
-      
-      // First try: search by razorpay_order_id stored in a column
-      const { data: directMatch } = await supabaseAdmin
-        .from('hosting_orders')
-        .select('id, status')
-        .eq('razorpay_order_id', razorpay_order_id)
-        .maybeSingle();
-      
-      if (directMatch) {
-        targetOrderId = directMatch.id;
-      } else {
-        // Fallback: check transaction_id column 
-        const { data: txMatch } = await supabaseAdmin
+      // Find our internal order by Razorpay order ID (with PG fallback)
+      let matchedOrder: any = null;
+      try {
+        const { data: directMatch, error: dErr } = await supabaseAdmin
           .from('hosting_orders')
           .select('id, status')
-          .eq('transaction_id', razorpay_order_id)
+          .eq('razorpay_order_id', razorpay_order_id)
           .maybeSingle();
-        if (txMatch) targetOrderId = txMatch.id;
+        if (!dErr && directMatch) matchedOrder = directMatch;
+      } catch {}
+
+      if (!matchedOrder && razorpay_order_id) {
+        matchedOrder = await pgFindOneByColumn('hosting_orders', 'razorpay_order_id', razorpay_order_id).catch(() => null);
       }
 
-      if (!targetOrderId) {
-        // Log this for manual review - payment captured but we can't find the order
+      if (!matchedOrder && razorpay_order_id) {
+        try {
+          const { data: txMatch, error: txErr } = await supabaseAdmin
+            .from('hosting_orders')
+            .select('id, status')
+            .eq('transaction_id', razorpay_order_id)
+            .maybeSingle();
+          if (!txErr && txMatch) matchedOrder = txMatch;
+        } catch {}
+      }
+
+      if (!matchedOrder && razorpay_order_id) {
+        matchedOrder = await pgFindOneByColumn('hosting_orders', 'transaction_id', razorpay_order_id).catch(() => null);
+      }
+
+      if (!matchedOrder) {
         console.error(`Razorpay webhook: payment ${razorpay_payment_id} captured for order ${razorpay_order_id} but no matching internal order found`);
-        // Return 200 to Razorpay so it doesn't retry (we'll handle manually)
         return NextResponse.json({ received: true, warning: 'Order not found - logged for review' });
       }
 
-      // Don't double-fulfill
-      const { data: existingOrder } = await supabaseAdmin
-        .from('hosting_orders')
-        .select('status')
-        .eq('id', targetOrderId)
-        .single();
-      
-      if (existingOrder?.status === 'paid' || existingOrder?.status === 'provisioning' || existingOrder?.status === 'active') {
+      if (matchedOrder.status === 'paid' || matchedOrder.status === 'provisioning' || matchedOrder.status === 'active') {
         return NextResponse.json({ received: true, message: 'Already fulfilled' });
       }
 
       // Fulfill the order
-      const result = await fulfillOrder(targetOrderId, 'razorpay', razorpay_payment_id);
-      console.log(`Webhook fulfillment result for order ${targetOrderId}:`, result);
+      const result = await fulfillOrder(matchedOrder.id, 'razorpay', razorpay_payment_id);
+      console.log(`Webhook fulfillment result for order ${matchedOrder.id}:`, result);
       
       return NextResponse.json({ received: true, fulfilled: result.success });
     }
@@ -137,16 +139,14 @@ export async function POST(req: Request) {
     if (event.event === 'payment.failed') {
       const payment = event.payload?.payment?.entity;
       if (payment?.order_id) {
-        const supabaseAdmin2 = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          { auth: { persistSession: false } }
-        );
-        // Update order to failed so user can retry
-        await supabaseAdmin2
+        const patch = { status: 'payment_failed', updated_at: new Date().toISOString() };
+        const { error: failErr } = await supabaseAdmin
           .from('hosting_orders')
-          .update({ status: 'payment_failed', updated_at: new Date().toISOString() })
+          .update(patch)
           .eq('razorpay_order_id', payment.order_id);
+        if (failErr) {
+          await pgUpdateWhere('hosting_orders', patch, 'razorpay_order_id', payment.order_id).catch(() => {});
+        }
       }
       return NextResponse.json({ received: true });
     }

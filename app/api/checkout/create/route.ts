@@ -8,6 +8,14 @@ import {
   calculateCustomComputeMonthly,
   normalizeCycle,
 } from '@/lib/billing/pricingMath';
+import {
+  pgListTable,
+  pgFindOneByColumn,
+  pgInsertRow,
+  pgUpdateWhere,
+  healPostgrestSchema,
+  withPgClient,
+} from '@/lib/db/pgFallback';
 
 export async function POST(req: Request) {
   try {
@@ -44,9 +52,12 @@ export async function POST(req: Request) {
       custom_storage,
     } = parseResult.data;
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl =
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      'http://api-gw:8000';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.ANON_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
     const authHeader = req.headers.get('Authorization');
 
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -72,8 +83,15 @@ export async function POST(req: Request) {
       ? createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } })
       : supabase;
 
-    // Load active add-ons
-    const { data: dbAddons } = await supabaseDb.from('hosting_addons').select('*');
+    // Load active add-ons (with PG fallback)
+    let dbAddons: any[] | null = null;
+    try {
+      const { data: addonsRes, error: addonsErr } = await supabaseDb.from('hosting_addons').select('*');
+      if (!addonsErr && addonsRes) dbAddons = addonsRes;
+    } catch {}
+    if (!dbAddons) {
+      dbAddons = await pgListTable('hosting_addons', 'sort_order', true).catch(() => []);
+    }
     const addonMap = new Map(
       (dbAddons || []).map((a: any) => [
         a.id,
@@ -93,11 +111,18 @@ export async function POST(req: Request) {
       );
       resolvedTier = 'cloud';
     } else {
-      const { data: planData } = await supabaseDb
-        .from('hosting_plans')
-        .select('id, price_monthly, tier')
-        .eq('id', planId)
-        .maybeSingle();
+      let planData: any = null;
+      try {
+        const { data: pData, error: pErr } = await supabaseDb
+          .from('hosting_plans')
+          .select('id, price_monthly, tier')
+          .eq('id', planId)
+          .maybeSingle();
+        if (!pErr && pData) planData = pData;
+      } catch {}
+      if (!planData) {
+        planData = await pgFindOneByColumn('hosting_plans', 'id', planId).catch(() => null);
+      }
 
       if (planData && planData.price_monthly !== undefined && planData.price_monthly !== null) {
         dbPlanExists = true;
@@ -111,20 +136,29 @@ export async function POST(req: Request) {
       }
     }
 
-    // Validate coupon server-side if supplied
+    // Validate coupon server-side if supplied (with PG fallback)
     let validCoupon: { id: string; code: string; discount_type: string; discount_value: number; current_uses: number } | null = null;
     if (coupon_code && coupon_code.trim()) {
+      const codeUpper = coupon_code.trim().toUpperCase();
       const nowIso = new Date().toISOString();
-      const { data: couponRow } = await supabaseDb
-        .from('hosting_coupons')
-        .select('id, code, discount_type, discount_value, max_uses, current_uses, valid_until, is_active')
-        .eq('code', coupon_code.trim().toUpperCase())
-        .eq('is_active', true)
-        .maybeSingle();
+      let couponRow: any = null;
+      try {
+        const { data: cData, error: cErr } = await supabaseDb
+          .from('hosting_coupons')
+          .select('id, code, discount_type, discount_value, max_uses, current_uses, valid_until, is_active')
+          .eq('code', codeUpper)
+          .eq('is_active', true)
+          .maybeSingle();
+        if (!cErr && cData) couponRow = cData;
+      } catch {}
+      if (!couponRow) {
+        const pgCoupon = await pgFindOneByColumn('hosting_coupons', 'code', codeUpper).catch(() => null);
+        if (pgCoupon?.is_active) couponRow = pgCoupon;
+      }
 
       if (
         couponRow &&
-        (!couponRow.valid_until || couponRow.valid_until >= nowIso) &&
+        (!couponRow.valid_until || new Date(couponRow.valid_until).toISOString() >= nowIso) &&
         (!couponRow.max_uses || (couponRow.current_uses || 0) < couponRow.max_uses)
       ) {
         validCoupon = couponRow;
@@ -134,11 +168,18 @@ export async function POST(req: Request) {
     // Check available wallet credit if user requested credit deduction
     let availableCreditInr = 0;
     if (use_credits) {
-      const { data: creditBal } = await supabaseDb
-        .from('credit_balances')
-        .select('balance_paise')
-        .eq('user_id', authUser.id)
-        .maybeSingle();
+      let creditBal: any = null;
+      try {
+        const { data: cbData, error: cbErr } = await supabaseDb
+          .from('credit_balances')
+          .select('balance_paise')
+          .eq('user_id', authUser.id)
+          .maybeSingle();
+        if (!cbErr && cbData) creditBal = cbData;
+      } catch {}
+      if (!creditBal) {
+        creditBal = await pgFindOneByColumn('credit_balances', 'user_id', authUser.id).catch(() => null);
+      }
       if (creditBal?.balance_paise && creditBal.balance_paise > 0) {
         availableCreditInr = Math.floor(creditBal.balance_paise / 100);
       }
@@ -166,73 +207,111 @@ export async function POST(req: Request) {
 
     const isZeroPayable = math.payableTotal === 0;
 
-    const { data, error } = await supabaseDb
-      .from('hosting_orders')
-      .insert({
-        plan_id: dbPlanExists ? planId : null,
-        plan_name: planName,
-        plan_tier: resolvedTier,
-        billing_cycle: normalizedCycle,
-        subtotal: math.subtotalBeforeCoupon,
-        discount_amount: math.couponDiscount + math.creditApplied,
-        tax_amount: math.taxAmount,
-        total: math.payableTotal,
-        domain: domain || null,
+    const orderPayload = {
+      plan_id: dbPlanExists ? planId : null,
+      plan_name: planName,
+      plan_tier: resolvedTier,
+      billing_cycle: normalizedCycle,
+      subtotal: math.subtotalBeforeCoupon,
+      discount_amount: math.couponDiscount + math.creditApplied,
+      tax_amount: math.taxAmount,
+      total: math.payableTotal,
+      domain: domain || null,
+      os_selection: os || 'ubuntu-22.04',
+      panel_selection: panel || 'none',
+      server_location: location || 'pune',
+      user_email: authUser.email,
+      notes: JSON.stringify({
         os_selection: os || 'ubuntu-22.04',
         panel_selection: panel || 'none',
         server_location: location || 'pune',
+        addons,
         user_email: authUser.email,
-        notes: JSON.stringify({
-          os_selection: os || 'ubuntu-22.04',
-          panel_selection: panel || 'none',
-          server_location: location || 'pune',
-          addons,
-          user_email: authUser.email,
-          hostname: hostname || null,
-          ssh_public_key: ssh_public_key || null,
-          custom_vcpu: planId === 'custom' ? Number(custom_vcpu || 4) : undefined,
-          custom_ram: planId === 'custom' ? Number(custom_ram || 8) : undefined,
-          custom_storage: planId === 'custom' ? Number(custom_storage || 100) : undefined,
-          coupon_code: validCoupon?.code || null,
-          coupon_discount: math.couponDiscount,
-          credit_applied: math.creditApplied,
-          hourly_rate: math.hourlyRate,
-          billing_mode: normalizedCycle === 'pay_as_you_go' ? 'hourly_metered' : 'commitment',
-        }),
-        status: 'pending_payment',
-        user_id: authUser.id,
-      })
-      .select('id, total, subtotal, discount_amount, tax_amount')
-      .single();
+        hostname: hostname || null,
+        ssh_public_key: ssh_public_key || null,
+        custom_vcpu: planId === 'custom' ? Number(custom_vcpu || 4) : undefined,
+        custom_ram: planId === 'custom' ? Number(custom_ram || 8) : undefined,
+        custom_storage: planId === 'custom' ? Number(custom_storage || 100) : undefined,
+        coupon_code: validCoupon?.code || null,
+        coupon_discount: math.couponDiscount,
+        credit_applied: math.creditApplied,
+        hourly_rate: math.hourlyRate,
+        billing_mode: normalizedCycle === 'pay_as_you_go' ? 'hourly_metered' : 'commitment',
+      }),
+      status: 'pending_payment',
+      user_id: authUser.id,
+    };
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    let data: any = null;
+    let insertErrorMsg: string | null = null;
+    try {
+      const res = await supabaseDb
+        .from('hosting_orders')
+        .insert(orderPayload)
+        .select('id, total, subtotal, discount_amount, tax_amount')
+        .single();
+      if (!res.error && res.data) {
+        data = res.data;
+      } else {
+        insertErrorMsg = res.error?.message || 'Order insert failed';
+      }
+    } catch (e: any) {
+      insertErrorMsg = e?.message || 'Order insert failed';
+    }
+
+    if (!data) {
+      try {
+        data = await pgInsertRow('hosting_orders', orderPayload);
+        healPostgrestSchema().catch(() => {});
+      } catch (pgErr: any) {
+        return NextResponse.json({ error: pgErr?.message || insertErrorMsg || 'Failed to create order' }, { status: 400 });
+      }
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: insertErrorMsg || 'Failed to create order' }, { status: 400 });
     }
 
     // Increment coupon usage atomically
     if (validCoupon) {
-      await supabaseDb
+      const nextUses = (validCoupon.current_uses || 0) + 1;
+      const { error: cUpErr } = await supabaseDb
         .from('hosting_coupons')
-        .update({ current_uses: (validCoupon.current_uses || 0) + 1 })
+        .update({ current_uses: nextUses })
         .eq('id', validCoupon.id);
+      if (cUpErr) {
+        await pgUpdateWhere('hosting_coupons', { current_uses: nextUses }, 'id', validCoupon.id).catch(() => {});
+      }
     }
 
     // Deduct wallet credits if applied
     if (math.creditApplied > 0) {
       const deductPaise = math.creditApplied * 100;
       const newBalancePaise = Math.max(0, availableCreditInr * 100 - deductPaise);
-      await supabaseDb
+      const { error: balErr } = await supabaseDb
         .from('credit_balances')
         .update({ balance_paise: newBalancePaise, updated_at: new Date().toISOString() })
         .eq('user_id', authUser.id);
-      await supabaseDb.from('credit_ledger').insert({
+      if (balErr) {
+        await withPgClient(async (c) => {
+          await c.query(
+            `UPDATE public.credit_balances SET balance_paise = $1, updated_at = now() WHERE user_id = $2`,
+            [newBalancePaise, authUser.id]
+          );
+        }).catch(() => {});
+      }
+      const ledgerEntry = {
         user_id: authUser.id,
         amount_paise: -deductPaise,
         balance_after_paise: newBalancePaise,
         type: 'usage_deduction',
         description: `Applied to order ${data.id} (${planName})`,
         reference_id: data.id,
-      });
+      };
+      const { error: ledErr } = await supabaseDb.from('credit_ledger').insert(ledgerEntry);
+      if (ledErr) {
+        await pgInsertRow('credit_ledger', ledgerEntry).catch(() => {});
+      }
     }
 
     // If order total is ₹0 (free tier, 100% coupon, or paid fully with wallet credits), fulfill immediately

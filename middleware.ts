@@ -84,7 +84,7 @@ export async function middleware(request: NextRequest) {
     process.env.SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     'http://api-gw:8000'
-  const rawAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const rawAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.ANON_KEY
   const anonKey =
     rawAnonKey && !rawAnonKey.includes('placeholder') ? rawAnonKey : undefined
   if (!anonKey) {

@@ -71,6 +71,22 @@ ALTER USER postgres WITH LOGIN PASSWORD :'pgpass';
 CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_auth_admin;
 CREATE SCHEMA IF NOT EXISTS storage AUTHORIZATION supabase_storage_admin;
 CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE SCHEMA IF NOT EXISTS graphql_public;
+
+ALTER SCHEMA auth OWNER TO supabase_auth_admin;
+ALTER SCHEMA storage OWNER TO supabase_storage_admin;
+
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'auth' LOOP
+    EXECUTE format('ALTER TABLE auth.%I OWNER TO supabase_auth_admin', r.tablename);
+  END LOOP;
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'storage' LOOP
+    EXECUTE format('ALTER TABLE storage.%I OWNER TO supabase_storage_admin', r.tablename);
+  END LOOP;
+END $$;
 
 -- Grant role membership to authenticator for PostgREST JWT switching
 GRANT anon TO authenticator;
@@ -83,6 +99,7 @@ GRANT authenticator TO supabase_storage_admin;
 
 -- Schema and database privileges (critical for PostgreSQL 15+ permission model)
 GRANT ALL ON SCHEMA public TO postgres, supabase_admin, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA graphql_public TO postgres, supabase_admin, authenticator, anon, authenticated, service_role;
 GRANT ALL ON SCHEMA auth TO supabase_auth_admin, postgres, service_role;
 GRANT ALL ON SCHEMA storage TO supabase_storage_admin, postgres, service_role;
 GRANT ALL PRIVILEGES ON DATABASE postgres TO supabase_auth_admin, supabase_storage_admin;

@@ -40,7 +40,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-postgres} -h localhost && (test -f /tmp/.roles_synced || (psql -h /var/run/postgresql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres} -v ON_ERROR_STOP=1 -f /etc/supabase-init/roles.sql && touch /tmp/.roles_synced))"
+          "pg_isready -U ${POSTGRES_USER:-postgres} -h 127.0.0.1 && (test -f /tmp/.roles_synced || ((psql -h 127.0.0.1 -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres} -v ON_ERROR_STOP=1 -f /etc/supabase-init/roles.sql || su -s /bin/sh postgres -c 'psql -h /var/run/postgresql -U postgres -d ${POSTGRES_DB:-postgres} -v ON_ERROR_STOP=1 -f /etc/supabase-init/roles.sql' || psql -h /var/run/postgresql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres} -v ON_ERROR_STOP=1 -f /etc/supabase-init/roles.sql) >/proc/1/fd/1 2>/proc/1/fd/2 && touch /tmp/.roles_synced))"
         ]
       interval: 5s
       timeout: 10s

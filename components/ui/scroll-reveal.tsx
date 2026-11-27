@@ -20,19 +20,38 @@ export function ScrollReveal({
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setHasReducedMotion(mediaQuery.matches);
-    
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
+    if (mediaQuery.matches) {
+      setHasReducedMotion(true);
+      setIsVisible(true);
+      return;
+    }
+
+    const el = ref.current;
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 120) {
         setIsVisible(true);
-        if (ref.current) {
-          observer.unobserve(ref.current);
-        }
+        return;
       }
-    }, { threshold: 0.05, rootMargin: '50px' });
-    
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          if (el) observer.unobserve(el);
+        }
+      },
+      { threshold: 0.01, rootMargin: '120px' }
+    );
+
+    if (el) observer.observe(el);
+    const safetyTimer = setTimeout(() => setIsVisible(true), 350);
+
+    return () => {
+      clearTimeout(safetyTimer);
+      observer.disconnect();
+    };
   }, []);
 
   if (hasReducedMotion) {
@@ -40,8 +59,8 @@ export function ScrollReveal({
   }
 
   return (
-    <div 
-      ref={ref} 
+    <div
+      ref={ref}
       className={cn(className, !isVisible && 'opacity-0', isVisible && `animate-${animation}`)}
       style={isVisible && delay > 0 ? { animationDelay: `${delay}ms`, animationFillMode: 'forwards' } : undefined}
     >

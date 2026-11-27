@@ -7,157 +7,159 @@ import { Check, X, Star, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeroV4 } from '@/components/ui/page-hero-v4';
 
+const DEFAULT_COMPARE_PLANS: HostingPlan[] = [
+  {
+    id: 'shared-starter',
+    slug: 'shared-starter',
+    tier: 'shared',
+    name: 'Shared Starter',
+    short_description: 'Personal sites & blogs',
+    long_description: null,
+    price_monthly: 790,
+    price_annual: 7900,
+    cpu: '1 vCPU',
+    ram: '1 GB',
+    storage: '10 GB NVMe',
+    bandwidth: 'Unmetered',
+    features: ['1 Website', 'Free SSL', '5 Mailboxes', 'Daily Backups', '99.9% Uptime SLA'],
+    specs: { cpu: 1, ram: 1 },
+    is_popular: false,
+    is_active: true,
+    sort_order: 1,
+  },
+  {
+    id: 'shared-pro',
+    slug: 'shared-pro',
+    tier: 'shared',
+    name: 'Shared Professional',
+    short_description: 'Growing businesses',
+    long_description: null,
+    price_monthly: 1490,
+    price_annual: 14900,
+    cpu: '2 vCPU',
+    ram: '2 GB',
+    storage: '50 GB NVMe',
+    bandwidth: 'Unmetered',
+    features: ['Unlimited Websites', 'Free SSL', 'Free Domain (Annual)', 'LiteSpeed Web Server', 'Unlimited Mailboxes', 'Priority 24/7 Support'],
+    specs: { cpu: 2, ram: 2 },
+    is_popular: true,
+    is_active: true,
+    sort_order: 2,
+  },
+  {
+    id: 'wp-managed',
+    slug: 'wp-managed',
+    tier: 'wordpress',
+    name: 'Managed WordPress Pro',
+    short_description: 'WordPress performance',
+    long_description: null,
+    price_monthly: 2490,
+    price_annual: 24900,
+    cpu: '2 vCPU',
+    ram: '4 GB',
+    storage: '40 GB NVMe',
+    bandwidth: 'Unmetered',
+    features: ['WP-CLI & SSH', 'LiteSpeed Cache', 'Staging Environment', 'Plugin Auto-Updates', 'Free Wildcard SSL', 'Malware Scanner'],
+    specs: { cpu: 2, ram: 4 },
+    is_popular: false,
+    is_active: true,
+    sort_order: 3,
+  },
+  {
+    id: 'vps-1',
+    slug: 'vps-1',
+    tier: 'vps',
+    name: 'VPS Essential',
+    short_description: 'Devs & APIs',
+    long_description: null,
+    price_monthly: 2960,
+    price_annual: 29472,
+    cpu: '2 vCPU Cores',
+    ram: '4 GB',
+    storage: '80 GB NVMe',
+    bandwidth: '3 TB',
+    features: ['Full Root Access', 'KVM Virtualization', 'Dedicated IPv4 + IPv6', '1-Click Snapshots', 'Mumbai Datacenter', 'DDoS Protection'],
+    specs: { cpu: 2, ram: 4 },
+    is_popular: false,
+    is_active: true,
+    sort_order: 4,
+  },
+  {
+    id: 'vps-2',
+    slug: 'vps-2',
+    tier: 'vps',
+    name: 'VPS Advanced',
+    short_description: 'High traffic apps',
+    long_description: null,
+    price_monthly: 5850,
+    price_annual: 58260,
+    cpu: '4 vCPU Cores',
+    ram: '8 GB',
+    storage: '160 GB NVMe',
+    bandwidth: '6 TB',
+    features: ['Full Root Access', 'EPYC High Frequency', '10 Gbps Uplink', 'BGP Anycast Routing', 'Live Kernel Patching', '24/7 Priority Support'],
+    specs: { cpu: 4, ram: 8 },
+    is_popular: true,
+    is_active: true,
+    sort_order: 5,
+  },
+  {
+    id: 'cloud-compute',
+    slug: 'cloud-compute',
+    tier: 'cloud',
+    name: 'Cloud Compute HA',
+    short_description: 'Auto-scaling cluster',
+    long_description: null,
+    price_monthly: 4890,
+    price_annual: 48900,
+    cpu: '8 vCPU Cores',
+    ram: '16 GB',
+    storage: '320 GB NVMe',
+    bandwidth: 'Unlimited',
+    features: ['Auto-scaling 1-5 nodes', 'Managed Load Balancer', 'High Availability SLA', 'Automated Failover', 'Prometheus Metrics', 'Private Subnet VPC'],
+    specs: { cpu: 8, ram: 16 },
+    is_popular: false,
+    is_active: true,
+    sort_order: 6,
+  },
+];
+
 export default function CompareClient() {
-  const [plans, setPlans] = useState<HostingPlan[]>([]);
+  const [plans, setPlans] = useState<HostingPlan[]>(DEFAULT_COMPARE_PLANS);
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const fetchPlans = async () => {
-      const { data } = await createClient()
-        .from('hosting_plans')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      if (data && data.length > 0) {
-        setPlans(data as unknown as HostingPlan[]);
-      } else {
-        setPlans([
-          {
-            id: 'shared-starter',
-            slug: 'shared-starter',
-            tier: 'shared',
-            name: 'Shared Starter',
-            short_description: 'Personal sites & blogs',
-            long_description: null,
-            price_monthly: 99,
-            price_annual: 999,
-            cpu: '1 vCPU',
-            ram: '1 GB',
-            storage: '20 GB NVMe',
-            bandwidth: '500 GB',
-            features: ['1 Website', 'Free SSL', '5 Mailboxes', 'Daily Backups', '99.9% Uptime SLA'],
-            specs: { cpu: 1, ram: 1 },
-            is_popular: false,
-            is_active: true,
-            sort_order: 1,
-          },
-          {
-            id: 'shared-pro',
-            slug: 'shared-pro',
-            tier: 'shared',
-            name: 'Shared Pro',
-            short_description: 'Growing businesses',
-            long_description: null,
-            price_monthly: 199,
-            price_annual: 1999,
-            cpu: '2 vCPU',
-            ram: '2 GB',
-            storage: '50 GB NVMe',
-            bandwidth: '1.5 TB',
-            features: ['Unlimited Websites', 'Free SSL', 'Free Domain (Annual)', 'LiteSpeed Web Server', 'Unlimited Mailboxes', 'Priority 24/7 Support'],
-            specs: { cpu: 2, ram: 2 },
-            is_popular: true,
-            is_active: true,
-            sort_order: 2,
-          },
-          {
-            id: 'wp-managed',
-            slug: 'wp-managed',
-            tier: 'wordpress',
-            name: 'Managed WP',
-            short_description: 'WordPress performance',
-            long_description: null,
-            price_monthly: 299,
-            price_annual: 2990,
-            cpu: '2 vCPU',
-            ram: '4 GB',
-            storage: '40 GB NVMe',
-            bandwidth: '1 TB',
-            features: ['WP-CLI & SSH', 'LiteSpeed Cache', 'Staging Environment', 'Plugin Auto-Updates', 'Free Wildcard SSL', 'Malware Scanner'],
-            specs: { cpu: 2, ram: 4 },
-            is_popular: false,
-            is_active: true,
-            sort_order: 3,
-          },
-          {
-            id: 'vps-essential',
-            slug: 'vps-essential',
-            tier: 'vps',
-            name: 'VPS Essential',
-            short_description: 'Devs & APIs',
-            long_description: null,
-            price_monthly: 499,
-            price_annual: 4990,
-            cpu: '2 vCPU Cores',
-            ram: '4 GB',
-            storage: '80 GB NVMe',
-            bandwidth: '2 TB',
-            features: ['Full Root Access', 'KVM Virtualization', 'Dedicated IPv4 + IPv6', '1-Click Snapshots', 'Mumbai Datacenter', 'DDoS Protection'],
-            specs: { cpu: 2, ram: 4 },
-            is_popular: false,
-            is_active: true,
-            sort_order: 4,
-          },
-          {
-            id: 'vps-pro',
-            slug: 'vps-pro',
-            tier: 'vps',
-            name: 'VPS Advanced',
-            short_description: 'High traffic apps',
-            long_description: null,
-            price_monthly: 899,
-            price_annual: 8990,
-            cpu: '4 vCPU Cores',
-            ram: '8 GB',
-            storage: '160 GB NVMe',
-            bandwidth: '4 TB',
-            features: ['Full Root Access', 'EPYC High Frequency', '10 Gbps Uplink', 'BGP Anycast Routing', 'Live Kernel Patching', '24/7 Priority Support'],
-            specs: { cpu: 4, ram: 8 },
-            is_popular: true,
-            is_active: true,
-            sort_order: 5,
-          },
-          {
-            id: 'cloud-compute',
-            slug: 'cloud-compute',
-            tier: 'cloud',
-            name: 'Cloud Compute',
-            short_description: 'Auto-scaling cluster',
-            long_description: null,
-            price_monthly: 1499,
-            price_annual: 14990,
-            cpu: '8 vCPU Cores',
-            ram: '16 GB',
-            storage: '320 GB NVMe',
-            bandwidth: 'Unlimited',
-            features: ['Auto-scaling 1-5 nodes', 'Managed Load Balancer', 'High Availability SLA', 'Automated Failover', 'Prometheus Metrics', 'Private Subnet VPC'],
-            specs: { cpu: 8, ram: 16 },
-            is_popular: false,
-            is_active: true,
-            sort_order: 6,
-          },
-        ]);
+      try {
+        const queryPromise = createClient()
+          .from('hosting_plans')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+        const timeoutPromise = new Promise<{ data: null }>((resolve) =>
+          setTimeout(() => resolve({ data: null }), 4000)
+        );
+        const result = await Promise.race([queryPromise, timeoutPromise]);
+        const data = result?.data;
+        if (active && Array.isArray(data) && data.length > 0) {
+          setPlans(data as unknown as HostingPlan[]);
+        }
+      } catch {
+        // Keep DEFAULT_COMPARE_PLANS visible on errors
       }
-      setLoading(false);
     };
     fetchPlans();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const getPrice = (plan: HostingPlan) =>
-    billing === 'annual' ? plan.price_annual / 12 : plan.price_monthly;
+    billing === 'annual' ? Math.round(plan.price_annual / 12) : plan.price_monthly;
 
-  const allFeatures = Array.from(new Set(plans.flatMap((p) => p.features))).sort();
-  const hasFeature = (plan: HostingPlan, feature: string) => plan.features.includes(feature);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading plans...</div>
-      </div>
-    );
-  }
+  const allFeatures = Array.from(new Set(plans.flatMap((p) => p.features || []))).sort();
+  const hasFeature = (plan: HostingPlan, feature: string) => (plan.features || []).includes(feature);
 
   return (
     <>

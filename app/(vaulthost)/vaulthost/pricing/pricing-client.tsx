@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 import { ComparisonMatrix } from '@/components/hosting/comparison-matrix';
-import { Check, Sparkles, TrendingDown, ArrowRight, Loader2 } from 'lucide-react';
+import { Check, Sparkles, TrendingDown, ArrowRight } from 'lucide-react';
 import { CloudCalculator } from '@/components/hosting/cloud-calculator';
 import Link from 'next/link';
 import { calculateHourlyRate, getAnnualPricing } from '@/lib/billing/pricingMath';
@@ -21,46 +21,64 @@ interface Plan {
 
 type BillingCycle = 'payg' | 'monthly' | 'semi_annual' | 'annual';
 
+const DEFAULT_PLANS: Plan[] = [
+  { id: 'shared-starter', name: 'Shared Starter', tier: 'shared', price_monthly: 790, price_annual: 7900, features: ['1 Website', '10GB NVMe Storage', 'Free Wildcard SSL', '24/7 Support'], is_popular: false, short_description: 'Fast NVMe hosting for blogs and small sites.' },
+  { id: 'shared-pro', name: 'Shared Professional', tier: 'shared', price_monthly: 1490, price_annual: 14900, features: ['Unlimited Websites', '50GB NVMe Storage', 'Free Wildcard SSL', 'Daily Backups', 'Free Migration'], is_popular: true, short_description: 'For growing businesses and portfolios.' },
+  { id: 'shared-business', name: 'Shared Business', tier: 'shared', price_monthly: 2790, price_annual: 27900, features: ['Unlimited Websites', '100GB NVMe Storage', 'Premium EV SSL', 'Daily Backups', 'Priority Support'], is_popular: false, short_description: 'High performance for eCommerce and agencies.' },
+  { id: 'vps-1', name: 'VPS Essential (2 vCPU / 4GB)', tier: 'vps', price_monthly: 2960, price_annual: 29472, features: ['2 vCPU Cores (AMD EPYC)', '4GB DDR5 RAM', '80GB NVMe Storage', 'Full Root SSH', 'DDoS Protection'], is_popular: false, short_description: 'Balanced cloud compute for production web applications and APIs.' },
+  { id: 'vps-2', name: 'VPS Advanced (4 vCPU / 8GB)', tier: 'vps', price_monthly: 5850, price_annual: 58260, features: ['4 vCPU Cores (AMD EPYC)', '8GB DDR5 RAM', '160GB NVMe Storage', 'Full Root SSH', 'Automated Snapshots'], is_popular: true, short_description: 'High-frequency compute instance for APIs, databases, and microservices.' },
+  { id: 'cloud-compute', name: 'Cloud Compute High Availability', tier: 'cloud', price_monthly: 4890, price_annual: 48900, features: ['Auto-scaling Cluster', 'Integrated Load Balancing', 'N+1 Multi-Zone Redundancy', 'Full REST API Automation', 'Automated Backups'], is_popular: true, short_description: 'Enterprise-grade cloud infrastructure for mission-critical apps.' },
+  { id: 'dedicated-metal', name: 'Bare Metal Dedicated Server', tier: 'dedicated', price_monthly: 59990, price_annual: 599900, features: ['16 Cores / 32 Threads Intel Xeon', '64GB ECC RAM', '2x 1TB NVMe RAID-1', '10Gbps Uplink', 'Unmetered Bandwidth', 'IPMI/KVM Root Console'], is_popular: false, short_description: 'Uncompromised dedicated physical hardware with zero virtualization overhead.' },
+  { id: 'wp-managed', name: 'Managed WordPress Pro', tier: 'wordpress', price_monthly: 2490, price_annual: 24900, features: ['LiteSpeed Cache (3x Faster)', '1-Click Staging', 'Automated Updates', 'Malware Scan', '1-Click Restore'], is_popular: true, short_description: 'Fully managed WordPress with LiteSpeed caching and zero maintenance.' },
+];
+
 export function PricingPageClient() {
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState<Plan[]>(DEFAULT_PLANS);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [activeTier, setActiveTier] = useState<string>('shared');
 
   useEffect(() => {
+    let active = true;
     const fetchPlans = async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('hosting_plans')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order');
-      
-      if (data && data.length > 0) {
-        setPlans(data);
-      } else {
-        // Authoritative enterprise plans with transparent INR pricing
-        setPlans([
-          { id: 'shared-starter', name: 'Shared Starter', tier: 'shared', price_monthly: 790, price_annual: 7900, features: ['1 Website', '10GB NVMe Storage', 'Free Wildcard SSL', '24/7 Support'], is_popular: false, short_description: 'Fast NVMe hosting for blogs and small sites.' },
-          { id: 'shared-pro', name: 'Shared Professional', tier: 'shared', price_monthly: 1490, price_annual: 14900, features: ['Unlimited Websites', '50GB NVMe Storage', 'Free Wildcard SSL', 'Daily Backups', 'Free Migration'], is_popular: true, short_description: 'For growing businesses and portfolios.' },
-          { id: 'shared-business', name: 'Shared Business', tier: 'shared', price_monthly: 2790, price_annual: 27900, features: ['Unlimited Websites', '100GB NVMe Storage', 'Premium EV SSL', 'Daily Backups', 'Priority Support'], is_popular: false, short_description: 'High performance for eCommerce and agencies.' },
-          
-          { id: 'vps-1', name: 'VPS Essential (2 vCPU / 4GB)', tier: 'vps', price_monthly: 2960, price_annual: 29472, features: ['2 vCPU Cores (AMD EPYC)', '4GB DDR5 RAM', '80GB NVMe Storage', 'Full Root SSH', 'DDoS Protection'], is_popular: false, short_description: 'Balanced cloud compute for production web applications and APIs.' },
-          { id: 'vps-2', name: 'VPS Advanced (4 vCPU / 8GB)', tier: 'vps', price_monthly: 5850, price_annual: 58260, features: ['4 vCPU Cores (AMD EPYC)', '8GB DDR5 RAM', '160GB NVMe Storage', 'Full Root SSH', 'Automated Snapshots'], is_popular: true, short_description: 'High-frequency compute instance for APIs, databases, and microservices.' },
-          
-          { id: 'cloud-compute', name: 'Cloud Compute High Availability', tier: 'cloud', price_monthly: 4890, price_annual: 48900, features: ['Auto-scaling Cluster', 'Integrated Load Balancing', 'N+1 Multi-Zone Redundancy', 'Full REST API Automation', 'Automated Backups'], is_popular: true, short_description: 'Enterprise-grade cloud infrastructure for mission-critical apps.' },
-          
-          { id: 'dedicated-metal', name: 'Bare Metal Dedicated Server', tier: 'dedicated', price_monthly: 59990, price_annual: 599900, features: ['16 Cores / 32 Threads Intel Xeon', '64GB ECC RAM', '2x 1TB NVMe RAID-1', '10Gbps Uplink', 'Unmetered Bandwidth', 'IPMI/KVM Root Console'], is_popular: false, short_description: 'Uncompromised dedicated physical hardware with zero virtualization overhead.' },
-          
-          { id: 'wp-managed', name: 'Managed WordPress Pro', tier: 'wordpress', price_monthly: 2490, price_annual: 24900, features: ['LiteSpeed Cache (3x Faster)', '1-Click Staging', 'Automated Updates', 'Malware Scan', '1-Click Restore'], is_popular: true, short_description: 'Fully managed WordPress with LiteSpeed caching and zero maintenance.' },
-        ]);
+      try {
+        const supabase = createClient();
+        const queryPromise = supabase
+          .from('hosting_plans')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order');
+
+        const timeoutPromise = new Promise<{ data: null }>((resolve) =>
+          setTimeout(() => resolve({ data: null }), 4000)
+        );
+
+        const result = await Promise.race([queryPromise, timeoutPromise]);
+        const data = result?.data as Plan[] | null | undefined;
+
+        if (active && Array.isArray(data) && data.length > 0) {
+          const validData = data.filter(
+            (p) => p && typeof p.id === 'string' && typeof p.tier === 'string' && Number(p.price_monthly) >= 0
+          );
+          if (validData.length > 0) {
+            const dbTiers = new Set(validData.map((p) => p.tier));
+            const fallbackForMissingTiers = DEFAULT_PLANS.filter((p) => !dbTiers.has(p.tier));
+            setPlans([...validData, ...fallbackForMissingTiers]);
+          }
+        }
+      } catch {
+        // Keep DEFAULT_PLANS visible on network/DB errors
       }
-      setLoading(false);
     };
     fetchPlans();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const tiers = ['shared', 'vps', 'cloud', 'dedicated', 'wordpress'];
+  const tierPlans = plans.filter((p) => p.tier === activeTier);
+  const visiblePlans =
+    tierPlans.length > 0 ? tierPlans : DEFAULT_PLANS.filter((p) => p.tier === activeTier);
 
   const getTierName = (tier: string) => {
     const map: Record<string, string> = {
@@ -72,14 +90,6 @@ export function PricingPageClient() {
     };
     return map[tier] || tier;
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="pt-8">
@@ -154,7 +164,7 @@ export function PricingPageClient() {
         {/* Plan Grid */}
         <div className="mb-16">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans.filter(p => p.tier === activeTier).map((plan) => {
+            {visiblePlans.map((plan) => {
               const baseMonthly = Number(plan.price_monthly);
               let displayPrice = baseMonthly;
               let suffix = '/mo';

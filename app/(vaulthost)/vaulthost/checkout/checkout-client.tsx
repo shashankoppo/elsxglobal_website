@@ -89,80 +89,81 @@ export function CheckoutClient() {
 
   useEffect(() => {
     const init = async () => {
-      const supabase = createClient();
+      try {
+        const supabase = createClient();
 
-      // Parse billing cycle from query params cleanly via pricingMath
-      const rawBilling = searchParams.get('billing');
-      if (rawBilling) {
-        setBillingCycle(normalizeCycle(rawBilling));
-      }
+        // Parse billing cycle from query params cleanly via pricingMath
+        const rawBilling = searchParams.get('billing');
+        if (rawBilling) {
+          setBillingCycle(normalizeCycle(rawBilling));
+        }
 
-      if (planId === 'custom') {
-        const vcpu = Number(searchParams.get('vcpu') || 4);
-        const ram = Number(searchParams.get('ram') || 8);
-        const storage = Number(searchParams.get('storage') || 100);
-        const customPrice = calculateCustomComputeMonthly(vcpu, ram, storage);
+        if (planId === 'custom') {
+          const vcpu = Number(searchParams.get('vcpu') || 4);
+          const ram = Number(searchParams.get('ram') || 8);
+          const storage = Number(searchParams.get('storage') || 100);
+          const customPrice = calculateCustomComputeMonthly(vcpu, ram, storage);
 
-        setPlan({
-          id: 'custom',
-          name: `Custom Cloud Compute`,
-          tier: 'cloud',
-          price_monthly: customPrice,
-          price_annual: Math.round(customPrice * 12 * 0.833),
-          features: [`${vcpu} vCPUs`, `${ram}GB RAM`, `${storage}GB NVMe Storage`, `Auto-scaling enabled`],
-          short_description: 'Custom configured cloud instance with transparent INR pricing',
-        });
-      } else {
-        try {
-          const { data: planData } = await supabase
-            .from('hosting_plans')
-            .select('*')
-            .eq('id', planId)
-            .maybeSingle();
-
-          if (planData) {
-            setPlan(planData as any);
-          } else {
+          setPlan({
+            id: 'custom',
+            name: `Custom Cloud Compute`,
+            tier: 'cloud',
+            price_monthly: customPrice,
+            price_annual: Math.round(customPrice * 12 * 0.833),
+            features: [`${vcpu} vCPUs`, `${ram}GB RAM`, `${storage}GB NVMe Storage`, `Auto-scaling enabled`],
+            short_description: 'Custom configured cloud instance with transparent INR pricing',
+          });
+        } else {
+          try {
+            const planRes = await Promise.race([
+              supabase.from('hosting_plans').select('*').eq('id', planId).maybeSingle(),
+              new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 4000)),
+            ]);
+            if (planRes?.data) {
+              setPlan(planRes.data as any);
+            } else {
+              setPlan(resolvePlan(planId, searchParams));
+            }
+          } catch {
             setPlan(resolvePlan(planId, searchParams));
           }
-        } catch {
-          setPlan(resolvePlan(planId, searchParams));
         }
+
+        const [psRes, sessionRes, addonsRes] = await Promise.allSettled([
+          supabase.from('public_payment_settings').select('*').maybeSingle(),
+          supabase.auth.getSession(),
+          supabase.from('hosting_addons').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
+        ]);
+
+        if (psRes.status === 'fulfilled' && psRes.value?.data) {
+          setPaymentSettings(psRes.value.data);
+        }
+
+        const authUser =
+          sessionRes.status === 'fulfilled' ? sessionRes.value?.data?.session?.user || null : null;
+        setUser(authUser);
+
+        if (authUser) {
+          try {
+            const { data: cb } = await supabase
+              .from('credit_balances')
+              .select('balance_paise')
+              .eq('user_id', authUser.id)
+              .maybeSingle();
+            if (cb?.balance_paise && cb.balance_paise > 0) {
+              setWalletBalanceInr(Math.floor(cb.balance_paise / 100));
+            }
+          } catch {}
+        }
+
+        if (addonsRes.status === 'fulfilled' && addonsRes.value?.data) {
+          setDbAddons(addonsRes.value.data);
+        } else {
+          setDbAddons([]);
+        }
+      } finally {
+        setLoading(false);
       }
-
-      const { data: psData, error: psError } = await supabase
-        .from('public_payment_settings')
-        .select('*')
-        .maybeSingle();
-      if (psError) console.error(psError);
-      setPaymentSettings(psData);
-
-      const { data: { session } } = await supabase.auth.getSession();
-      const authUser = session?.user || null;
-      setUser(authUser);
-
-      if (authUser) {
-        try {
-          const { data: cb } = await supabase
-            .from('credit_balances')
-            .select('balance_paise')
-            .eq('user_id', authUser.id)
-            .maybeSingle();
-          if (cb?.balance_paise && cb.balance_paise > 0) {
-            setWalletBalanceInr(Math.floor(cb.balance_paise / 100));
-          }
-        } catch {}
-      }
-
-      const { data: addonsData, error: addonsError } = await supabase
-        .from('hosting_addons')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-      if (addonsError) console.error(addonsError);
-      setDbAddons(addonsData || []);
-
-      setLoading(false);
     };
     init();
   }, [planId, searchParams]);

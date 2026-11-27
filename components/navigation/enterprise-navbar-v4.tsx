@@ -140,6 +140,17 @@ export function EnterpriseNavbarV4() {
                 </div>
               );
             })}
+            <Link
+              href="/pricing"
+              className={cn(
+                'px-2.5 py-2 text-sm font-medium rounded-btn transition-colors v4-focus-ring whitespace-nowrap',
+                pathname?.startsWith('/pricing')
+                  ? 'text-signal'
+                  : 'text-text-secondary-v4 hover:text-text-primary-v4'
+              )}
+            >
+              Pricing
+            </Link>
           </div>
 
           {/* Right CTA group */}
@@ -252,6 +263,14 @@ export function EnterpriseNavbarV4() {
                   )}
                 </div>
               ))}
+
+              <Link
+                href="/pricing"
+                className="block px-4 py-3.5 text-sm font-semibold rounded-xl transition-colors"
+                style={{ color: 'hsl(215,14%,78%)' }}
+              >
+                Pricing
+              </Link>
 
               {/* Divider */}
               <div className="my-4 h-px" style={{ background: 'hsl(215,18%,18%)' }} />

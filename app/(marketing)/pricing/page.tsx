@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Check, X, ArrowRight, Server } from 'lucide-react';
 import { PageHeroV4 } from '@/components/ui/page-hero-v4';
 import { PanelCard } from '@/components/ui/panel-card';
 import { SectionLabelV4 } from '@/components/ui/section-label-v4';
-import { motion } from 'framer-motion';
-import { useScrollReveal } from '@/lib/animations';
 import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
 } from '@/components/ui/accordion';
@@ -16,6 +15,7 @@ const TIERS = [
     name: 'Starter',
     monthly: 0,
     annual: 0,
+    checkoutHref: '/portal/signup',
     features: { vcpu: '1', ram: '512MB', bandwidth: '100GB', edges: '3', aiOps: false, waf: 'Basic', databases: '1', support: 'Community' },
   },
   {
@@ -23,18 +23,21 @@ const TIERS = [
     monthly: 3999,
     annual: 3199,
     popular: true,
+    checkoutPlan: 'vps-pro',
     features: { vcpu: '4', ram: '8GB', bandwidth: '2TB', edges: '12', aiOps: true, waf: 'Advanced', databases: '5', support: 'Email' },
   },
   {
     name: 'Enterprise',
     monthly: 24999,
     annual: 19999,
+    checkoutPlan: 'vps-ultra',
     features: { vcpu: '16', ram: '64GB', bandwidth: '20TB', edges: '38', aiOps: true, waf: 'Zero-Trust', databases: '20', support: '24/7 Dedicated' },
   },
   {
     name: 'Infinite',
     monthly: null,
     annual: null,
+    checkoutHref: '/contact',
     features: { vcpu: 'Unlimited', ram: 'Unlimited', bandwidth: 'Custom', edges: 'All', aiOps: true, waf: 'Custom', databases: 'Unlimited', support: 'White-Glove' },
   },
 ];
@@ -61,38 +64,42 @@ export default function PricingPage() {
         title={<>Transparent Pricing. No Surprises.</>}
         description="Start free. Scale when you need. Cancel anytime. No hidden fees, no vendor lock-in."
       >
-        <div className="flex gap-2 justify-center flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-wrap">
           <div className="inline-flex items-center gap-1 p-1 rounded-panel border border-hairline bg-ink-surface-2 max-w-full">
             <button
+              type="button"
               onClick={() => setAnnual(false)}
               className={`px-4 py-2 rounded-chip text-sm font-medium transition-colors ${!annual ? 'bg-signal/15 text-signal' : 'text-text-muted-v4 hover:text-text-secondary-v4'}`}
             >
               Monthly
             </button>
             <button
+              type="button"
               onClick={() => setAnnual(true)}
               className={`px-4 py-2 rounded-chip text-sm font-medium transition-colors ${annual ? 'bg-signal/15 text-signal' : 'text-text-muted-v4 hover:text-text-secondary-v4'}`}
             >
               Annual <span className="text-[10px] text-good">-20%</span>
             </button>
           </div>
+          <Link
+            href="/vaulthost/pricing"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-btn v4-btn-secondary text-sm font-medium"
+          >
+            View All Cloud &amp; Server Plans <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </PageHeroV4>
 
       <section className="v4-section-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-stretch">
-            {TIERS.map((tier, i) => {
+            {TIERS.map((tier) => {
               const price = annual ? tier.annual : tier.monthly;
+              const targetHref = tier.checkoutHref
+                ? tier.checkoutHref
+                : `/vaulthost/checkout?plan=${tier.checkoutPlan}&billing=${annual ? 'annual' : 'monthly'}`;
               return (
-                <motion.div
-                  key={tier.name}
-                  initial={{ opacity: 0, y: 8 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.06 }}
-                  className="flex"
-                >
+                <div key={tier.name} className="flex">
                   <PanelCard hover className={`p-6 flex flex-col justify-between h-full w-full relative transition-transform duration-300 ${tier.popular ? 'border-signal/50 shadow-[0_0_20px_rgba(var(--signal-rgb),0.15)] md:scale-105 md:-translate-y-1 z-10' : ''}`}>
                     <div>
                       {tier.popular && (
@@ -108,7 +115,7 @@ export default function PricingPage() {
                           <p className="v4-readout-primary text-2xl">Custom</p>
                         ) : (
                           <div className="flex items-baseline gap-1">
-                            <span className="v4-readout-primary text-2xl">₹{price}</span>
+                            <span className="v4-readout-primary text-2xl">₹{price.toLocaleString('en-IN')}</span>
                             <span className="v4-readout text-xs text-text-muted-v4">/mo</span>
                           </div>
                         )}
@@ -141,16 +148,16 @@ export default function PricingPage() {
                         </div>
                       </div>
                     </div>
-                    <a
-                      href={price === null ? '/contact' : '/vaulthost'}
+                    <Link
+                      href={targetHref}
                       className={`mt-6 block text-center py-3 rounded-btn text-sm font-medium transition-colors ${
                         tier.popular ? 'v4-btn-primary' : 'v4-btn-secondary'
                       }`}
                     >
                       {price === 0 ? 'Start Free' : price === null ? 'Contact Sales' : 'Get Started'}
-                    </a>
+                    </Link>
                   </PanelCard>
-                </motion.div>
+                </div>
               );
             })}
           </div>
@@ -247,10 +254,10 @@ export default function PricingPage() {
 
       <section className="v4-section-sm bg-ink-surface">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div {...useScrollReveal()} className="text-center mb-10">
+          <div className="text-center mb-10">
             <SectionLabelV4 icon={Server}>FAQ</SectionLabelV4>
             <h2 className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-bold v4-display text-text-primary-v4">Frequently Asked Questions</h2>
-          </motion.div>
+          </div>
           <Accordion type="single" collapsible className="space-y-3">
             {FAQS.map((faq) => (
               <AccordionItem key={faq.q} value={faq.q} className="v4-panel rounded-panel px-5 border-b-0">
@@ -268,13 +275,13 @@ export default function PricingPage() {
 
       <section className="v4-section-sm">
         <div className="max-w-3xl mx-auto px-5 sm:px-8 lg:px-16 text-center">
-          <motion.div {...useScrollReveal()}>
+          <div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold v4-display text-text-primary-v4">Still Have Questions?</h2>
             <p className="mt-4 text-base sm:text-lg text-text-secondary-v4">Talk to our team about custom infrastructure needs.</p>
-            <a href="/contact" className="mt-8 inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-btn v4-btn-primary text-sm w-full sm:w-auto">
+            <Link href="/contact" className="mt-8 inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-btn v4-btn-primary text-sm w-full sm:w-auto">
               Contact Sales <ArrowRight className="h-4 w-4" />
-            </a>
-          </motion.div>
+            </Link>
+          </div>
         </div>
       </section>
     </div>

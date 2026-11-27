@@ -204,6 +204,8 @@ export const COMPANY_MENU: NavMenu = {
     {
       heading: 'Resources',
       items: [
+        { label: 'Pricing', href: '/pricing', desc: 'Transparent INR tiers', icon: Zap },
+        { label: 'VaultHost Pricing', href: '/vaulthost/pricing', desc: 'Cloud & VPS plans', icon: Server },
         { label: 'Blog', href: '/blog', desc: 'Insights & articles', icon: BookOpen },
         { label: 'Resources Hub', href: '/resources', desc: 'Guides & whitepapers', icon: FileText },
         { label: 'Compare Services', href: '/compare', desc: 'Find your fit', icon: Server },

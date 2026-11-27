@@ -131,16 +131,31 @@ async function executeViaPg(connectionString, sql) {
   const pg = await import('pg');
   const Client = pg.default?.Client || pg.Client;
 
-  const client = new Client({
-    connectionString,
-    ssl:
-      connectionString.includes('sslmode=require') ||
-      connectionString.includes('supabase.co') ||
-      connectionString.includes('aws.')
-        ? { rejectUnauthorized: false }
-        : undefined,
-    connectionTimeoutMillis: 10000
-  });
+  const isLocalComposeDb =
+    process.env.POSTGRES_PASSWORD &&
+    (connectionString.includes('@db:5432/') || connectionString.includes('@db/'));
+
+  const clientConfig = isLocalComposeDb
+    ? {
+        host: 'db',
+        port: 5432,
+        user: process.env.POSTGRES_USER || 'postgres',
+        password: process.env.POSTGRES_PASSWORD,
+        database: process.env.POSTGRES_DB || 'postgres',
+        connectionTimeoutMillis: 10000,
+      }
+    : {
+        connectionString,
+        ssl:
+          connectionString.includes('sslmode=require') ||
+          connectionString.includes('supabase.co') ||
+          connectionString.includes('aws.')
+            ? { rejectUnauthorized: false }
+            : undefined,
+        connectionTimeoutMillis: 10000,
+      };
+
+  const client = new Client(clientConfig);
 
   await client.connect();
   try {
@@ -345,6 +360,30 @@ async function ensureServiceRoles() {
     console.log(`[migration] PostgREST roles, schemas, and privileges synchronized.`);
   } catch (err) {
     console.warn(`[migration] Notice: Role/schema sync warning (${err.message}).`);
+  }
+
+  // Give GoTrue (auth service) up to 30s to apply its own auth.schema_migrations
+  // using the newly synchronized supabase_auth_admin role before running user seeds.
+  for (let i = 0; i < 15; i++) {
+    try {
+      const checkRes = await runQuery(`
+        SELECT
+          to_regclass('auth.users') IS NOT NULL AS has_users,
+          to_regclass('auth.schema_migrations') IS NOT NULL AS has_migrations;
+      `);
+      const row = checkRes?.rows?.[0];
+      if (row?.has_users && row?.has_migrations) {
+        console.log(`[migration] GoTrue auth schema detected (migrated cleanly).`);
+        break;
+      }
+    } catch {
+      // Ignore transient check errors during auth startup
+    }
+    if (i < 14) {
+      await sleep(2000);
+    } else {
+      console.log(`[migration] Proceeding with auth schema safeguard & user seeding...`);
+    }
   }
 
   // Part 2: Auth schema stubs and seed users

@@ -43,50 +43,61 @@ export async function fulfillOrder(
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // 1. Fetch the order (with direct PG fallback)
+    // ── ATOMIC CLAIM ──────────────────────────────────────────────────────────
+    // claim_order_for_fulfillment() does:
+    //   UPDATE hosting_orders SET status='provisioning', payment_status='paid'
+    //   WHERE id=$1 AND status IN ('pending','processing') RETURNING *
+    // If another worker (webhook vs /verify race) got here first, returns null.
     let order: any = null;
     try {
-      const { data, error: orderError } = await supabaseAdmin
-        .from('hosting_orders')
-        .select('*')
-        .eq('id', orderId)
-        .maybeSingle();
-      if (!orderError && data) order = data;
+      const { data: claimed, error: claimErr } = await supabaseAdmin
+        .rpc('claim_order_for_fulfillment', { p_order_id: orderId });
+      if (!claimErr && claimed) order = claimed;
     } catch {}
+
+    // Fallback: direct PG if PostgREST is unavailable
     if (!order) {
-      order = await pgFindOneByColumn('hosting_orders', 'id', orderId).catch(() => null);
+      const { withPgClient } = await import('@/lib/db/pgFallback');
+      await withPgClient(async (client: any) => {
+        const res = await client.query(
+          `UPDATE public.hosting_orders
+           SET status = 'provisioning', payment_status = 'paid', updated_at = now()
+           WHERE id = $1 AND status IN ('pending', 'processing')
+           RETURNING *`,
+          [orderId]
+        );
+        if (res.rowCount > 0) order = res.rows[0];
+      }).catch(() => {});
     }
 
+    // No row returned = already claimed by another worker or order doesn't exist
     if (!order) {
-      return { success: false, error: 'Order not found' };
+      // Check if it already exists and is fulfilled (idempotent success)
+      let existingOrder: any = null;
+      try {
+        const { data } = await supabaseAdmin.from('hosting_orders').select('id,status').eq('id', orderId).maybeSingle();
+        existingOrder = data;
+      } catch {}
+      if (existingOrder && ['provisioning','paid','active','completed'].includes(existingOrder.status)) {
+        return { success: true, message: 'Order already fulfilled' };
+      }
+      return { success: false, error: 'Order not found or already being processed' };
     }
 
-    // Check if service already exists for this order to ensure idempotency
-    let existingService: any = null;
-    try {
-      const { data: svcData, error: svcCheckErr } = await supabaseAdmin
-        .from('hosting_services')
-        .select('id')
-        .eq('order_id', orderId)
-        .maybeSingle();
-      if (!svcCheckErr && svcData) existingService = svcData;
-    } catch {}
-    if (!existingService) {
-      existingService = await pgFindOneByColumn('hosting_services', 'order_id', orderId).catch(() => null);
-    }
-
-    if (
-      existingService &&
-      (order.status === 'completed' ||
-        order.status === 'paid' ||
-        order.status === 'provisioning' ||
-        order.status === 'active')
-    ) {
-      return {
-        success: true,
-        message: 'Order already fulfilled',
-        serviceId: existingService.id,
-      };
+    // Now patch remaining billing columns (payment_method, transaction_id)
+    // These are not in the atomic claim — update them separately
+    const billingPatch = {
+      payment_method: paymentMethod,
+      transaction_id: transactionId,
+      updated_at: new Date().toISOString(),
+    };
+    const { error: billErr } = await supabaseAdmin
+      .from('hosting_orders')
+      .update(billingPatch)
+      .eq('id', order.id);
+    if (billErr) {
+      // Non-fatal — the claim already succeeded
+      console.warn('[fulfillOrder] billing patch warn:', billErr.message);
     }
 
     // 2. Parse Notes for configuration
@@ -112,26 +123,6 @@ export async function fulfillOrder(
       specsJson = { features: planFeatures };
     }
 
-    // 3. Update Order Status (with direct PG fallback)
-    const orderStatusPatch = {
-      status: opts.manualOnly ? 'active' : 'provisioning',
-      payment_status: 'paid',
-      payment_method: paymentMethod,
-      transaction_id: transactionId,
-      updated_at: new Date().toISOString(),
-    };
-    const { error: updateError } = await supabaseAdmin
-      .from('hosting_orders')
-      .update(orderStatusPatch)
-      .eq('id', orderId);
-
-    if (updateError) {
-      const pgUpdated = await pgUpdateWhere('hosting_orders', orderStatusPatch, 'id', orderId).catch(() => null);
-      if (!pgUpdated) {
-        throw new Error(`Failed to update order status: ${updateError.message}`);
-      }
-    }
-
     // 4. Provision or fetch Service Record
     const renewalDate = new Date();
     if (order.billing_cycle === 'annual') {
@@ -142,7 +133,18 @@ export async function fulfillOrder(
       renewalDate.setMonth(renewalDate.getMonth() + 1);
     }
 
-    let serviceId = existingService?.id;
+    // Check if a service record already exists for this order (idempotency)
+    let existingServiceId: string | null = null;
+    try {
+      const { data: svcCheck } = await supabaseAdmin
+        .from('hosting_services')
+        .select('id')
+        .eq('order_id', order.id)
+        .maybeSingle();
+      if (svcCheck?.id) existingServiceId = svcCheck.id;
+    } catch {}
+
+    let serviceId = existingServiceId;
 
     if (!serviceId) {
       const svcPayload = {
@@ -271,9 +273,10 @@ export async function fulfillOrder(
     return {
       success: true,
       message: opts.manualOnly ? 'Order fulfilled for manual setup' : 'Order fulfilled & provisioning started',
-      serviceId,
+      serviceId: serviceId ?? undefined,
       invoiceId,
     };
+
   } catch (error: any) {
     console.error(`Fulfillment Error for order ${orderId}:`, error);
     return { success: false, error: error.message || 'Internal Fulfillment Error' };

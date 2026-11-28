@@ -81,7 +81,7 @@ async function logApiKeyUsage(apiKeyId: string, endpoint: string, method: string
       endpoint,
       method,
       status_code: statusCode,
-      client_ip: req.headers.get('x-forwarded-for') || '127.0.0.1',
+      ip_address: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1',
       created_at: new Date().toISOString(),
     });
   } catch {}

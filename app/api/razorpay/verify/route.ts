@@ -85,8 +85,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    if (order.razorpay_order_id && order.razorpay_order_id !== razorpay_order_id) {
+    // STRICT: razorpay_order_id in DB must exist and match request exactly.
+    // Null in DB = order was never sent to Razorpay → reject immediately.
+    if (!order.razorpay_order_id) {
+      return NextResponse.json({ error: 'Order has no Razorpay transaction associated' }, { status: 400 });
+    }
+    if (order.razorpay_order_id !== razorpay_order_id) {
       return NextResponse.json({ error: 'Order transaction mismatch' }, { status: 400 });
+    }
+
+    // Idempotency: reject already-fulfilled orders to prevent race-condition double-provisioning
+    if (['completed', 'paid', 'active', 'provisioning'].includes(order.status)) {
+      return NextResponse.json({ success: true, message: 'Order already fulfilled' });
     }
 
     // Hand off to the centralized fulfillment engine

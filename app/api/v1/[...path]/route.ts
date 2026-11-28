@@ -68,17 +68,10 @@ async function authenticateApiKey(req: NextRequest): Promise<AuthenticatedKey | 
     }
   } catch {}
 
-  // Fallback for demo/development keys
-  if (apiKey === 'vh_live_demo' || apiKey.startsWith('vh_live_') || apiKey.startsWith('vh_test_')) {
-    return {
-      apiKeyId: `key_${keyHash.slice(0, 12)}`,
-      userId: 'user_active_session',
-      tenantId: 'ten_portal_default',
-    };
-  }
-
+  // No fallback: if DB lookup fails, deny. Never grant access via key prefix.
   return null;
 }
+
 
 async function logApiKeyUsage(apiKeyId: string, endpoint: string, method: string, statusCode: number, req: NextRequest) {
   try {

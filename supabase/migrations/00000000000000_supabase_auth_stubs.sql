@@ -283,11 +283,11 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@elsxglobal.com') THEN
     INSERT INTO auth.users (
       id, instance_id, aud, role, email, encrypted_password,
-      email_confirmed_at, confirmed_at, raw_app_meta_data, raw_user_meta_data,
+      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
       is_super_admin, created_at, updated_at
     ) VALUES (
       v_admin_id, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated',
-      'admin@elsxglobal.com', v_admin_hash, now(), now(),
+      'admin@elsxglobal.com', v_admin_hash, now(),
       '{"provider":"email","providers":["email"]}'::jsonb,
       '{"full_name":"Master Admin","role":"superadmin"}'::jsonb,
       true, now(), now()
@@ -296,7 +296,6 @@ BEGIN
     UPDATE auth.users
     SET encrypted_password = v_admin_hash,
         email_confirmed_at = COALESCE(email_confirmed_at, now()),
-        confirmed_at = COALESCE(confirmed_at, now()),
         raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
         is_super_admin = true
     WHERE email = 'admin@elsxglobal.com';
@@ -340,11 +339,11 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'client@elsxglobal.com') THEN
     INSERT INTO auth.users (
       id, instance_id, aud, role, email, encrypted_password,
-      email_confirmed_at, confirmed_at, raw_app_meta_data, raw_user_meta_data,
+      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
       is_super_admin, created_at, updated_at
     ) VALUES (
       v_client_id, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated',
-      'client@elsxglobal.com', v_client_hash, now(), now(),
+      'client@elsxglobal.com', v_client_hash, now(),
       '{"provider":"email","providers":["email"]}'::jsonb,
       '{"full_name":"Demo Client"}'::jsonb,
       false, now(), now()
@@ -353,11 +352,11 @@ BEGIN
     UPDATE auth.users
     SET encrypted_password = v_client_hash,
         email_confirmed_at = COALESCE(email_confirmed_at, now()),
-        confirmed_at = COALESCE(confirmed_at, now()),
         raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb
     WHERE email = 'client@elsxglobal.com';
     SELECT id INTO v_client_id FROM auth.users WHERE email = 'client@elsxglobal.com';
   END IF;
+
 
   -- Ensure identity exists for client
   IF NOT EXISTS (SELECT 1 FROM auth.identities WHERE user_id = v_client_id AND provider = 'email') THEN

@@ -202,6 +202,47 @@ async function initAdminViaPg(connectionString: string, email: string, password:
 
 export async function POST(request: Request) {
   try {
+    // ── GUARD 1: One-time setup secret ──────────────────────────────────────
+    // Set ADMIN_SETUP_SECRET in your environment. Once set, all requests must
+    // supply it as x-setup-secret header. Without this, the endpoint is 403.
+    const setupSecret = process.env.ADMIN_SETUP_SECRET;
+    if (!setupSecret) {
+      return NextResponse.json(
+        { error: 'Admin setup is disabled. Set ADMIN_SETUP_SECRET env var to enable.' },
+        { status: 403 }
+      );
+    }
+    const providedSecret = request.headers.get('x-setup-secret') || '';
+    // Timing-safe compare
+    const crypto = await import('crypto');
+    const bufA = Buffer.from(providedSecret, 'utf8');
+    const bufB = Buffer.from(setupSecret, 'utf8');
+    const secretMatch =
+      bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+    if (!secretMatch) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // ── GUARD 2: Block if admin already exists (one-time use only) ──────────
+    const { withPgClient } = await import('@/lib/db/pgFallback');
+    let adminExists = false;
+    try {
+      await withPgClient(async (client: any) => {
+        const res = await client.query(
+          `SELECT 1 FROM public.admin_users WHERE is_active = true LIMIT 1;`
+        );
+        adminExists = res.rowCount > 0;
+      });
+    } catch {
+      // If admin_users table doesn't exist yet, allow setup to proceed
+    }
+    if (adminExists) {
+      return NextResponse.json(
+        { error: 'Admin already initialized. Use the admin panel to manage credentials.' },
+        { status: 409 }
+      );
+    }
+
     const { action, email, password, name = 'Master Admin' } = await request.json();
 
     if (action !== 'setup') {
@@ -217,7 +258,8 @@ export async function POST(request: Request) {
     }
 
     // Attempt 1: Direct PostgreSQL connection (most reliable, zero hairpin NAT risk)
-    const dbPassword = process.env.POSTGRES_PASSWORD || 'postgres_standalone_pwd_2026';
+    const dbPassword = process.env.POSTGRES_PASSWORD;
+
     const candidateDbUrls = [
       process.env.DATABASE_URL,
       process.env.SUPABASE_DB_URL,

@@ -11,7 +11,7 @@ export async function GET() {
 
   let dbStatus = 'unconfigured';
   let latencyMs = -1;
-  let errorDetail: string | null = null;
+  let dbError = false;
   let directPgStatus = 'unconfigured';
   let healAttempted = false;
 
@@ -21,8 +21,8 @@ export async function GET() {
         await client.query('SELECT 1');
       });
       directPgStatus = 'connected';
-    } catch (err: any) {
-      directPgStatus = `error: ${err?.message || 'connection failed'}`;
+    } catch {
+      directPgStatus = 'error';
     }
   }
 
@@ -41,52 +41,54 @@ export async function GET() {
         dbStatus = 'connected';
       } else {
         dbStatus = 'error';
-        errorDetail = `HTTP ${res.status}`;
+        dbError = true;
         if (res.status === 503 && directPgStatus === 'connected') {
           healAttempted = true;
           await healPostgrestSchema().catch(() => {});
         }
       }
-    } catch (err: any) {
+    } catch {
       latencyMs = Date.now() - start;
       dbStatus = 'unreachable';
-      errorDetail = err?.message || 'Connection timeout or network failure';
+      dbError = true;
     }
   }
 
   let authStatus = 'unconfigured';
+  let authError = false;
   try {
     const authTarget = process.env.GOTRUE_URL || 'http://auth:9999';
     const authRes = await fetch(`${authTarget}/health`, { signal: AbortSignal.timeout(3000) });
-    authStatus = authRes.ok ? 'connected' : `HTTP ${authRes.status}`;
-  } catch (e: any) {
-    authStatus = `unreachable: ${e.message}`;
+    authStatus = authRes.ok ? 'connected' : 'error';
+    if (!authRes.ok) authError = true;
+  } catch {
+    authStatus = 'unreachable';
+    authError = true;
   }
+
+  // Determine overall health. If DB or auth unreachable → 503 so Docker marks unhealthy.
+  const isHealthy = dbStatus === 'connected' && !authError;
+  const httpStatus = isHealthy ? 200 : 503;
 
   return NextResponse.json(
     {
-      status: 'healthy',
+      status: isHealthy ? 'healthy' : 'degraded',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       version: process.env.npm_package_version || '0.1.0',
-      auth: {
-        target: process.env.GOTRUE_URL || 'http://auth:9999',
-        status: authStatus,
-      },
+      // Intentionally omit internal URLs, keys, and raw error strings from public response
+      auth: { status: authStatus },
       database: {
         configured: Boolean(supabaseUrl && anonKey),
-        supabaseUrl: supabaseUrl ? supabaseUrl.replace(/\/+$/, '') : 'not set',
-        hasAnonKey: Boolean(anonKey),
         hasServiceRoleKey: hasServiceKey,
         hasDirectDbUrl: hasDbUrl,
         directPostgres: directPgStatus,
         healAttempted,
         status: dbStatus,
         latencyMs,
-        error: errorDetail,
       },
     },
-    { status: 200 }
+    { status: httpStatus }
   );
 }
 

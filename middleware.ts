@@ -1,84 +1,40 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { buildPublicRedirectUrl } from '@/lib/http/origin'
+import crypto from 'crypto'
 
-/**
- * Fast JWT cookie parser that extracts user identity directly from
- * session cookie without network calls (immunity to network/PostgREST outages).
- */
-function extractUserFromCookies(cookies: { name: string; value: string }[]) {
+// ----------------------------------------------------------------
+// isMasterAdmin: ONLY use app_metadata (server-set by GoTrue admin API).
+// user_metadata is user-editable — NEVER use it for auth decisions.
+// ----------------------------------------------------------------
+function isMasterAdmin(user: any): boolean {
+  if (!user) return false
+  return (
+    user.email?.toLowerCase() === 'admin@elsxglobal.com' ||
+    user.app_metadata?.role === 'superadmin' ||
+    user.app_metadata?.claims_admin === true
+  )
+}
+
+// Timing-safe header secret comparison. NOTE: SUPABASE_SERVICE_ROLE_KEY
+// is intentionally NOT a fallback — set ADMIN_SECRET explicitly.
+function isValidAdminSecret(req: NextRequest): boolean {
+  const configured = process.env.ADMIN_SECRET
+  if (!configured) return false
+  const header = req.headers.get('x-admin-secret')
+  if (!header) return false
   try {
-    const baseNames = ['elsxglobal-auth-token']
-    const legacyCookie = cookies.find((c) => c.name.startsWith('sb-') && c.name.includes('-auth-token'))
-    if (legacyCookie) {
-      const match = legacyCookie.name.match(/^(sb-[a-zA-Z0-9_-]+-auth-token)/)
-      if (match) baseNames.push(match[1])
-    }
-
-    for (const base of baseNames) {
-      let rawVal = cookies.find((c) => c.name === base)?.value
-      if (!rawVal) {
-        const chunks: string[] = []
-        let i = 0
-        while (true) {
-          const chunk = cookies.find((c) => c.name === `${base}.${i}`)
-          if (!chunk) break
-          chunks.push(chunk.value)
-          i++
-        }
-        if (chunks.length > 0) {
-          rawVal = chunks.join('')
-        }
-      }
-
-      if (!rawVal) continue
-
-      let decodedStr = rawVal
-      if (decodedStr.startsWith('base64-')) {
-        const b64 = decodedStr.slice(7)
-        decodedStr = Buffer.from(b64, 'base64url').toString('utf8')
-      }
-
-      let parsedSession: any = null
-      try {
-        parsedSession = JSON.parse(decodedStr)
-      } catch {
-        continue
-      }
-
-      const accessToken = parsedSession?.access_token
-      if (!accessToken || typeof accessToken !== 'string') continue
-
-      const parts = accessToken.split('.')
-      if (parts.length !== 3) continue
-
-      const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8')
-      const payload = JSON.parse(payloadJson)
-
-      // Expiry check (with 60s clock skew tolerance)
-      if (payload.exp && payload.exp * 1000 < Date.now() - 60000) {
-        continue
-      }
-
-      return {
-        id: payload.sub,
-        email: payload.email,
-        role: payload.role || 'authenticated',
-        app_metadata: payload.app_metadata || {},
-        user_metadata: payload.user_metadata || {},
-      }
-    }
+    const bufA = Buffer.from(header, 'utf8')
+    const bufB = Buffer.from(configured, 'utf8')
+    return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB)
   } catch {
-    // Silently continue
+    return false
   }
-  return null
 }
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   })
 
   const supabaseUrl =
@@ -86,99 +42,92 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     'http://api-gw:8000'
   const rawAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.ANON_KEY
-  const anonKey =
-    rawAnonKey && !rawAnonKey.includes('placeholder') ? rawAnonKey : undefined
+  const anonKey = rawAnonKey && !rawAnonKey.includes('placeholder') ? rawAnonKey : undefined
+
   if (!anonKey) {
     console.error('CRITICAL: NEXT_PUBLIC_SUPABASE_ANON_KEY is not set')
-    // Allow the request to pass through without Supabase client
-    // The route handlers will enforce auth independently
   }
 
+  // ── Get VERIFIED user from GoTrue ────────────────────────────────
+  // This is the ONLY source of truth for auth decisions.
+  // We do NOT fall back to unverified JWT cookie parsing for access control.
   let user: any = null
   if (anonKey) {
-    const supabase = createServerClient(
-      supabaseUrl,
-      anonKey,
-      {
-        cookieOptions: {
-          name: 'elsxglobal-auth-token',
-        },
-        cookies: {
-          getAll() {
-            const all = request.cookies.getAll()
-            const hasAuthToken = all.some((c) => c.name.startsWith('elsxglobal-auth-token'))
-            if (!hasAuthToken) {
-              const legacy = all.filter(
-                (c) =>
-                  c.name.startsWith('sb-elsxglobal-auth-token') ||
-                  c.name.startsWith('sb-api-gw-auth-token')
-              )
-              if (legacy.length > 0) {
-                return [
-                  ...all,
-                  ...legacy.map((c) => ({
-                    name: c.name.replace(/^sb-(elsxglobal|api-gw)-auth-token/, 'elsxglobal-auth-token'),
-                    value: c.value,
-                  })),
-                ]
-              }
-            }
-            return all
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-            supabaseResponse = NextResponse.next({
-              request: {
-                headers: request.headers,
-              },
-            })
-            cookiesToSet.forEach(({ name, value, options }) =>
-              supabaseResponse.cookies.set(name, value, options)
+    const supabase = createServerClient(supabaseUrl, anonKey, {
+      cookieOptions: { name: 'elsxglobal-auth-token' },
+      cookies: {
+        getAll() {
+          const all = request.cookies.getAll()
+          const hasAuthToken = all.some((c) => c.name.startsWith('elsxglobal-auth-token'))
+          if (!hasAuthToken) {
+            const legacy = all.filter(
+              (c) =>
+                c.name.startsWith('sb-elsxglobal-auth-token') ||
+                c.name.startsWith('sb-api-gw-auth-token')
             )
-          },
+            if (legacy.length > 0) {
+              return [
+                ...all,
+                ...legacy.map((c) => ({
+                  name: c.name.replace(
+                    /^sb-(elsxglobal|api-gw)-auth-token/,
+                    'elsxglobal-auth-token'
+                  ),
+                  value: c.value,
+                })),
+              ]
+            }
+          }
+          return all
         },
-      }
-    )
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request: { headers: request.headers } })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    })
 
     try {
       const { data: authData } = await supabase.auth.getUser()
-      if (authData?.user) {
-        user = authData.user
-      }
+      if (authData?.user) user = authData.user
     } catch {
-      // Fall back to direct cookie decoding
+      // Network / GoTrue unreachable — user stays null, protected routes will deny
     }
-  }
-
-  // Cookie-based fallback still works
-  if (!user) {
-    user = extractUserFromCookies(request.cookies.getAll())
   }
 
   const pathname = request.nextUrl.pathname
 
-  // 1. Customer Portal UI routes protection
+  // ── 1. Customer Portal ───────────────────────────────────────────
   const isPortalRoute = pathname.startsWith('/portal')
-  const isPortalLoginRoute =
+  const isPortalAuthRoute =
     pathname.startsWith('/portal/login') ||
     pathname.startsWith('/portal/signup') ||
     pathname.startsWith('/portal/forgot-password') ||
     pathname.startsWith('/portal/reset-password')
 
-  if (isPortalRoute && !isPortalLoginRoute && !user) {
+  if (isPortalRoute && !isPortalAuthRoute && !user) {
     const redirectUrl = buildPublicRedirectUrl('/portal/login', request.headers, request.url, '/portal/login')
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (isPortalLoginRoute && user) {
-    const target = request.nextUrl.searchParams.get('redirect') || '/portal'
+  if (isPortalAuthRoute && user) {
+    const rawTarget = request.nextUrl.searchParams.get('redirect') || '/portal'
+    // Guard against redirect loops (e.g. ?redirect=/portal/login)
+    const isLoop =
+      rawTarget.startsWith('/portal/login') ||
+      rawTarget.startsWith('/portal/signup') ||
+      rawTarget.startsWith('/portal/forgot-password') ||
+      rawTarget.startsWith('/portal/reset-password')
     return NextResponse.redirect(
-      buildPublicRedirectUrl(target, request.headers, request.url, '/portal')
+      buildPublicRedirectUrl(isLoop ? '/portal' : rawTarget, request.headers, request.url, '/portal')
     )
   }
 
-  // 2. Admin UI routes protection
+  // ── 2. Admin UI ──────────────────────────────────────────────────
   const isAdminRoute = pathname.startsWith('/admin')
   const isAdminPublicRoute =
     pathname.startsWith('/admin/login') ||
@@ -186,81 +135,43 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/admin/reset')
 
   if (isAdminRoute && !isAdminPublicRoute) {
-    if (!user) {
-      return NextResponse.redirect(
-        buildPublicRedirectUrl('/admin/login', request.headers, request.url, '/admin/login')
-      )
-    }
-
-    const isMasterAdmin =
-      user.email?.toLowerCase() === 'admin@elsxglobal.com' ||
-      user.app_metadata?.role === 'superadmin' ||
-      user.user_metadata?.role === 'superadmin' ||
-      user.app_metadata?.claims_admin === true
-
-    if (!isMasterAdmin) {
+    if (!user || !isMasterAdmin(user)) {
       return NextResponse.redirect(
         buildPublicRedirectUrl('/admin/login', request.headers, request.url, '/admin/login')
       )
     }
   }
 
-  // If already logged in as Master Admin and visiting /admin/login
-  if (pathname.startsWith('/admin/login') && user) {
-    const isMasterAdmin =
-      user.email?.toLowerCase() === 'admin@elsxglobal.com' ||
-      user.app_metadata?.role === 'superadmin' ||
-      user.user_metadata?.role === 'superadmin'
+  if (pathname.startsWith('/admin/login') && user && isMasterAdmin(user)) {
+    return NextResponse.redirect(
+      buildPublicRedirectUrl('/admin/overview/', request.headers, request.url, '/admin/overview/')
+    )
+  }
 
-    if (isMasterAdmin) {
-      return NextResponse.redirect(
-        buildPublicRedirectUrl('/admin/overview/', request.headers, request.url, '/admin/overview/')
-      )
+  // ── 3. Admin API (/api/admin/*) — /api/admin-setup NOT matched ───
+  if (pathname.startsWith('/api/admin/') || pathname === '/api/admin') {
+    if (!isValidAdminSecret(request)) {
+      if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      if (!isMasterAdmin(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
   }
 
-  // 3. Admin API routes protection (/api/admin/*)
-  if (pathname.startsWith('/api/admin')) {
-    const adminSecret = request.headers.get('x-admin-secret')
-    const configuredSecret = process.env.ADMIN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
-    const isSecretValid = adminSecret && configuredSecret && adminSecret === configuredSecret
-
-    if (!isSecretValid) {
-      if (!user) {
-        return NextResponse.json(
-          { error: 'Unauthorized: Admin authentication required' },
-          { status: 401 }
-        )
-      }
-
-      const isMasterAdmin =
-        user.email?.toLowerCase() === 'admin@elsxglobal.com' ||
-        user.app_metadata?.role === 'superadmin' ||
-        user.user_metadata?.role === 'superadmin' ||
-        user.app_metadata?.claims_admin === true
-
-      if (!isMasterAdmin) {
-        return NextResponse.json(
-          { error: 'Forbidden: Admin privileges required' },
-          { status: 403 }
-        )
-      }
-    }
-  }
-
-  // 4. Cloud API routes protection (/api/cloud/*)
+  // ── 4. Cloud API (/api/cloud/*) ──────────────────────────────────
+  // Requires verified session OR explicit admin secret. Bearer token alone is not sufficient.
   if (pathname.startsWith('/api/cloud')) {
-    const authHeader = request.headers.get('authorization')
-    const hasBearer = authHeader && authHeader.startsWith('Bearer ')
-    const adminSecret = request.headers.get('x-admin-secret')
-    const configuredSecret = process.env.ADMIN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
-    const isSecretValid = adminSecret && configuredSecret && adminSecret === configuredSecret
+    if (!user && !isValidAdminSecret(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  }
 
-    if (!user && !hasBearer && !isSecretValid) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Authentication required for cloud resource APIs' },
-        { status: 401 }
-      )
+  // ── 5. Action Gateway (/api/action-gateway/*) ───────────────────
+  if (pathname.startsWith('/api/action-gateway')) {
+    if (!user && !isValidAdminSecret(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    // Approve/reject mutations require admin
+    if (request.method !== 'GET' && !isValidAdminSecret(request) && !isMasterAdmin(user)) {
+      return NextResponse.json({ error: 'Forbidden: Admin required' }, { status: 403 })
     }
   }
 
@@ -273,5 +184,6 @@ export const config = {
     '/admin/:path*',
     '/api/admin/:path*',
     '/api/cloud/:path*',
+    '/api/action-gateway/:path*',
   ],
 }

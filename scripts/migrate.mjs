@@ -127,43 +127,70 @@ async function executeViaHttp(url, serviceKey, sql) {
 /**
  * Execute SQL query via direct PostgreSQL connection using pg client
  */
+let cachedComposeDbPassword = null;
+
 async function executeViaPg(connectionString, sql) {
   const pg = await import('pg');
   const Client = pg.default?.Client || pg.Client;
 
   const isLocalComposeDb =
-    process.env.POSTGRES_PASSWORD &&
+    Boolean(process.env.POSTGRES_PASSWORD) &&
     (connectionString.includes('@db:5432/') || connectionString.includes('@db/'));
 
-  const clientConfig = isLocalComposeDb
-    ? {
-        host: 'db',
-        port: 5432,
-        user: process.env.POSTGRES_USER || 'postgres',
-        password: process.env.POSTGRES_PASSWORD,
-        database: process.env.POSTGRES_DB || 'postgres',
-        connectionTimeoutMillis: 10000,
+  const buildConfig = (pwd) =>
+    isLocalComposeDb
+      ? {
+          host: 'db',
+          port: 5432,
+          user: process.env.POSTGRES_USER || 'postgres',
+          password: pwd,
+          database: process.env.POSTGRES_DB || 'postgres',
+          connectionTimeoutMillis: 10000,
+        }
+      : {
+          connectionString,
+          ssl:
+            connectionString.includes('sslmode=require') ||
+            connectionString.includes('supabase.co') ||
+            connectionString.includes('aws.')
+              ? { rejectUnauthorized: false }
+              : undefined,
+          connectionTimeoutMillis: 10000,
+        };
+
+  const candidates = isLocalComposeDb
+    ? Array.from(
+        new Set(
+          [
+            cachedComposeDbPassword,
+            process.env.POSTGRES_PASSWORD,
+            'postgres_standalone_pwd_2026',
+            'postgres',
+          ].filter(Boolean)
+        )
+      )
+    : [null];
+
+  let lastErr;
+  for (const pwd of candidates) {
+    const client = new Client(buildConfig(pwd));
+    try {
+      await client.connect();
+      if (isLocalComposeDb && pwd) cachedComposeDbPassword = pwd;
+      try {
+        const res = await client.query(sql);
+        return { success: true, rows: res.rows };
+      } finally {
+        await client.end().catch(() => {});
       }
-    : {
-        connectionString,
-        ssl:
-          connectionString.includes('sslmode=require') ||
-          connectionString.includes('supabase.co') ||
-          connectionString.includes('aws.')
-            ? { rejectUnauthorized: false }
-            : undefined,
-        connectionTimeoutMillis: 10000,
-      };
-
-  const client = new Client(clientConfig);
-
-  await client.connect();
-  try {
-    const res = await client.query(sql);
-    return { success: true, rows: res.rows };
-  } finally {
-    await client.end().catch(() => {});
+    } catch (err) {
+      await client.end().catch(() => {});
+      lastErr = err;
+      const isAuthErr = err?.code === '28P01' || String(err?.message || '').includes('password authentication failed');
+      if (!isAuthErr) throw err;
+    }
   }
+  throw lastErr;
 }
 
 /**
@@ -267,8 +294,9 @@ async function ensureServiceRoles() {
 
   const sanitizedPassword = password.replace(/'/g, "''");
 
-  // Part 1: Roles, schemas, and PostgREST permissions (executed independently so auth DDL never rolls this back)
-  const rolesAndSchemasSql = `
+  // Step 1: Synchronize ONLY roles & passwords first in an isolated query so no
+  // schema/grant/extension statement can ever roll back the role passwords.
+  const rolesOnlySql = `
     DO $$
     BEGIN
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
@@ -313,14 +341,29 @@ async function ensureServiceRoles() {
       ELSE
         ALTER ROLE pgbouncer WITH LOGIN PASSWORD '${sanitizedPassword}';
       END IF;
+
+      ALTER ROLE postgres WITH LOGIN PASSWORD '${sanitizedPassword}';
     END
     $$;
+  `;
 
+  try {
+    await runQuery(rolesOnlySql);
+    if (cachedComposeDbPassword) cachedComposeDbPassword = password;
+    console.log(`[migration] Supabase service roles & passwords synchronized.`);
+  } catch (err) {
+    console.warn(`[migration] Notice: Role password sync warning (${err.message}).`);
+  }
+
+  // Step 2: Schemas, ownership, search paths, and grants (each block isolated)
+  const schemasAndGrantsSql = `
     CREATE SCHEMA IF NOT EXISTS public;
     CREATE SCHEMA IF NOT EXISTS graphql_public;
     CREATE SCHEMA IF NOT EXISTS extensions;
     CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_auth_admin;
     CREATE SCHEMA IF NOT EXISTS storage AUTHORIZATION supabase_storage_admin;
+    ALTER SCHEMA auth OWNER TO supabase_auth_admin;
+    ALTER SCHEMA storage OWNER TO supabase_storage_admin;
 
     GRANT anon TO authenticator;
     GRANT authenticated TO authenticator;
@@ -328,7 +371,6 @@ async function ensureServiceRoles() {
     GRANT supabase_admin TO authenticator;
     GRANT authenticator TO supabase_storage_admin;
 
-    -- Reset any stale pgrst.db_schemas role override so env PGRST_DB_SCHEMAS takes effect cleanly
     ALTER ROLE authenticator RESET pgrst.db_schemas;
     ALTER ROLE authenticator SET search_path TO public, graphql_public, extensions;
     ALTER ROLE supabase_auth_admin SET search_path TO auth, public, extensions;
@@ -350,21 +392,26 @@ async function ensureServiceRoles() {
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO authenticator, supabase_auth_admin, supabase_storage_admin, anon, authenticated, service_role;
-
-    CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
-    CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
   `;
 
   try {
-    await runQuery(rolesAndSchemasSql);
-    console.log(`[migration] PostgREST roles, schemas, and privileges synchronized.`);
+    await runQuery(schemasAndGrantsSql);
+    console.log(`[migration] PostgREST/Auth/Storage schemas and privileges synchronized.`);
   } catch (err) {
-    console.warn(`[migration] Notice: Role/schema sync warning (${err.message}).`);
+    console.warn(`[migration] Notice: Schema/grant sync warning (${err.message}).`);
   }
 
-  // Give GoTrue (auth service) up to 30s to apply its own auth.schema_migrations
-  // using the newly synchronized supabase_auth_admin role before running user seeds.
-  for (let i = 0; i < 15; i++) {
+  for (const ext of ['pgcrypto', '"uuid-ossp"']) {
+    try {
+      await runQuery(`CREATE EXTENSION IF NOT EXISTS ${ext};`);
+    } catch (err) {
+      console.warn(`[migration] Notice: Extension ${ext} check (${err.message}).`);
+    }
+  }
+
+  // Give GoTrue (auth service) up to 65s (covering 60s Docker restart backoff) to
+  // apply its own auth.schema_migrations before running user seeds / stub fallback.
+  for (let i = 0; i < 33; i++) {
     try {
       const checkRes = await runQuery(`
         SELECT
@@ -379,7 +426,7 @@ async function ensureServiceRoles() {
     } catch {
       // Ignore transient check errors during auth startup
     }
-    if (i < 14) {
+    if (i < 32) {
       await sleep(2000);
     } else {
       console.log(`[migration] Proceeding with auth schema safeguard & user seeding...`);

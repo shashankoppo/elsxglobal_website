@@ -40,8 +40,8 @@ services:
       test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
       interval: 5s
       timeout: 5s
-      retries: 30
-      start_period: 15s
+      retries: 40
+      start_period: 60s
     environment:
       POSTGRES_HOST: /var/run/postgresql
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -59,7 +59,7 @@ services:
         "-c",
         "config_file=/etc/postgresql/postgresql.conf",
         "-c",
-        "log_min_messages=fatal"
+        "log_min_messages=error"
       ]
     expose:
       - "${POSTGRES_PORT:-5432}"

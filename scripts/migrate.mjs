@@ -309,7 +309,7 @@ async function ensureServiceRoles() {
         CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;
       END IF;
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_admin') THEN
-        CREATE ROLE supabase_admin NOLOGIN NOINHERIT BYPASSRLS;
+        CREATE ROLE supabase_admin WITH LOGIN SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS PASSWORD '${sanitizedPassword}';
       END IF;
 
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
@@ -409,9 +409,9 @@ async function ensureServiceRoles() {
     }
   }
 
-  // Give GoTrue (auth service) up to 65s (covering 60s Docker restart backoff) to
-  // apply its own auth.schema_migrations before running user seeds / stub fallback.
-  for (let i = 0; i < 33; i++) {
+  // Give GoTrue (auth service) up to 40s to apply its own auth.schema_migrations
+  // before running user seeds / stub fallback.
+  for (let i = 0; i < 21; i++) {
     try {
       const checkRes = await runQuery(`
         SELECT
@@ -426,7 +426,7 @@ async function ensureServiceRoles() {
     } catch {
       // Ignore transient check errors during auth startup
     }
-    if (i < 32) {
+    if (i < 20) {
       await sleep(2000);
     } else {
       console.log(`[migration] Proceeding with auth schema safeguard & user seeding...`);

@@ -116,7 +116,8 @@ services:
       retries: 20
       start_period: 15s
     environment:
-      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}@db:5432/postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres_standalone_pwd_2026}
+      PGRST_DB_URI: "host=db port=5432 dbname=postgres user=authenticator"
       PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS:-public,graphql_public}
       PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public,extensions}
       PGRST_DB_ANON_ROLE: anon
